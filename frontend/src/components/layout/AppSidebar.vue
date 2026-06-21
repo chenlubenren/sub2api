@@ -9,7 +9,7 @@
     <!-- Logo/Brand -->
     <div class="sidebar-header" :class="{ 'sidebar-header-collapsed': sidebarCollapsed }">
       <!-- Custom Logo or Default Logo -->
-      <div class="sidebar-logo flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-glow">
+      <div class="sidebar-logo flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl shadow-glow">
         <img v-if="settingsLoaded" :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
       </div>
       <div class="sidebar-brand" :class="{ 'sidebar-brand-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">
@@ -141,19 +141,6 @@
 
     <!-- Bottom Section -->
     <div class="mt-auto border-t border-gray-100 p-3 dark:border-dark-800">
-      <button
-        @click="toggleTheme"
-        class="sidebar-link mb-2 w-full"
-        :class="{ 'sidebar-link-collapsed': sidebarCollapsed }"
-        :title="sidebarCollapsed ? (isDark ? t('nav.lightMode') : t('nav.darkMode')) : undefined"
-      >
-        <SunIcon v-if="isDark" class="h-5 w-5 flex-shrink-0 text-amber-500" />
-        <MoonIcon v-else class="h-5 w-5 flex-shrink-0" />
-        <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{
-          isDark ? t('nav.lightMode') : t('nav.darkMode')
-        }}</span>
-      </button>
-
       <!-- Collapse Button -->
       <button
         @click="toggleSidebar"
@@ -235,7 +222,6 @@ const adminSettingsStore = useAdminSettingsStore()
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
 const mobileOpen = computed(() => appStore.mobileOpen)
 const isAdmin = computed(() => authStore.isAdmin)
-const isDark = ref(document.documentElement.classList.contains('dark'))
 // Track which parent nav groups are expanded
 const expandedGroups = ref<Set<string>>(new Set())
 
@@ -481,36 +467,6 @@ const CogIcon = {
           'stroke-linecap': 'round',
           'stroke-linejoin': 'round',
           d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z'
-        })
-      ]
-    )
-}
-
-const SunIcon = {
-  render: () =>
-    h(
-      'svg',
-      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' },
-      [
-        h('path', {
-          'stroke-linecap': 'round',
-          'stroke-linejoin': 'round',
-          d: 'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z'
-        })
-      ]
-    )
-}
-
-const MoonIcon = {
-  render: () =>
-    h(
-      'svg',
-      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' },
-      [
-        h('path', {
-          'stroke-linecap': 'round',
-          'stroke-linejoin': 'round',
-          d: 'M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z'
         })
       ]
     )
@@ -789,12 +745,6 @@ function toggleSidebar() {
   appStore.toggleSidebar()
 }
 
-function toggleTheme() {
-  isDark.value = !isDark.value
-  document.documentElement.classList.toggle('dark', isDark.value)
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-}
-
 function closeMobile() {
   appStore.setMobileOpen(false)
 }
@@ -860,15 +810,6 @@ function handleGroupClick(item: NavItem) {
   if (!expandedGroups.value.has(item.path)) {
     expandedGroups.value.add(item.path)
   }
-}
-
-const savedTheme = localStorage.getItem('theme')
-if (
-  savedTheme === 'dark' ||
-  (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
-) {
-  isDark.value = true
-  document.documentElement.classList.add('dark')
 }
 
 // Fetch admin settings (for feature-gated nav items like Ops).

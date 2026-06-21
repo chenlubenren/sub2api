@@ -942,6 +942,11 @@ select {
   background: #fff !important;
 }
 
+.sidebar-logo {
+  background: transparent !important;
+  box-shadow: 0 0 0 1px rgba(58, 91, 160, 0.08), 0 0 26px rgba(58, 91, 160, 0.22) !important;
+}
+
 .sidebar-brand-title {
   color: var(--pixel-black) !important;
 }

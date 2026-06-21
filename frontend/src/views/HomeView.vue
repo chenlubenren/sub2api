@@ -20,10 +20,10 @@
       <div class="absolute inset-x-0 top-0 h-28 bg-[#101010]"></div>
     </div>
 
-    <header class="relative z-20 border-b-4 border-[#a83232] bg-[#101010] px-5 py-4 text-white">
+    <header class="relative z-20 border-b-4 border-[#a83232] bg-[#101010] px-5 py-3 text-white">
       <nav class="mx-auto flex max-w-7xl items-center justify-between gap-4">
         <div class="flex min-w-0 items-center gap-3">
-          <div class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden border-2 border-white bg-[#f8f8f8]">
+          <div class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden border-2 border-white/70 bg-transparent">
             <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
           </div>
           <div class="min-w-0">
