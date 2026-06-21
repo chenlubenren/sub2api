@@ -3,17 +3,17 @@
     <div class="mx-auto max-w-2xl space-y-6">
       <!-- Current Balance Card -->
       <div class="card overflow-hidden">
-        <div class="bg-gradient-to-br from-primary-500 to-primary-600 px-6 py-8 text-center">
+        <div class="redeem-balance-hero px-6 py-8 text-center">
           <div
-            class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm"
+            class="redeem-balance-icon mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl"
           >
             <Icon name="creditCard" size="xl" class="text-white" />
           </div>
-          <p class="text-sm font-medium text-primary-100">{{ t('redeem.currentBalance') }}</p>
-          <p class="mt-2 text-4xl font-bold text-white">
+          <p class="redeem-balance-label text-sm font-medium">{{ t('redeem.currentBalance') }}</p>
+          <p class="redeem-balance-value mt-2 text-4xl font-bold">
             ${{ user?.balance?.toFixed(2) || '0.00' }}
           </p>
-          <p class="mt-2 text-sm text-primary-100">
+          <p class="redeem-balance-meta mt-2 text-sm">
             {{ t('redeem.concurrency') }}: {{ user?.concurrency || 0 }} {{ t('redeem.requests') }}
           </p>
         </div>
@@ -488,6 +488,30 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.redeem-balance-hero {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)),
+    #101010;
+  color: #f8f8f8;
+}
+
+.redeem-balance-icon {
+  background: rgba(248, 248, 248, 0.12);
+  border: 1px solid rgba(248, 248, 248, 0.18);
+}
+
+.redeem-balance-label {
+  color: rgba(248, 248, 248, 0.72);
+}
+
+.redeem-balance-value {
+  color: #f8f8f8;
+}
+
+.redeem-balance-meta {
+  color: rgba(248, 248, 248, 0.76);
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: all 0.3s ease;
