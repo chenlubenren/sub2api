@@ -114,7 +114,7 @@
               </div>
               <h2 class="text-lg font-black leading-7 text-[#101010]">官方模型，不掺水！</h2>
               <p class="mt-2 text-sm leading-6 text-[#101010]/74">
-                后台采用真实的官方 PLUS 账号与 PRO 账号提供 Token 供应，不走阉割替代方案，模型能力、可用范围和整体体验都尽量贴近官方原生水准。
+                后台采用真实的官方 PLUS 账号与 PRO 账号提供 Token 供应，不走阉割替代方案，模型能力、可用范围和整体体验都保持官方原生水准。
               </p>
             </div>
             <div class="flex h-full flex-col border-[3px] border-[#101010] bg-white p-5 shadow-[6px_6px_0_#101010]">
