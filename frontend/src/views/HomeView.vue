@@ -17,7 +17,7 @@
 
     <div class="pointer-events-none absolute inset-0">
       <div class="absolute inset-0 bg-[linear-gradient(rgba(16,16,16,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(16,16,16,0.045)_1px,transparent_1px)] bg-[size:34px_34px]"></div>
-      <div class="absolute inset-x-0 top-0 h-28 bg-[#101010]"></div>
+      <div class="absolute inset-x-0 top-0 h-5 bg-[#101010]"></div>
     </div>
 
     <header class="relative z-20 border-b-4 border-[#a83232] bg-[#101010] px-5 py-3 text-white">
