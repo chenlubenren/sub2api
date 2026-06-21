@@ -141,7 +141,6 @@
 
     <!-- Bottom Section -->
     <div class="mt-auto border-t border-gray-100 p-3 dark:border-dark-800">
-      <!-- Theme Toggle -->
       <button
         @click="toggleTheme"
         class="sidebar-link mb-2 w-full"
@@ -237,7 +236,6 @@ const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
 const mobileOpen = computed(() => appStore.mobileOpen)
 const isAdmin = computed(() => authStore.isAdmin)
 const isDark = ref(document.documentElement.classList.contains('dark'))
-
 // Track which parent nav groups are expanded
 const expandedGroups = ref<Set<string>>(new Set())
 
@@ -864,7 +862,6 @@ function handleGroupClick(item: NavItem) {
   }
 }
 
-// Initialize theme
 const savedTheme = localStorage.getItem('theme')
 if (
   savedTheme === 'dark' ||
