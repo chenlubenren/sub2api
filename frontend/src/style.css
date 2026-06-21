@@ -1127,6 +1127,12 @@ select {
   color: var(--pixel-black) !important;
 }
 
+#app .sidebar .sidebar-brand-title,
+#app .sidebar .sidebar-brand-title.text-gray-900,
+#app .sidebar .sidebar-brand-title.dark\:text-white {
+  color: var(--pixel-white) !important;
+}
+
 #app .text-gray-500,
 #app .text-gray-600,
 #app .text-dark-400,
