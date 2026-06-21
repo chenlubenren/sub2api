@@ -23,7 +23,7 @@
     <header class="relative z-20 border-b-4 border-[#a83232] bg-[#101010] px-5 py-3 text-white">
       <nav class="mx-auto flex max-w-7xl items-center justify-between gap-4">
         <div class="flex min-w-0 items-center gap-3">
-          <div class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden border-2 border-white/70 bg-transparent">
+          <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden bg-transparent">
             <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
           </div>
           <div class="min-w-0">
