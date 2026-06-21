@@ -125,8 +125,12 @@
 
     <div class="mx-auto w-full max-w-[1380px]">
       <div class="card px-6 py-5">
-        <p class="text-base font-semibold text-gray-900 dark:text-white">
-          算力站本日已为您节省 ￥{{ formatRmb(todaySavedRmb) }}，已累计为您节省 ￥{{ formatRmb(totalSavedRmb) }}。
+        <p class="flex flex-wrap items-center gap-x-3 gap-y-2 text-base font-semibold text-gray-900 dark:text-white">
+          <span>算力站本日已为您节省</span>
+          <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400">￥{{ formatRmb(todaySavedRmb) }}</span>
+          <span>，已累计为您节省</span>
+          <span class="text-3xl font-black text-violet-600 dark:text-violet-400">￥{{ formatRmb(totalSavedRmb) }}</span>
+          <span>。</span>
         </p>
       </div>
     </div>

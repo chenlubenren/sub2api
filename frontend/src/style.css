@@ -943,12 +943,12 @@ select {
 }
 
 .sidebar-logo {
-  width: 56px !important;
-  height: 56px !important;
+  width: 2.25rem !important;
+  height: 2.25rem !important;
   background: transparent !important;
   border: 0 !important;
-  box-shadow: 0 0 24px rgba(58, 91, 160, 0.22) !important;
-  border-radius: 0 !important;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.28) !important;
+  border-radius: 0.75rem !important;
 }
 
 .sidebar-brand-title {
