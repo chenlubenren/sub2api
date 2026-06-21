@@ -938,12 +938,12 @@ select {
 }
 
 .sidebar-header {
-  border-bottom: 4px solid var(--pixel-red) !important;
-  background: var(--pixel-black);
+  border-bottom: 1px solid rgba(16, 16, 16, 0.12) !important;
+  background: #fff !important;
 }
 
 .sidebar-brand-title {
-  color: var(--pixel-white) !important;
+  color: var(--pixel-black) !important;
 }
 
 .sidebar-link {
