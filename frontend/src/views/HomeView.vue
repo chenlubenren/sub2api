@@ -20,11 +20,11 @@
       <div class="absolute inset-x-0 top-0 h-5 bg-[#101010]"></div>
     </div>
 
-    <header class="relative z-20 border-b-4 border-[#a83232] bg-[#101010] px-5 py-3 text-white">
+    <header class="relative z-20 border-b border-[#d6d6d6] bg-[#101010] px-5 py-2 text-white">
       <nav class="mx-auto flex max-w-7xl items-center justify-between gap-4">
         <div class="flex min-w-0 items-center gap-3">
-          <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden bg-transparent">
-            <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
+          <div class="home-logo-shell flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden bg-transparent">
+            <img :src="displayLogo" alt="Logo" class="home-logo-image" />
           </div>
           <div class="min-w-0">
             <div class="truncate text-base font-semibold text-white sm:text-lg">
@@ -83,7 +83,7 @@
               助研算力供应中心
             </h1>
             <p class="max-w-2xl text-lg leading-8 text-[#101010]/70 sm:text-xl">
-              拒绝掺水，不转卖用户隐私，高度安全，超低价玩转codex。
+              不做阉割替代，不碰多余数据流转，用更稳的官方链路把 Codex 的能力直接带到你的工作流里。
             </p>
           </div>
 
@@ -123,16 +123,16 @@
               </div>
               <h2 class="text-lg font-black leading-7 text-[#101010]">高度安全，不转卖数据</h2>
               <p class="mt-2 text-sm leading-6 text-[#101010]/74">
-                不篡改模型输出，不做数据转卖和额外利用，尽量减少中间环节对请求内容的触碰，既保护你的对话隐私，也降低对本地电脑和工作环境的潜在风险。
+                不操控模型输出，不做数据转卖和额外利用，尽量减少中间环节对请求内容的触达，既保护你的对话隐私，也降低本地电脑和工作环境的潜在风险。
               </p>
             </div>
             <div class="flex h-full flex-col border-[3px] border-[#101010] bg-white p-5 shadow-[6px_6px_0_#101010]">
               <div class="mb-3 flex h-11 w-11 items-center justify-center border-[3px] border-[#101010] bg-[#d4a533] text-[#101010] shadow-[3px_3px_0_#101010]">
                 <Icon name="sparkles" size="md" />
               </div>
-              <h2 class="text-lg font-black leading-7 text-[#101010]">超低价，低于一折使用token</h2>
+              <h2 class="text-lg font-black leading-7 text-[#101010]">超低价，低于一折使用 token</h2>
               <p class="mt-2 text-sm leading-6 text-[#101010]/74">
-                充值按 1 人民币 = 1 美金计算，再叠加专属线路优惠，综合成本大约只有官方价格的 7% 左右，让高频调用和长期使用都能把预算压得更稳。
+                充值按 1 人民币 = 1 美金计算，再叠加专属线路折扣，综合下来约为官方价格的 7% 左右，让高频调用和长期使用都能把预算压得更稳。
               </p>
             </div>
           </div>
@@ -203,10 +203,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
 import Icon from '@/components/icons/Icon.vue'
+import { prepareLogoAsset } from '@/utils/logo'
 
 const { t } = useI18n()
 
@@ -218,6 +219,7 @@ const siteLogo = computed(() => appStore.cachedPublicSettings?.site_logo || appS
 const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || 'AI API Gateway Platform')
 const docUrl = computed(() => appStore.cachedPublicSettings?.doc_url || appStore.docUrl || '')
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
+const displayLogo = ref('/logo.png')
 
 const isHomeContentUrl = computed(() => {
   const content = homeContent.value.trim()
@@ -242,6 +244,10 @@ function initTheme() {
   document.documentElement.classList.remove('dark')
 }
 
+async function syncDisplayLogo() {
+  displayLogo.value = await prepareLogoAsset(siteLogo.value || '/logo.png')
+}
+
 onMounted(() => {
   initTheme()
   if (showIntroLoading.value) {
@@ -255,9 +261,30 @@ onMounted(() => {
     appStore.fetchPublicSettings()
   }
 })
+
+watch(
+  siteLogo,
+  () => {
+    void syncDisplayLogo()
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
+.home-logo-shell {
+  filter: drop-shadow(0 0 16px rgba(58, 91, 160, 0.26));
+}
+
+.home-logo-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: scale(1.42);
+  transform-origin: center;
+}
+
 .hero-cta {
   position: relative;
   animation: hero-cta-bob 2.6s steps(4) infinite;
