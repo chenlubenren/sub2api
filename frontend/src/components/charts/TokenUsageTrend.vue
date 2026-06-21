@@ -1,17 +1,58 @@
 <template>
-  <div class="card p-4">
-    <h3 class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">
+  <div class="card border-2 border-[#101010] bg-white p-4 shadow-[4px_4px_0_#101010]">
+    <h3 class="mb-4 text-sm font-semibold text-[#101010]">
       {{ t('admin.dashboard.tokenUsageTrend') }}
     </h3>
     <div v-if="loading" class="flex h-48 items-center justify-center">
       <LoadingSpinner />
     </div>
-    <div v-else-if="trendData.length > 0 && chartData" class="h-48">
-      <Line :data="chartData" :options="lineOptions" />
+    <div v-else-if="trendData.length > 0" class="space-y-3">
+      <div class="relative h-48 border-2 border-[#101010] bg-[#f8f8f8] p-3">
+        <div class="absolute inset-3 bg-[linear-gradient(rgba(16,16,16,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(16,16,16,0.08)_1px,transparent_1px)] bg-[size:18px_18px]"></div>
+        <svg class="relative h-full w-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <polyline
+            v-for="series in pixelSeries"
+            :key="series.key"
+            :points="series.points"
+            fill="none"
+            :stroke="series.color"
+            stroke-width="3"
+            stroke-linejoin="miter"
+            stroke-linecap="square"
+          />
+          <g v-for="series in pixelSeries" :key="`${series.key}-points`">
+            <rect
+              v-for="point in series.pointRects"
+              :key="`${series.key}-${point.x}-${point.y}`"
+              :x="point.x - 1.8"
+              :y="point.y - 1.8"
+              width="3.6"
+              height="3.6"
+              :fill="series.color"
+              stroke="#101010"
+              stroke-width="0.7"
+            />
+          </g>
+        </svg>
+      </div>
+
+      <div class="grid gap-2 sm:grid-cols-2">
+        <div
+          v-for="series in pixelSeries"
+          :key="`${series.key}-legend`"
+          class="flex items-center justify-between gap-2 border-2 border-[#101010] bg-[#f8f8f8] px-3 py-2 text-xs"
+        >
+          <span class="flex items-center gap-2 font-semibold text-[#101010]">
+            <span class="h-3 w-3 border border-[#101010]" :style="{ backgroundColor: series.color }"></span>
+            {{ series.label }}
+          </span>
+          <span class="font-mono text-[#101010]/65">{{ formatTokens(series.total) }}</span>
+        </div>
+      </div>
     </div>
     <div
       v-else
-      class="flex h-48 items-center justify-center text-sm text-gray-500 dark:text-gray-400"
+      class="flex h-48 items-center justify-center text-sm text-gray-500"
     >
       {{ t('admin.dashboard.noDataAvailable') }}
     </div>
@@ -21,31 +62,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-} from 'chart.js'
-import { Line } from 'vue-chartjs'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import type { TrendDataPoint } from '@/types'
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-)
 
 const { t } = useI18n()
 
@@ -54,175 +72,45 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
-const isDarkMode = computed(() => {
-  return document.documentElement.classList.contains('dark')
+const chartRows = computed(() => props.trendData.slice(-18))
+
+const maxTokens = computed(() => {
+  const values = chartRows.value.flatMap((d) => [
+    d.input_tokens,
+    d.output_tokens,
+    d.cache_creation_tokens,
+    d.cache_read_tokens
+  ])
+  return Math.max(...values, 1)
 })
 
-const chartColors = computed(() => ({
-  text: isDarkMode.value ? '#e5e7eb' : '#374151',
-  grid: isDarkMode.value ? '#374151' : '#e5e7eb',
-  input: '#3b82f6',
-  output: '#10b981',
-  cacheCreation: '#f59e0b',
-  cacheRead: '#06b6d4',
-  cacheHitRate: '#8b5cf6'
-}))
+const seriesConfig = [
+  { key: 'input', label: 'Input', color: '#3A5BA0', getValue: (d: TrendDataPoint) => d.input_tokens },
+  { key: 'output', label: 'Output', color: '#2D7D46', getValue: (d: TrendDataPoint) => d.output_tokens },
+  { key: 'cache', label: 'Cache', color: '#D4A533', getValue: (d: TrendDataPoint) => d.cache_creation_tokens + d.cache_read_tokens }
+]
 
-const chartData = computed(() => {
-  if (!props.trendData?.length) return null
-
-  return {
-    labels: props.trendData.map((d) => d.date),
-    datasets: [
-      {
-        label: 'Input',
-        data: props.trendData.map((d) => d.input_tokens),
-        borderColor: chartColors.value.input,
-        backgroundColor: `${chartColors.value.input}20`,
-        fill: true,
-        tension: 0.3
-      },
-      {
-        label: 'Output',
-        data: props.trendData.map((d) => d.output_tokens),
-        borderColor: chartColors.value.output,
-        backgroundColor: `${chartColors.value.output}20`,
-        fill: true,
-        tension: 0.3
-      },
-      {
-        label: 'Cache Creation',
-        data: props.trendData.map((d) => d.cache_creation_tokens),
-        borderColor: chartColors.value.cacheCreation,
-        backgroundColor: `${chartColors.value.cacheCreation}20`,
-        fill: true,
-        tension: 0.3
-      },
-      {
-        label: 'Cache Read',
-        data: props.trendData.map((d) => d.cache_read_tokens),
-        borderColor: chartColors.value.cacheRead,
-        backgroundColor: `${chartColors.value.cacheRead}20`,
-        fill: true,
-        tension: 0.3
-      },
-      {
-        label: 'Cache Hit Rate',
-        data: props.trendData.map((d) => {
-          const totalPromptTokens = d.input_tokens + d.cache_read_tokens + d.cache_creation_tokens
-          return totalPromptTokens > 0 ? (d.cache_read_tokens / totalPromptTokens) * 100 : 0
-        }),
-        borderColor: chartColors.value.cacheHitRate,
-        backgroundColor: `${chartColors.value.cacheHitRate}20`,
-        borderDash: [5, 5],
-        fill: false,
-        tension: 0.3,
-        yAxisID: 'yPercent'
-      }
-    ]
-  }
+const pixelSeries = computed(() => {
+  const rowCount = Math.max(chartRows.value.length - 1, 1)
+  return seriesConfig.map((series) => {
+    const pointRects = chartRows.value.map((row, index) => {
+      const x = chartRows.value.length === 1 ? 50 : (index / rowCount) * 100
+      const y = 96 - (series.getValue(row) / maxTokens.value) * 86
+      return { x, y }
+    })
+    return {
+      ...series,
+      pointRects,
+      points: pointRects.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' '),
+      total: chartRows.value.reduce((sum, row) => sum + series.getValue(row), 0)
+    }
+  })
 })
-
-const lineOptions = computed(() => ({
-  responsive: true,
-  maintainAspectRatio: false,
-  interaction: {
-    intersect: false,
-    mode: 'index' as const
-  },
-  plugins: {
-    legend: {
-      position: 'top' as const,
-      labels: {
-        color: chartColors.value.text,
-        usePointStyle: true,
-        pointStyle: 'circle',
-        padding: 15,
-        font: {
-          size: 11
-        }
-      }
-    },
-    tooltip: {
-      callbacks: {
-        label: (context: any) => {
-          if (context.dataset.yAxisID === 'yPercent') {
-            return `${context.dataset.label}: ${context.raw.toFixed(1)}%`
-          }
-          return `${context.dataset.label}: ${formatTokens(context.raw)}`
-        },
-        footer: (tooltipItems: any) => {
-          const dataIndex = tooltipItems[0]?.dataIndex
-          if (dataIndex !== undefined && props.trendData[dataIndex]) {
-            const data = props.trendData[dataIndex]
-            return `Actual: $${formatCost(data.actual_cost)} | Standard: $${formatCost(data.cost)}`
-          }
-          return ''
-        }
-      }
-    }
-  },
-  scales: {
-    x: {
-      grid: {
-        color: chartColors.value.grid
-      },
-      ticks: {
-        color: chartColors.value.text,
-        font: {
-          size: 10
-        }
-      }
-    },
-    y: {
-      grid: {
-        color: chartColors.value.grid
-      },
-      ticks: {
-        color: chartColors.value.text,
-        font: {
-          size: 10
-        },
-        callback: (value: string | number) => formatTokens(Number(value))
-      }
-    },
-    yPercent: {
-      position: 'right' as const,
-      min: 0,
-      max: 100,
-      grid: {
-        drawOnChartArea: false
-      },
-      ticks: {
-        color: chartColors.value.cacheHitRate,
-        font: {
-          size: 10
-        },
-        callback: (value: string | number) => `${value}%`
-      }
-    }
-  }
-}))
 
 const formatTokens = (value: number): string => {
-  if (value >= 1_000_000_000) {
-    return `${(value / 1_000_000_000).toFixed(2)}B`
-  } else if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(2)}M`
-  } else if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(2)}K`
-  }
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(2)}K`
   return value.toLocaleString()
-}
-
-const formatCost = (value: number): string => {
-  if (value >= 1000) {
-    return (value / 1000).toFixed(2) + 'K'
-  } else if (value >= 1) {
-    return value.toFixed(2)
-  } else if (value >= 0.01) {
-    return value.toFixed(3)
-  }
-  return value.toFixed(4)
 }
 </script>

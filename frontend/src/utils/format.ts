@@ -59,19 +59,13 @@ export function formatNumber(num: number | null | undefined): string {
  * @returns 格式化后的字符串，如 "$1.25"
  */
 export function formatCurrency(amount: number | null | undefined, currency: string = 'USD'): string {
-  if (amount === null || amount === undefined) return '$0.00'
-
-  const locale = getLocale()
+  void currency
+  if (amount === null || amount === undefined) return '￥0.00'
 
   // For very small amounts, show more decimals
   const fractionDigits = amount > 0 && amount < 0.01 ? 6 : 2
 
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits
-  }).format(amount)
+  return formatDisplayCurrency(amount, fractionDigits)
 }
 
 /**
@@ -236,6 +230,18 @@ export function formatNumberLocaleString(num: number): string {
  */
 export function formatCostFixed(amount: number, fractionDigits: number = 4): string {
   return amount.toFixed(fractionDigits)
+}
+
+export const DISPLAY_CURRENCY_SYMBOL = '￥'
+
+export function formatDisplayCurrency(amount: number | null | undefined, fractionDigits: number = 2): string {
+  const value = typeof amount === 'number' && Number.isFinite(amount) ? amount : 0
+  return `${DISPLAY_CURRENCY_SYMBOL}${value.toFixed(fractionDigits)}`
+}
+
+export function formatTokensM(tokens: number | null | undefined, fractionDigits: number = 2): string {
+  const value = typeof tokens === 'number' && Number.isFinite(tokens) ? tokens : 0
+  return `${(value / 1_000_000).toFixed(fractionDigits)}M`
 }
 
 /**

@@ -4,14 +4,12 @@ import App from './App.vue'
 import router from './router'
 import i18n, { initI18n } from './i18n'
 import { useAppStore } from '@/stores/app'
+import { DEFAULT_DOCUMENT_TITLE_SUFFIX, normalizeSiteName } from '@/constants/brand'
 import './style.css'
 
 function initThemeClass() {
-  const savedTheme = localStorage.getItem('theme')
-  const shouldUseDark =
-    savedTheme === 'dark' ||
-    (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  document.documentElement.classList.toggle('dark', shouldUseDark)
+  localStorage.setItem('theme', 'light')
+  document.documentElement.classList.remove('dark')
 }
 
 async function bootstrap() {
@@ -28,8 +26,9 @@ async function bootstrap() {
   appStore.initFromInjectedConfig()
 
   // Set document title immediately after config is loaded
-  if (appStore.siteName && appStore.siteName !== 'Sub2API') {
-    document.title = `${appStore.siteName} - AI API Gateway`
+  const siteName = normalizeSiteName(appStore.siteName)
+  if (siteName) {
+    document.title = `${siteName} - ${DEFAULT_DOCUMENT_TITLE_SUFFIX}`
   }
 
   await initI18n()

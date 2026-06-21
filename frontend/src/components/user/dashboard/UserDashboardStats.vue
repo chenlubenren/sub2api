@@ -1,6 +1,6 @@
 <template>
   <!-- Row 1: Core Stats -->
-  <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
     <!-- Balance -->
     <div v-if="!isSimple" class="card p-4">
       <div class="flex items-center gap-3">
@@ -11,7 +11,7 @@
         </div>
         <div>
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('dashboard.balance') }}</p>
-          <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400">${{ formatBalance(balance) }}</p>
+          <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400">{{ formatDisplayCurrency(balance) }}</p>
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('common.available') }}</p>
         </div>
       </div>
@@ -46,23 +46,49 @@
     </div>
 
     <!-- Today Cost -->
-    <div class="card p-4">
-      <div class="flex items-center gap-3">
-        <div class="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/30">
-          <Icon name="dollar" size="md" class="text-purple-600 dark:text-purple-400" :stroke-width="2" />
+    <div class="card p-5 lg:col-span-2">
+      <div class="flex h-full flex-col gap-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="rounded-lg bg-rose-100 p-2 dark:bg-rose-900/30">
+              <Icon name="dollar" size="md" class="text-rose-600 dark:text-rose-400" :stroke-width="2" />
+            </div>
+            <div>
+              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('dashboard.todayCost') }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('dashboard.actual') }} / {{ t('dashboard.standard') }}</p>
+            </div>
+          </div>
+          <span class="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300">
+            {{ effectiveTodayMultiplier }}
+          </span>
         </div>
-        <div>
-          <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('dashboard.todayCost') }}</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white">
-            <span class="text-purple-600 dark:text-purple-400" :title="t('dashboard.actual')">${{ formatCost(stats?.today_actual_cost || 0) }}</span>
-            <span class="text-sm font-normal text-gray-400 dark:text-gray-500" :title="t('dashboard.standard')"> / ${{ formatCost(stats?.today_cost || 0) }}</span>
-          </p>
-          <p class="text-xs">
-            <span class="text-gray-500 dark:text-gray-400">{{ t('common.total') }}: </span>
-            <span class="text-purple-600 dark:text-purple-400" :title="t('dashboard.actual')">${{ formatCost(stats?.total_actual_cost || 0) }}</span>
-            <span class="text-gray-400 dark:text-gray-500" :title="t('dashboard.standard')"> / ${{ formatCost(stats?.total_cost || 0) }}</span>
-          </p>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('dashboard.todayCost') }}</p>
+            <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+              {{ formatDisplayCurrency(todayActualCost, 4) }}
+            </p>
+            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              {{ t('dashboard.standard') }} {{ formatDisplayCurrency(todayStandardCost, 4) }}
+            </p>
+          </div>
+          <div class="border-t border-gray-100 pt-3 dark:border-dark-700 sm:border-l sm:border-t-0 sm:pl-3 sm:pt-0">
+            <p class="text-xs text-gray-500 dark:text-gray-400">今日已帮您省下</p>
+            <p class="mt-1 text-xl font-bold text-emerald-600 dark:text-emerald-400">
+              今日已帮您省下 {{ formatDisplayCurrency(todaySaved, 4) }}
+            </p>
+            <p class="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+              今日已帮您省下 {{ formatDisplayCurrency(todaySavedCny, 2) }}（按6.7汇率计算）
+            </p>
+          </div>
         </div>
+
+        <p class="border-t border-gray-100 pt-3 text-xs dark:border-dark-700">
+          <span class="text-gray-500 dark:text-gray-400">{{ t('common.total') }}: </span>
+          <span class="font-semibold text-rose-600 dark:text-rose-400" :title="t('dashboard.actual')">{{ formatDisplayCurrency(totalActualCost, 4) }}</span>
+          <span class="text-gray-400 dark:text-gray-500" :title="t('dashboard.standard')"> / {{ formatDisplayCurrency(totalStandardCost, 4) }}</span>
+        </p>
       </div>
     </div>
   </div>
@@ -77,8 +103,8 @@
         </div>
         <div>
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('dashboard.todayTokens') }}</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ formatTokens(stats?.today_tokens || 0) }}</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('dashboard.input') }}: {{ formatTokens(stats?.today_input_tokens || 0) }} / {{ t('dashboard.output') }}: {{ formatTokens(stats?.today_output_tokens || 0) }}</p>
+          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ formatTokensM(stats?.today_tokens || 0) }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('dashboard.input') }}: {{ formatTokensM(stats?.today_input_tokens || 0) }} / {{ t('dashboard.output') }}: {{ formatTokensM(stats?.today_output_tokens || 0) }}</p>
         </div>
       </div>
     </div>
@@ -91,8 +117,8 @@
         </div>
         <div>
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('dashboard.totalTokens') }}</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ formatTokens(stats?.total_tokens || 0) }}</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('dashboard.input') }}: {{ formatTokens(stats?.total_input_tokens || 0) }} / {{ t('dashboard.output') }}: {{ formatTokens(stats?.total_output_tokens || 0) }}</p>
+          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ formatTokensM(stats?.total_tokens || 0) }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('dashboard.input') }}: {{ formatTokensM(stats?.total_input_tokens || 0) }} / {{ t('dashboard.output') }}: {{ formatTokensM(stats?.total_output_tokens || 0) }}</p>
         </div>
       </div>
     </div>
@@ -156,13 +182,13 @@
             {{ item.isOther ? t('dashboard.platformOther') : platformLabel(item.platform) }}
           </span>
           <span class="font-mono text-sm text-purple-600 dark:text-purple-400" :title="t('dashboard.actual')">
-            ${{ formatCost(item.total_actual_cost) }}
+            {{ formatDisplayCurrency(item.total_actual_cost, 4) }}
           </span>
         </div>
         <div class="mt-2 space-y-1 text-xs">
           <div class="flex items-center justify-between">
             <span class="text-gray-500 dark:text-gray-400">{{ t('dashboard.todayCost') }}</span>
-            <span class="font-mono text-gray-900 dark:text-white">${{ formatCost(item.today_actual_cost) }}</span>
+            <span class="font-mono text-gray-900 dark:text-white">{{ formatDisplayCurrency(item.today_actual_cost, 4) }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-gray-500 dark:text-gray-400">{{ t('dashboard.requests') }}</span>
@@ -200,7 +226,7 @@
                 <div class="flex items-center justify-between text-xs">
                   <span class="text-gray-600 dark:text-gray-300">{{ t(`dashboard.platformQuota.${w}`) }}</span>
                   <span class="font-mono text-gray-700 dark:text-gray-200">
-                    ${{ formatUsd((quotaVal(item.quota, `${w}_usage_usd`) as number) ?? 0) }} / ${{ formatUsd(quotaVal(item.quota, `${w}_limit_usd`) as number) }}
+                    ￥{{ formatUsd((quotaVal(item.quota, `${w}_usage_usd`) as number) ?? 0) }} / ￥{{ formatUsd(quotaVal(item.quota, `${w}_limit_usd`) as number) }}
                   </span>
                 </div>
                 <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-dark-700">
@@ -228,6 +254,7 @@ import { useI18n } from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 import type { UserDashboardStats as UserStatsType } from '@/api/usage'
 import type { PlatformQuotaItem } from '@/types'
+import { formatDisplayCurrency, formatTokensM } from '@/utils/format'
 
 interface FusedPlatformCard {
   platform: string
@@ -253,6 +280,8 @@ const PLATFORM_LABELS: Record<string, string> = {
   gemini: 'Gemini',
   antigravity: 'Antigravity'
 }
+
+const EXCHANGE_RATE_CNY = 6.7
 
 const platformLabel = (p: string) => PLATFORM_LABELS[p] ?? p
 
@@ -325,6 +354,29 @@ const platformCards = computed<FusedPlatformCard[]>(() => {
   return cards
 })
 
+const todayActualCost = computed(() => props.stats?.today_actual_cost ?? 0)
+const todayStandardCost = computed(() => props.stats?.today_cost ?? 0)
+const totalActualCost = computed(() => props.stats?.total_actual_cost ?? 0)
+const totalStandardCost = computed(() => props.stats?.total_cost ?? 0)
+const effectiveTodayRate = computed(() => {
+  if (todayStandardCost.value <= 0 || todayActualCost.value <= 0) return 1
+  return Math.min(1, todayActualCost.value / todayStandardCost.value)
+})
+const effectiveTodayMultiplier = computed(() => {
+  const rate = effectiveTodayRate.value
+  if (todayActualCost.value <= 0) return '暂无消费'
+  if (!Number.isFinite(rate) || rate <= 0) return '0折'
+  return `${Number((rate * 10).toFixed(2))}折`
+})
+const todayOriginalCny = computed(() => {
+  const rate = effectiveTodayRate.value
+  if (!Number.isFinite(rate) || rate <= 0 || todayActualCost.value <= 0) return 0
+  return todayActualCost.value * EXCHANGE_RATE_CNY / rate
+})
+const todayPaidCny = computed(() => todayActualCost.value * EXCHANGE_RATE_CNY)
+const todaySavedCny = computed(() => Math.max(0, todayOriginalCny.value - todayPaidCny.value))
+const todaySaved = computed(() => todaySavedCny.value / EXCHANGE_RATE_CNY)
+
 // Quota helpers
 
 type QuotaWindow = 'daily' | 'weekly' | 'monthly'
@@ -374,14 +426,7 @@ function formatResetTime(iso: string | null | undefined): string {
   })
 }
 
-const formatBalance = (b: number) =>
-  new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(b)
-
 const formatNumber = (n: number) => n.toLocaleString()
-const formatCost = (c: number) => c.toFixed(4)
 const formatTokens = (t: number) => {
   if (t >= 1_000_000) return `${(t / 1_000_000).toFixed(1)}M`
   if (t >= 1000) return `${(t / 1000).toFixed(1)}K`

@@ -5,7 +5,7 @@ type LocaleCode = 'en' | 'zh'
 type LocaleMessages = Record<string, any>
 
 const LOCALE_KEY = 'sub2api_locale'
-const DEFAULT_LOCALE: LocaleCode = 'en'
+const DEFAULT_LOCALE: LocaleCode = 'zh'
 
 const localeLoaders: Record<LocaleCode, () => Promise<{ default: LocaleMessages }>> = {
   en: () => import('./locales/en'),
@@ -17,16 +17,7 @@ function isLocaleCode(value: string): value is LocaleCode {
 }
 
 function getDefaultLocale(): LocaleCode {
-  const saved = localStorage.getItem(LOCALE_KEY)
-  if (saved && isLocaleCode(saved)) {
-    return saved
-  }
-
-  const browserLang = navigator.language.toLowerCase()
-  if (browserLang.startsWith('zh')) {
-    return 'zh'
-  }
-
+  localStorage.setItem(LOCALE_KEY, DEFAULT_LOCALE)
   return DEFAULT_LOCALE
 }
 

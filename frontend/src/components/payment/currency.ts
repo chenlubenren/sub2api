@@ -1,4 +1,5 @@
 export const DEFAULT_PAYMENT_CURRENCY = 'CNY'
+const DISPLAY_PAYMENT_CURRENCY_SYMBOL = '￥'
 
 export function normalizePaymentCurrency(currency?: string | null): string {
   const normalized = String(currency || '').trim().toUpperCase()
@@ -19,15 +20,6 @@ function paymentCurrencyFractionDigits(currency: string): number {
 export function formatPaymentAmount(amount: number, currency?: string | null, locale?: string): string {
   const normalized = normalizePaymentCurrency(currency)
   const fractionDigits = paymentCurrencyFractionDigits(normalized)
-  try {
-    return new Intl.NumberFormat(locale || undefined, {
-      style: 'currency',
-      currency: normalized,
-      currencyDisplay: 'narrowSymbol',
-      minimumFractionDigits: fractionDigits,
-      maximumFractionDigits: fractionDigits,
-    }).format(Number.isFinite(amount) ? amount : 0)
-  } catch {
-    return `${normalized} ${(Number.isFinite(amount) ? amount : 0).toFixed(fractionDigits)}`
-  }
+  void locale
+  return `${DISPLAY_PAYMENT_CURRENCY_SYMBOL}${(Number.isFinite(amount) ? amount : 0).toFixed(fractionDigits)}`
 }

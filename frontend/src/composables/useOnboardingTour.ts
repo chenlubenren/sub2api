@@ -526,6 +526,13 @@ export function useOnboardingTour(options: OnboardingOptions) {
       isCurrentStep
     })
 
+    if (import.meta.env.DEV && userStore.user?.email === 'review@local.dev') {
+      onboardingStore.getDriverInstance()?.destroy()
+      onboardingStore.setDriverInstance(null)
+      markAsSeen()
+      return
+    }
+
     if (onboardingStore.isDriverActive()) {
       driverInstance = onboardingStore.getDriverInstance()
       return

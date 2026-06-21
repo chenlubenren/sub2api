@@ -15,6 +15,9 @@ const TOKEN_EXPIRES_AT_KEY = 'token_expires_at' // 存储过期时间戳而非�
 const PENDING_AUTH_SESSION_KEY = 'pending_auth_session'
 const AUTO_REFRESH_INTERVAL = 60 * 1000 // 60 seconds for user data refresh
 const TOKEN_REFRESH_BUFFER = 120 * 1000 // 120 seconds before expiry to refresh token
+const DEV_REVIEW_EMAIL = 'review@local.dev'
+const DEV_REVIEW_PASSWORD = 'review123456'
+const DEV_REVIEW_TOKEN = 'dev-review-token'
 
 type PendingAuthTokenField = 'pending_auth_token' | 'pending_oauth_token'
 
@@ -66,6 +69,39 @@ function persistPendingAuthSession(session: PendingAuthSessionSummary): void {
 
 function clearPendingAuthSessionStorage(): void {
   localStorage.removeItem(PENDING_AUTH_SESSION_KEY)
+}
+
+function isDevReviewToken(value: string | null): boolean {
+  return import.meta.env.DEV && value === DEV_REVIEW_TOKEN
+}
+
+function createDevReviewAuthResponse(): AuthResponse {
+  const now = new Date().toISOString()
+  return {
+    access_token: DEV_REVIEW_TOKEN,
+    refresh_token: 'dev-review-refresh-token',
+    expires_in: 60 * 60 * 24 * 7,
+    token_type: 'Bearer',
+    user: {
+      id: 100000,
+      username: '审查管理员',
+      email: DEV_REVIEW_EMAIL,
+      avatar_url: null,
+      role: 'admin',
+      balance: 9999,
+      concurrency: 50,
+      rpm_limit: 0,
+      status: 'active',
+      allowed_groups: null,
+      balance_notify_enabled: false,
+      balance_notify_threshold: null,
+      balance_notify_extra_emails: [],
+      subscriptions: [],
+      created_at: now,
+      updated_at: now,
+      run_mode: 'standard'
+    }
+  } as AuthResponse
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -239,6 +275,18 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
+      if (
+        import.meta.env.DEV &&
+        credentials.email.trim().toLowerCase() === DEV_REVIEW_EMAIL &&
+        credentials.password === DEV_REVIEW_PASSWORD
+      ) {
+        const response = createDevReviewAuthResponse()
+        setAuthFromResponse(response)
+        localStorage.setItem('admin_guide_100000_admin_v4_interactive', 'true')
+        localStorage.setItem('user_guide_100000_admin_v4_interactive', 'true')
+        return response
+      }
+
       const response = await authAPI.login(credentials)
 
       // If 2FA is required, return the response without setting auth state
@@ -397,6 +445,11 @@ export const useAuthStore = defineStore('auth', () => {
    * Clears all authentication state and persisted data
    */
   async function logout(): Promise<void> {
+    if (isDevReviewToken(token.value)) {
+      clearAuth()
+      return
+    }
+
     // Call API logout (revokes refresh token on server)
     await authAPI.logout()
 
@@ -413,6 +466,10 @@ export const useAuthStore = defineStore('auth', () => {
   async function refreshUser(): Promise<User> {
     if (!token.value) {
       throw new Error('Not authenticated')
+    }
+
+    if (isDevReviewToken(token.value)) {
+      return user.value!
     }
 
     try {
