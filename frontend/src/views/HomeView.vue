@@ -23,8 +23,8 @@
     <header class="relative z-20 border-b border-[#d6d6d6] bg-[#101010] px-5 py-2 text-white">
       <nav class="mx-auto flex max-w-7xl items-center justify-between gap-4">
         <div class="flex min-w-0 items-center gap-3">
-          <div class="home-logo-shell flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden bg-transparent">
-            <img :src="displayLogo" alt="Logo" class="home-logo-image" />
+          <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden bg-transparent">
+            <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
           </div>
           <div class="min-w-0">
             <div class="truncate text-base font-semibold text-white sm:text-lg">
@@ -203,11 +203,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
 import Icon from '@/components/icons/Icon.vue'
-import { prepareLogoAsset } from '@/utils/logo'
 
 const { t } = useI18n()
 
@@ -219,7 +218,6 @@ const siteLogo = computed(() => appStore.cachedPublicSettings?.site_logo || appS
 const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || 'AI API Gateway Platform')
 const docUrl = computed(() => appStore.cachedPublicSettings?.doc_url || appStore.docUrl || '')
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
-const displayLogo = ref('/logo.png')
 
 const isHomeContentUrl = computed(() => {
   const content = homeContent.value.trim()
@@ -244,10 +242,6 @@ function initTheme() {
   document.documentElement.classList.remove('dark')
 }
 
-async function syncDisplayLogo() {
-  displayLogo.value = await prepareLogoAsset(siteLogo.value || '/logo.png')
-}
-
 onMounted(() => {
   initTheme()
   if (showIntroLoading.value) {
@@ -261,30 +255,9 @@ onMounted(() => {
     appStore.fetchPublicSettings()
   }
 })
-
-watch(
-  siteLogo,
-  () => {
-    void syncDisplayLogo()
-  },
-  { immediate: true }
-)
 </script>
 
 <style scoped>
-.home-logo-shell {
-  filter: drop-shadow(0 0 16px rgba(58, 91, 160, 0.26));
-}
-
-.home-logo-image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  transform: scale(1.42);
-  transform-origin: center;
-}
-
 .hero-cta {
   position: relative;
   animation: hero-cta-bob 2.6s steps(4) infinite;

@@ -124,24 +124,8 @@
     </div>
 
     <div class="mx-auto w-full max-w-[1380px]">
-      <div class="card savings-card px-6 py-5">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Savings Overview</p>
-            <h3 class="mt-2 text-xl font-bold text-gray-900 dark:text-white">算力站已为您的使用成本做了进一步压缩</h3>
-          </div>
-          <div class="grid gap-3 sm:grid-cols-2 lg:min-w-[640px]">
-            <div class="rounded-xl bg-[#3a5ba0]/8 px-4 py-3">
-              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">本日节省</p>
-              <p class="mt-1 text-2xl font-black text-[#3a5ba0]">￥{{ formatRmb(todaySavedRmb) }}</p>
-            </div>
-            <div class="rounded-xl bg-[#2d7d46]/8 px-4 py-3">
-              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">累计节省</p>
-              <p class="mt-1 text-2xl font-black text-[#2d7d46]">￥{{ formatRmb(totalSavedRmb) }}</p>
-            </div>
-          </div>
-        </div>
-        <p class="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300">
+      <div class="card px-6 py-5">
+        <p class="text-base font-semibold text-gray-900 dark:text-white">
           算力站本日已为您节省 ￥{{ formatRmb(todaySavedRmb) }}，已累计为您节省 ￥{{ formatRmb(totalSavedRmb) }}。
         </p>
       </div>

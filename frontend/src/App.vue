@@ -8,7 +8,6 @@ import { resolveDocumentTitle } from '@/router/title'
 import AnnouncementPopup from '@/components/common/AnnouncementPopup.vue'
 import { useAppStore, useAuthStore, useSubscriptionStore, useAnnouncementStore, useAdminComplianceStore } from '@/stores'
 import { getSetupStatus } from '@/api/setup'
-import { prepareLogoAsset } from '@/utils/logo'
 
 const router = useRouter()
 const route = useRoute()
@@ -22,9 +21,7 @@ const adminComplianceStore = useAdminComplianceStore()
  * Update favicon dynamically
  * @param logoUrl - URL of the logo to use as favicon
  */
-async function updateFavicon(logoUrl: string) {
-  const preparedLogo = await prepareLogoAsset(logoUrl)
-
+function updateFavicon(logoUrl: string) {
   // Find existing favicon link or create new one
   let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
   if (!link) {
@@ -32,12 +29,8 @@ async function updateFavicon(logoUrl: string) {
     link.rel = 'icon'
     document.head.appendChild(link)
   }
-  link.type = preparedLogo.startsWith('data:image/png')
-    ? 'image/png'
-    : preparedLogo.endsWith('.svg')
-      ? 'image/svg+xml'
-      : 'image/x-icon'
-  link.href = preparedLogo
+  link.type = logoUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/x-icon'
+  link.href = logoUrl
 }
 
 // Watch for site settings changes and update favicon/title
@@ -45,7 +38,7 @@ watch(
   () => appStore.siteLogo,
   (newLogo) => {
     if (newLogo) {
-      void updateFavicon(newLogo)
+      updateFavicon(newLogo)
     }
   },
   { immediate: true }

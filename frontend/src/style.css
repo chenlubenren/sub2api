@@ -947,7 +947,7 @@ select {
   height: 56px !important;
   background: transparent !important;
   border: 0 !important;
-  box-shadow: 0 0 24px rgba(58, 91, 160, 0.28) !important;
+  box-shadow: 0 0 24px rgba(58, 91, 160, 0.22) !important;
   border-radius: 0 !important;
 }
 
