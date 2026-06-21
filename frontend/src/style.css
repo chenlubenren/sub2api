@@ -933,15 +933,13 @@ select {
 
 .sidebar {
   border-right: 4px solid var(--pixel-black) !important;
-  background:
-    linear-gradient(180deg, rgba(248, 248, 248, 0.06), rgba(248, 248, 248, 0)),
-    var(--pixel-black) !important;
+  background: var(--pixel-black) !important;
   box-shadow: 6px 0 0 var(--pixel-black) !important;
 }
 
 .sidebar-header {
   border-bottom: 4px solid rgba(248, 248, 248, 0.16) !important;
-  background: transparent !important;
+  background: var(--pixel-black) !important;
 }
 
 .sidebar-logo {
@@ -949,7 +947,7 @@ select {
   height: 2.25rem !important;
   background: transparent !important;
   border: 0 !important;
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.28) !important;
+  box-shadow: none !important;
   border-radius: 0.75rem !important;
 }
 
