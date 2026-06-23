@@ -20,6 +20,15 @@ const (
 	RunModeSimple   = "simple"
 )
 
+const (
+	StorageBackendDisabled         = "disabled"
+	StorageBackendS3               = "s3"
+	DefaultStoragePresignExpire    = 900
+	DefaultStorageMaxFileSizeBytes = int64(10 * 1024 * 1024)
+)
+
+var DefaultStorageAllowedMimeTypes = []string{"image/png", "image/jpeg", "image/webp"}
+
 // 使用量记录队列溢出策略
 const (
 	UsageRecordOverflowPolicyDrop   = "drop"
@@ -80,6 +89,7 @@ type Config struct {
 	RateLimit               RateLimitConfig               `mapstructure:"rate_limit"`
 	Pricing                 PricingConfig                 `mapstructure:"pricing"`
 	Gateway                 GatewayConfig                 `mapstructure:"gateway"`
+	Storage                 StorageConfig                 `mapstructure:"storage"`
 	APIKeyAuth              APIKeyAuthCacheConfig         `mapstructure:"api_key_auth_cache"`
 	SubscriptionCache       SubscriptionCacheConfig       `mapstructure:"subscription_cache"`
 	SubscriptionMaintenance SubscriptionMaintenanceConfig `mapstructure:"subscription_maintenance"`
@@ -1451,6 +1461,7 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 	cfg.CORS.AllowedOrigins = normalizeStringSlice(cfg.CORS.AllowedOrigins)
 	cfg.Security.ResponseHeaders.AdditionalAllowed = normalizeStringSlice(cfg.Security.ResponseHeaders.AdditionalAllowed)
 	cfg.Security.ResponseHeaders.ForceRemove = normalizeStringSlice(cfg.Security.ResponseHeaders.ForceRemove)
+	normalizeStorageConfig(&cfg)
 	cfg.Security.CSP.Policy = strings.TrimSpace(cfg.Security.CSP.Policy)
 	cfg.SetTrustForwardedIPForAPIKeyACL(cfg.Security.TrustForwardedIPForAPIKeyACL)
 	cfg.Log.Level = strings.ToLower(strings.TrimSpace(cfg.Log.Level))
@@ -1936,6 +1947,16 @@ func setDefaults() {
 	viper.SetDefault("gateway.usage_record.auto_scale_cooldown_seconds", 10)
 	viper.SetDefault("gateway.user_group_rate_cache_ttl_seconds", 30)
 	viper.SetDefault("gateway.models_list_cache_ttl_seconds", 15)
+	viper.SetDefault("storage.backend", StorageBackendDisabled)
+	viper.SetDefault("storage.endpoint", "")
+	viper.SetDefault("storage.region", "us-east-1")
+	viper.SetDefault("storage.bucket", "")
+	viper.SetDefault("storage.access_key", "")
+	viper.SetDefault("storage.secret_key", "")
+	viper.SetDefault("storage.use_path_style", true)
+	viper.SetDefault("storage.presign_expire_seconds", DefaultStoragePresignExpire)
+	viper.SetDefault("storage.max_file_size_bytes", DefaultStorageMaxFileSizeBytes)
+	viper.SetDefault("storage.allowed_mime_types", append([]string(nil), DefaultStorageAllowedMimeTypes...))
 	// TLS指纹伪装配置（默认关闭，需要账号级别单独启用）
 	// 用户消息串行队列默认值
 	viper.SetDefault("gateway.user_message_queue.enabled", false)
@@ -2299,6 +2320,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Redis.MinIdleConns > c.Redis.PoolSize {
 		return fmt.Errorf("redis.min_idle_conns cannot exceed redis.pool_size")
+	}
+	if err := c.validateStorageConfig(); err != nil {
+		return err
 	}
 	if c.Dashboard.Enabled {
 		if c.Dashboard.StatsFreshTTLSeconds <= 0 {
@@ -2816,6 +2840,21 @@ func normalizeStringSlice(values []string) []string {
 	normalized := make([]string, 0, len(values))
 	for _, v := range values {
 		trimmed := strings.TrimSpace(v)
+		if trimmed == "" {
+			continue
+		}
+		normalized = append(normalized, trimmed)
+	}
+	return normalized
+}
+
+func normalizeLowerStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return values
+	}
+	normalized := make([]string, 0, len(values))
+	for _, v := range values {
+		trimmed := strings.ToLower(strings.TrimSpace(v))
 		if trimmed == "" {
 			continue
 		}

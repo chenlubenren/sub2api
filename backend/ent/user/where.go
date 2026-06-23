@@ -1363,6 +1363,29 @@ func HasAPIKeysWith(preds ...predicate.APIKey) predicate.User {
 	})
 }
 
+// HasFileObjects applies the HasEdge predicate on the "file_objects" edge.
+func HasFileObjects() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, FileObjectsTable, FileObjectsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasFileObjectsWith applies the HasEdge predicate on the "file_objects" edge with a given conditions (other predicates).
+func HasFileObjectsWith(preds ...predicate.FileObject) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newFileObjectsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasRedeemCodes applies the HasEdge predicate on the "redeem_codes" edge.
 func HasRedeemCodes() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
