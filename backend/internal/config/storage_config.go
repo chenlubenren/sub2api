@@ -8,6 +8,7 @@ import (
 type StorageConfig struct {
 	Backend              string   `mapstructure:"backend"`
 	Endpoint             string   `mapstructure:"endpoint"`
+	PublicEndpoint       string   `mapstructure:"public_endpoint"`
 	Region               string   `mapstructure:"region"`
 	Bucket               string   `mapstructure:"bucket"`
 	AccessKey            string   `mapstructure:"access_key"`
@@ -21,6 +22,7 @@ type StorageConfig struct {
 func normalizeStorageConfig(cfg *Config) {
 	cfg.Storage.Backend = strings.ToLower(strings.TrimSpace(cfg.Storage.Backend))
 	cfg.Storage.Endpoint = strings.TrimSpace(cfg.Storage.Endpoint)
+	cfg.Storage.PublicEndpoint = strings.TrimSpace(cfg.Storage.PublicEndpoint)
 	cfg.Storage.Region = strings.TrimSpace(cfg.Storage.Region)
 	cfg.Storage.Bucket = strings.TrimSpace(cfg.Storage.Bucket)
 	cfg.Storage.AccessKey = strings.TrimSpace(cfg.Storage.AccessKey)
@@ -46,6 +48,12 @@ func (c *Config) validateStorageConfig() error {
 			return fmt.Errorf("storage.endpoint invalid: %w", err)
 		}
 		warnIfInsecureURL("storage.endpoint", c.Storage.Endpoint)
+	}
+	if c.Storage.PublicEndpoint != "" {
+		if err := ValidateAbsoluteHTTPURL(c.Storage.PublicEndpoint); err != nil {
+			return fmt.Errorf("storage.public_endpoint invalid: %w", err)
+		}
+		warnIfInsecureURL("storage.public_endpoint", c.Storage.PublicEndpoint)
 	}
 	if c.Storage.PresignExpireSeconds <= 0 {
 		return fmt.Errorf("storage.presign_expire_seconds must be positive")

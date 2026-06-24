@@ -1949,6 +1949,7 @@ func setDefaults() {
 	viper.SetDefault("gateway.models_list_cache_ttl_seconds", 15)
 	viper.SetDefault("storage.backend", StorageBackendDisabled)
 	viper.SetDefault("storage.endpoint", "")
+	viper.SetDefault("storage.public_endpoint", "")
 	viper.SetDefault("storage.region", "us-east-1")
 	viper.SetDefault("storage.bucket", "")
 	viper.SetDefault("storage.access_key", "")
