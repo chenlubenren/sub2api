@@ -79,6 +79,21 @@ services:
       - REDIS_ENABLE_TLS=${REDIS_ENABLE_TLS:-false}
 
       # =======================================================================
+      # Object Storage / File Reference Uploads
+      # =======================================================================
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-s3}
+      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://minio:9000}
+      - STORAGE_PUBLIC_ENDPOINT=${STORAGE_PUBLIC_ENDPOINT:-http://localhost:9000}
+      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
+      - STORAGE_BUCKET=${STORAGE_BUCKET:-sub2api-files}
+      - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY:-sub2api}
+      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY:?STORAGE_SECRET_KEY is required}
+      - STORAGE_USE_PATH_STYLE=${STORAGE_USE_PATH_STYLE:-true}
+      - STORAGE_PRESIGN_EXPIRE_SECONDS=${STORAGE_PRESIGN_EXPIRE_SECONDS:-900}
+      - STORAGE_MAX_FILE_SIZE_BYTES=${STORAGE_MAX_FILE_SIZE_BYTES:-10485760}
+      - STORAGE_ALLOWED_MIME_TYPES=${STORAGE_ALLOWED_MIME_TYPES:-image/png,image/jpeg,image/webp}
+
+      # =======================================================================
       # Admin Account (auto-created on first run)
       # =======================================================================
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@sub2api.local}
@@ -170,6 +185,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     networks:
       - sub2api-network
     healthcheck:
@@ -243,6 +260,50 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+
+  # ===========================================================================
+  # MinIO Object Storage
+  # ===========================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: sub2api-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "${BIND_HOST:-0.0.0.0}:${MINIO_API_PORT:-9000}:9000"
+      - "${BIND_HOST:-0.0.0.0}:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - ./minio_data:/data
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-sub2api}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      - TZ=${TZ:-Asia/Shanghai}
+    networks:
+      - sub2api-network
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: sub2api-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\" &&
+      mc mb --ignore-existing local/$${STORAGE_BUCKET:-sub2api-files}
+      "
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-sub2api}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      - STORAGE_BUCKET=${STORAGE_BUCKET:-sub2api-files}
+    networks:
+      - sub2api-network
 
 # =============================================================================
 # Networks

@@ -14,6 +14,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/announcementread"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
+	"github.com/Wei-Shaw/sub2api/ent/fileobject"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/pendingauthsession"
@@ -426,6 +427,21 @@ func (_u *UserUpdate) AddAPIKeys(v ...*APIKey) *UserUpdate {
 	return _u.AddAPIKeyIDs(ids...)
 }
 
+// AddFileObjectIDs adds the "file_objects" edge to the FileObject entity by IDs.
+func (_u *UserUpdate) AddFileObjectIDs(ids ...int64) *UserUpdate {
+	_u.mutation.AddFileObjectIDs(ids...)
+	return _u
+}
+
+// AddFileObjects adds the "file_objects" edges to the FileObject entity.
+func (_u *UserUpdate) AddFileObjects(v ...*FileObject) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddFileObjectIDs(ids...)
+}
+
 // AddRedeemCodeIDs adds the "redeem_codes" edge to the RedeemCode entity by IDs.
 func (_u *UserUpdate) AddRedeemCodeIDs(ids ...int64) *UserUpdate {
 	_u.mutation.AddRedeemCodeIDs(ids...)
@@ -630,6 +646,27 @@ func (_u *UserUpdate) RemoveAPIKeys(v ...*APIKey) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAPIKeyIDs(ids...)
+}
+
+// ClearFileObjects clears all "file_objects" edges to the FileObject entity.
+func (_u *UserUpdate) ClearFileObjects() *UserUpdate {
+	_u.mutation.ClearFileObjects()
+	return _u
+}
+
+// RemoveFileObjectIDs removes the "file_objects" edge to FileObject entities by IDs.
+func (_u *UserUpdate) RemoveFileObjectIDs(ids ...int64) *UserUpdate {
+	_u.mutation.RemoveFileObjectIDs(ids...)
+	return _u
+}
+
+// RemoveFileObjects removes "file_objects" edges to FileObject entities.
+func (_u *UserUpdate) RemoveFileObjects(v ...*FileObject) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveFileObjectIDs(ids...)
 }
 
 // ClearRedeemCodes clears all "redeem_codes" edges to the RedeemCode entity.
@@ -1110,6 +1147,51 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.FileObjectsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.FileObjectsTable,
+			Columns: []string{user.FileObjectsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileobject.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedFileObjectsIDs(); len(nodes) > 0 && !_u.mutation.FileObjectsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.FileObjectsTable,
+			Columns: []string{user.FileObjectsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileobject.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.FileObjectsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.FileObjectsTable,
+			Columns: []string{user.FileObjectsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileobject.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -2075,6 +2157,21 @@ func (_u *UserUpdateOne) AddAPIKeys(v ...*APIKey) *UserUpdateOne {
 	return _u.AddAPIKeyIDs(ids...)
 }
 
+// AddFileObjectIDs adds the "file_objects" edge to the FileObject entity by IDs.
+func (_u *UserUpdateOne) AddFileObjectIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.AddFileObjectIDs(ids...)
+	return _u
+}
+
+// AddFileObjects adds the "file_objects" edges to the FileObject entity.
+func (_u *UserUpdateOne) AddFileObjects(v ...*FileObject) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddFileObjectIDs(ids...)
+}
+
 // AddRedeemCodeIDs adds the "redeem_codes" edge to the RedeemCode entity by IDs.
 func (_u *UserUpdateOne) AddRedeemCodeIDs(ids ...int64) *UserUpdateOne {
 	_u.mutation.AddRedeemCodeIDs(ids...)
@@ -2279,6 +2376,27 @@ func (_u *UserUpdateOne) RemoveAPIKeys(v ...*APIKey) *UserUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAPIKeyIDs(ids...)
+}
+
+// ClearFileObjects clears all "file_objects" edges to the FileObject entity.
+func (_u *UserUpdateOne) ClearFileObjects() *UserUpdateOne {
+	_u.mutation.ClearFileObjects()
+	return _u
+}
+
+// RemoveFileObjectIDs removes the "file_objects" edge to FileObject entities by IDs.
+func (_u *UserUpdateOne) RemoveFileObjectIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.RemoveFileObjectIDs(ids...)
+	return _u
+}
+
+// RemoveFileObjects removes "file_objects" edges to FileObject entities.
+func (_u *UserUpdateOne) RemoveFileObjects(v ...*FileObject) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveFileObjectIDs(ids...)
 }
 
 // ClearRedeemCodes clears all "redeem_codes" edges to the RedeemCode entity.
@@ -2789,6 +2907,51 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.FileObjectsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.FileObjectsTable,
+			Columns: []string{user.FileObjectsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileobject.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedFileObjectsIDs(); len(nodes) > 0 && !_u.mutation.FileObjectsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.FileObjectsTable,
+			Columns: []string{user.FileObjectsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileobject.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.FileObjectsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.FileObjectsTable,
+			Columns: []string{user.FileObjectsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileobject.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

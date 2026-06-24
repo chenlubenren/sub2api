@@ -65,6 +65,9 @@ func RegisterGatewayRoutes(
 		})
 		gateway.GET("/models", h.Gateway.Models)
 		gateway.GET("/usage", h.Gateway.Usage)
+		gateway.POST("/files", h.File.Create)
+		gateway.POST("/files/:id/complete", h.File.Complete)
+		gateway.GET("/files/:id", h.File.Get)
 		// OpenAI Responses API: auto-route based on group platform
 		gateway.POST("/responses", func(c *gin.Context) {
 			if getGroupPlatform(c) == service.PlatformOpenAI {

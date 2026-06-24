@@ -17,6 +17,22 @@ func resetViperWithJWTSecret(t *testing.T) {
 	t.Setenv("JWT_SECRET", strings.Repeat("x", 32))
 }
 
+func buildValidStorageConfig(t *testing.T) *Config {
+	t.Helper()
+	resetViperWithJWTSecret(t)
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	cfg.Storage.Backend = "s3"
+	cfg.Storage.Endpoint = "http://minio:9000"
+	cfg.Storage.Region = "us-east-1"
+	cfg.Storage.Bucket = "sub2api-files"
+	cfg.Storage.AccessKey = "minioadmin"
+	cfg.Storage.SecretKey = "minioadmin"
+
+	return cfg
+}
+
 func TestLoadForBootstrapAllowsMissingJWTSecret(t *testing.T) {
 	viper.Reset()
 	t.Setenv("JWT_SECRET", "")
@@ -28,6 +44,68 @@ func TestLoadForBootstrapAllowsMissingJWTSecret(t *testing.T) {
 	if cfg.JWT.Secret != "" {
 		t.Fatalf("LoadForBootstrap() should keep empty jwt.secret during bootstrap")
 	}
+}
+
+func TestLoadStorageConfigFromEnv(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("STORAGE_BACKEND", "s3")
+	t.Setenv("STORAGE_ENDPOINT", "http://minio:9000")
+	t.Setenv("STORAGE_PUBLIC_ENDPOINT", "http://localhost:9000")
+	t.Setenv("STORAGE_REGION", "us-east-1")
+	t.Setenv("STORAGE_BUCKET", "sub2api-files")
+	t.Setenv("STORAGE_ACCESS_KEY", "minioadmin")
+	t.Setenv("STORAGE_SECRET_KEY", "minioadmin")
+	t.Setenv("STORAGE_USE_PATH_STYLE", "true")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.Equal(t, "s3", cfg.Storage.Backend)
+	require.Equal(t, "http://minio:9000", cfg.Storage.Endpoint)
+	require.Equal(t, "http://localhost:9000", cfg.Storage.PublicEndpoint)
+	require.Equal(t, "us-east-1", cfg.Storage.Region)
+	require.Equal(t, "sub2api-files", cfg.Storage.Bucket)
+	require.Equal(t, "minioadmin", cfg.Storage.AccessKey)
+	require.Equal(t, "minioadmin", cfg.Storage.SecretKey)
+	require.True(t, cfg.Storage.UsePathStyle)
+	require.Equal(t, 900, cfg.Storage.PresignExpireSeconds)
+	require.Equal(t, int64(10*1024*1024), cfg.Storage.MaxFileSizeBytes)
+	require.Equal(t, []string{"image/png", "image/jpeg", "image/webp"}, cfg.Storage.AllowedMimeTypes)
+}
+
+func TestValidateStorageConfigRejectsInvalidPublicEndpoint(t *testing.T) {
+	cfg := buildValidStorageConfig(t)
+	cfg.Storage.PublicEndpoint = "minio:9000"
+
+	err := cfg.Validate()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "storage.public_endpoint invalid")
+}
+
+func TestValidateStorageConfigRequiresBucket(t *testing.T) {
+	cfg := buildValidStorageConfig(t)
+	cfg.Storage.Bucket = ""
+
+	err := cfg.Validate()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "storage.bucket is required when storage.backend=s3")
+}
+
+func TestValidateStorageConfigRejectsInvalidPresignExpireSeconds(t *testing.T) {
+	cfg := buildValidStorageConfig(t)
+	cfg.Storage.PresignExpireSeconds = 0
+
+	err := cfg.Validate()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "storage.presign_expire_seconds must be positive")
+}
+
+func TestValidateStorageConfigRejectsInvalidMaxFileSizeBytes(t *testing.T) {
+	cfg := buildValidStorageConfig(t)
+	cfg.Storage.MaxFileSizeBytes = 0
+
+	err := cfg.Validate()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "storage.max_file_size_bytes must be positive")
 }
 
 func TestNormalizeRunMode(t *testing.T) {

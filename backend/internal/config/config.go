@@ -20,6 +20,16 @@ const (
 	RunModeSimple   = "simple"
 )
 
+const (
+	StorageBackendDisabled            = "disabled"
+	StorageBackendS3                  = "s3"
+	DefaultStoragePresignExpire       = 900
+	DefaultStorageMaxFileSizeBytes    = int64(10 * 1024 * 1024)
+	DefaultGatewayMaxInlineImageBytes = int64(512 * 1024)
+)
+
+var DefaultStorageAllowedMimeTypes = []string{"image/png", "image/jpeg", "image/webp"}
+
 // 使用量记录队列溢出策略
 const (
 	UsageRecordOverflowPolicyDrop   = "drop"
@@ -80,6 +90,7 @@ type Config struct {
 	RateLimit               RateLimitConfig               `mapstructure:"rate_limit"`
 	Pricing                 PricingConfig                 `mapstructure:"pricing"`
 	Gateway                 GatewayConfig                 `mapstructure:"gateway"`
+	Storage                 StorageConfig                 `mapstructure:"storage"`
 	APIKeyAuth              APIKeyAuthCacheConfig         `mapstructure:"api_key_auth_cache"`
 	SubscriptionCache       SubscriptionCacheConfig       `mapstructure:"subscription_cache"`
 	SubscriptionMaintenance SubscriptionMaintenanceConfig `mapstructure:"subscription_maintenance"`
@@ -694,6 +705,8 @@ type GatewayConfig struct {
 	OpenAIResponseHeaderTimeout int `mapstructure:"openai_response_header_timeout"`
 	// 请求体最大字节数，用于网关请求体大小限制
 	MaxBodySize int64 `mapstructure:"max_body_size"`
+	// legacy data:image base64 兼容路径允许的单图最大解码后字节数
+	MaxInlineImageBytes int64 `mapstructure:"max_inline_image_bytes"`
 	// 非流式上游响应体读取上限（字节），用于防止无界读取导致内存放大
 	UpstreamResponseReadMaxBytes int64 `mapstructure:"upstream_response_read_max_bytes"`
 	// 代理探测响应体读取上限（字节）
@@ -1451,6 +1464,7 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 	cfg.CORS.AllowedOrigins = normalizeStringSlice(cfg.CORS.AllowedOrigins)
 	cfg.Security.ResponseHeaders.AdditionalAllowed = normalizeStringSlice(cfg.Security.ResponseHeaders.AdditionalAllowed)
 	cfg.Security.ResponseHeaders.ForceRemove = normalizeStringSlice(cfg.Security.ResponseHeaders.ForceRemove)
+	normalizeStorageConfig(&cfg)
 	cfg.Security.CSP.Policy = strings.TrimSpace(cfg.Security.CSP.Policy)
 	cfg.SetTrustForwardedIPForAPIKeyACL(cfg.Security.TrustForwardedIPForAPIKeyACL)
 	cfg.Log.Level = strings.ToLower(strings.TrimSpace(cfg.Log.Level))
@@ -1884,6 +1898,7 @@ func setDefaults() {
 	viper.SetDefault("gateway.antigravity_fallback_cooldown_minutes", 1)
 	viper.SetDefault("gateway.antigravity_extra_retries", 10)
 	viper.SetDefault("gateway.max_body_size", int64(256*1024*1024))
+	viper.SetDefault("gateway.max_inline_image_bytes", DefaultGatewayMaxInlineImageBytes)
 	viper.SetDefault("gateway.upstream_response_read_max_bytes", DefaultUpstreamResponseReadMaxBytes)
 	viper.SetDefault("gateway.proxy_probe_response_read_max_bytes", int64(1024*1024))
 	viper.SetDefault("gateway.gemini_debug_response_headers", false)
@@ -1936,6 +1951,17 @@ func setDefaults() {
 	viper.SetDefault("gateway.usage_record.auto_scale_cooldown_seconds", 10)
 	viper.SetDefault("gateway.user_group_rate_cache_ttl_seconds", 30)
 	viper.SetDefault("gateway.models_list_cache_ttl_seconds", 15)
+	viper.SetDefault("storage.backend", StorageBackendDisabled)
+	viper.SetDefault("storage.endpoint", "")
+	viper.SetDefault("storage.public_endpoint", "")
+	viper.SetDefault("storage.region", "us-east-1")
+	viper.SetDefault("storage.bucket", "")
+	viper.SetDefault("storage.access_key", "")
+	viper.SetDefault("storage.secret_key", "")
+	viper.SetDefault("storage.use_path_style", true)
+	viper.SetDefault("storage.presign_expire_seconds", DefaultStoragePresignExpire)
+	viper.SetDefault("storage.max_file_size_bytes", DefaultStorageMaxFileSizeBytes)
+	viper.SetDefault("storage.allowed_mime_types", append([]string(nil), DefaultStorageAllowedMimeTypes...))
 	// TLS指纹伪装配置（默认关闭，需要账号级别单独启用）
 	// 用户消息串行队列默认值
 	viper.SetDefault("gateway.user_message_queue.enabled", false)
@@ -2300,6 +2326,9 @@ func (c *Config) Validate() error {
 	if c.Redis.MinIdleConns > c.Redis.PoolSize {
 		return fmt.Errorf("redis.min_idle_conns cannot exceed redis.pool_size")
 	}
+	if err := c.validateStorageConfig(); err != nil {
+		return err
+	}
 	if c.Dashboard.Enabled {
 		if c.Dashboard.StatsFreshTTLSeconds <= 0 {
 			return fmt.Errorf("dashboard_cache.stats_fresh_ttl_seconds must be positive")
@@ -2436,6 +2465,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Gateway.MaxBodySize <= 0 {
 		return fmt.Errorf("gateway.max_body_size must be positive")
+	}
+	if c.Gateway.MaxInlineImageBytes <= 0 {
+		return fmt.Errorf("gateway.max_inline_image_bytes must be positive")
 	}
 	if c.Gateway.UpstreamResponseReadMaxBytes <= 0 {
 		return fmt.Errorf("gateway.upstream_response_read_max_bytes must be positive")
@@ -2816,6 +2848,21 @@ func normalizeStringSlice(values []string) []string {
 	normalized := make([]string, 0, len(values))
 	for _, v := range values {
 		trimmed := strings.TrimSpace(v)
+		if trimmed == "" {
+			continue
+		}
+		normalized = append(normalized, trimmed)
+	}
+	return normalized
+}
+
+func normalizeLowerStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return values
+	}
+	normalized := make([]string, 0, len(values))
+	for _, v := range values {
+		trimmed := strings.ToLower(strings.TrimSpace(v))
 		if trimmed == "" {
 			continue
 		}
