@@ -188,6 +188,20 @@ func (s *FileService) CompleteUpload(ctx context.Context, ownerUserID, fileID in
 	return s.repo.UpdateStatus(ctx, file.ID, FileObjectStatusUploaded, &uploadedAt)
 }
 
+func (s *FileService) GetFile(ctx context.Context, ownerUserID, fileID int64) (*FileObject, error) {
+	if s == nil || s.repo == nil {
+		return nil, ErrFileStorageNotConfigured
+	}
+	file, err := s.repo.GetByID(ctx, fileID)
+	if err != nil {
+		return nil, err
+	}
+	if file.OwnerUserID != ownerUserID {
+		return nil, ErrFileAccessDenied
+	}
+	return file, nil
+}
+
 func isAllowedFileMIMEType(mimeType string, allowed []string) bool {
 	if len(allowed) == 0 {
 		return true
