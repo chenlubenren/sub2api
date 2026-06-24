@@ -158,6 +158,36 @@ func TestFileServiceS3PresignUsesPublicEndpointWhenConfigured(t *testing.T) {
 	require.Equal(t, "localhost:9000", parsed.Host)
 }
 
+func TestFileServiceResolveInputFileURLReturnsPresignedDownloadURL(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeFileRepository()
+	storage := &fakeStorageProvider{
+		upload:      fakeUploadInfo(),
+		downloadURL: "https://files.example.com/download/123.png?signature=fake",
+	}
+	svc := NewFileService(repo, storage, testFileStorageConfig())
+	now := time.Now()
+	file, err := repo.Create(ctx, &FileObject{
+		OwnerUserID:      1001,
+		Purpose:          "vision_input",
+		StorageProvider:  "s3",
+		Bucket:           "sub2api-files",
+		ObjectKey:        "files/1001/uploaded.png",
+		OriginalFilename: fileStringPtr("uploaded.png"),
+		MimeType:         "image/png",
+		SizeBytes:        12345,
+		Status:           FileObjectStatusUploaded,
+		UploadedAt:       &now,
+	})
+	require.NoError(t, err)
+
+	url, err := svc.ResolveInputFileURL(ctx, 1001, file.ID)
+
+	require.NoError(t, err)
+	require.Equal(t, "https://files.example.com/download/123.png?signature=fake", url)
+	require.True(t, storage.presignDownloadCalled)
+}
+
 type fakeFileRepository struct {
 	nextID int64
 	files  map[int64]*FileObject
@@ -201,10 +231,12 @@ func (r *fakeFileRepository) UpdateStatus(_ context.Context, id int64, status st
 }
 
 type fakeStorageProvider struct {
-	upload        PresignedUploadInfo
-	verifyErr     error
-	verifyCalled  bool
-	lastObjectKey string
+	upload                PresignedUploadInfo
+	downloadURL           string
+	verifyErr             error
+	verifyCalled          bool
+	presignDownloadCalled bool
+	lastObjectKey         string
 }
 
 func (p *fakeStorageProvider) PresignUpload(_ context.Context, input PresignUploadInput) (PresignedUploadInfo, error) {
@@ -221,6 +253,14 @@ func (p *fakeStorageProvider) VerifyUploaded(_ context.Context, _ *FileObject) e
 		return p.verifyErr
 	}
 	return nil
+}
+
+func (p *fakeStorageProvider) PresignDownload(_ context.Context, _ *FileObject, _ time.Duration) (string, error) {
+	p.presignDownloadCalled = true
+	if p.downloadURL == "" {
+		return "", ErrFileNotFound
+	}
+	return p.downloadURL, nil
 }
 
 func testFileStorageConfig() *config.Config {

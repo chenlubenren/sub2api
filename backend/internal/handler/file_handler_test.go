@@ -179,6 +179,10 @@ func (s *fileHandlerFakeStorage) VerifyUploaded(_ context.Context, _ *service.Fi
 	return nil
 }
 
+func (s *fileHandlerFakeStorage) PresignDownload(_ context.Context, _ *service.FileObject, _ time.Duration) (string, error) {
+	return "https://files.example.com/download.png", nil
+}
+
 type fileHandlerFakeRepository struct {
 	nextID int64
 	files  map[int64]*service.FileObject

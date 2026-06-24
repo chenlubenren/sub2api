@@ -21,10 +21,11 @@ const (
 )
 
 const (
-	StorageBackendDisabled         = "disabled"
-	StorageBackendS3               = "s3"
-	DefaultStoragePresignExpire    = 900
-	DefaultStorageMaxFileSizeBytes = int64(10 * 1024 * 1024)
+	StorageBackendDisabled            = "disabled"
+	StorageBackendS3                  = "s3"
+	DefaultStoragePresignExpire       = 900
+	DefaultStorageMaxFileSizeBytes    = int64(10 * 1024 * 1024)
+	DefaultGatewayMaxInlineImageBytes = int64(512 * 1024)
 )
 
 var DefaultStorageAllowedMimeTypes = []string{"image/png", "image/jpeg", "image/webp"}
@@ -704,6 +705,8 @@ type GatewayConfig struct {
 	OpenAIResponseHeaderTimeout int `mapstructure:"openai_response_header_timeout"`
 	// 请求体最大字节数，用于网关请求体大小限制
 	MaxBodySize int64 `mapstructure:"max_body_size"`
+	// legacy data:image base64 兼容路径允许的单图最大解码后字节数
+	MaxInlineImageBytes int64 `mapstructure:"max_inline_image_bytes"`
 	// 非流式上游响应体读取上限（字节），用于防止无界读取导致内存放大
 	UpstreamResponseReadMaxBytes int64 `mapstructure:"upstream_response_read_max_bytes"`
 	// 代理探测响应体读取上限（字节）
@@ -1895,6 +1898,7 @@ func setDefaults() {
 	viper.SetDefault("gateway.antigravity_fallback_cooldown_minutes", 1)
 	viper.SetDefault("gateway.antigravity_extra_retries", 10)
 	viper.SetDefault("gateway.max_body_size", int64(256*1024*1024))
+	viper.SetDefault("gateway.max_inline_image_bytes", DefaultGatewayMaxInlineImageBytes)
 	viper.SetDefault("gateway.upstream_response_read_max_bytes", DefaultUpstreamResponseReadMaxBytes)
 	viper.SetDefault("gateway.proxy_probe_response_read_max_bytes", int64(1024*1024))
 	viper.SetDefault("gateway.gemini_debug_response_headers", false)
@@ -2461,6 +2465,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Gateway.MaxBodySize <= 0 {
 		return fmt.Errorf("gateway.max_body_size must be positive")
+	}
+	if c.Gateway.MaxInlineImageBytes <= 0 {
+		return fmt.Errorf("gateway.max_inline_image_bytes must be positive")
 	}
 	if c.Gateway.UpstreamResponseReadMaxBytes <= 0 {
 		return fmt.Errorf("gateway.upstream_response_read_max_bytes must be positive")

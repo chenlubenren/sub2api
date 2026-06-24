@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/apicompat"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
@@ -7279,6 +7281,66 @@ func isEmptyBase64DataURI(raw string) bool {
 		return false
 	}
 	return strings.TrimSpace(strings.TrimPrefix(rest, "base64,")) == ""
+}
+
+func validateInlineImageDataURIs(body []byte, maxDecodedBytes int64) error {
+	if len(body) == 0 || maxDecodedBytes <= 0 {
+		return nil
+	}
+
+	var payload any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return fmt.Errorf("parse request body for inline image validation: %w", err)
+	}
+	return validateInlineImageValue(payload, maxDecodedBytes)
+}
+
+func validateInlineImageValue(value any, maxDecodedBytes int64) error {
+	switch typed := value.(type) {
+	case map[string]any:
+		for _, child := range typed {
+			if err := validateInlineImageValue(child, maxDecodedBytes); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for _, item := range typed {
+			if err := validateInlineImageValue(item, maxDecodedBytes); err != nil {
+				return err
+			}
+		}
+	case string:
+		return validateInlineImageDataURIString(typed, maxDecodedBytes)
+	}
+	return nil
+}
+
+func validateInlineImageDataURIString(raw string, maxDecodedBytes int64) error {
+	trimmed := strings.TrimSpace(raw)
+	if !strings.HasPrefix(strings.ToLower(trimmed), "data:image/") {
+		return nil
+	}
+
+	parts := strings.SplitN(trimmed, ",", 2)
+	if len(parts) != 2 || !strings.Contains(strings.ToLower(parts[0]), ";base64") {
+		return nil
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return nil
+	}
+	if int64(len(decoded)) <= maxDecodedBytes {
+		return nil
+	}
+	return infraerrors.BadRequest(
+		"INLINE_IMAGE_TOO_LARGE",
+		fmt.Sprintf("inline image payload exceeds %d bytes; please upload via /v1/files and send file_id instead", maxDecodedBytes),
+	)
+}
+
+func ValidateInlineImageDataURIsForCompatibility(body []byte, maxDecodedBytes int64) error {
+	return validateInlineImageDataURIs(body, maxDecodedBytes)
 }
 
 func getOpenAIRequestBodyMap(_ *gin.Context, body []byte) (map[string]any, error) {

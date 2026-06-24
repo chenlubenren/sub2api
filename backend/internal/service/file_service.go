@@ -78,6 +78,7 @@ type FileRepository interface {
 
 type StorageProvider interface {
 	PresignUpload(ctx context.Context, input PresignUploadInput) (PresignedUploadInfo, error)
+	PresignDownload(ctx context.Context, file *FileObject, expires time.Duration) (string, error)
 	VerifyUploaded(ctx context.Context, file *FileObject) error
 }
 
@@ -200,6 +201,26 @@ func (s *FileService) GetFile(ctx context.Context, ownerUserID, fileID int64) (*
 		return nil, ErrFileAccessDenied
 	}
 	return file, nil
+}
+
+func (s *FileService) ResolveInputFileURL(ctx context.Context, ownerUserID, fileID int64) (string, error) {
+	if s == nil || s.storage == nil || s.cfg == nil {
+		return "", ErrFileStorageNotConfigured
+	}
+
+	file, err := s.GetFile(ctx, ownerUserID, fileID)
+	if err != nil {
+		return "", err
+	}
+	if file.Status != FileObjectStatusUploaded {
+		return "", ErrFileInvalidInput
+	}
+
+	expires := time.Duration(s.cfg.Storage.PresignExpireSeconds) * time.Second
+	if expires <= 0 {
+		expires = time.Duration(config.DefaultStoragePresignExpire) * time.Second
+	}
+	return s.storage.PresignDownload(ctx, file, expires)
 }
 
 func isAllowedFileMIMEType(mimeType string, allowed []string) bool {

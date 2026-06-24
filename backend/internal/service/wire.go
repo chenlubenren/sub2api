@@ -541,6 +541,8 @@ var ProviderSet = wire.NewSet(
 	NewOpenAIGatewayService,
 	ProvideStorageProvider,
 	NewFileService,
+	wire.Bind(new(FileReferenceResolver), new(*FileService)),
+	NewFileReferenceRewriter,
 	wire.Bind(new(AccountRuntimeBlocker), new(*OpenAIGatewayService)),
 	NewOAuthService,
 	ProvideOpenAIOAuthService,

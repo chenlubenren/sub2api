@@ -73,6 +73,25 @@ func (p *S3StorageProvider) PresignUpload(ctx context.Context, input PresignUplo
 	}, nil
 }
 
+func (p *S3StorageProvider) PresignDownload(ctx context.Context, file *FileObject, expires time.Duration) (string, error) {
+	if p == nil || p.presigner == nil || file == nil {
+		return "", ErrFileStorageNotConfigured
+	}
+	if expires <= 0 {
+		expires = time.Duration(config.DefaultStoragePresignExpire) * time.Second
+	}
+	req, err := p.presigner.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(file.Bucket),
+		Key:    aws.String(file.ObjectKey),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = expires
+	})
+	if err != nil {
+		return "", err
+	}
+	return req.URL, nil
+}
+
 func (p *S3StorageProvider) VerifyUploaded(ctx context.Context, file *FileObject) error {
 	if p == nil || p.client == nil || file == nil {
 		return ErrFileStorageNotConfigured
