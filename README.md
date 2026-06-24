@@ -153,6 +153,8 @@ underscores_in_headers on;
 
 Nginx drops headers containing underscores by default (e.g. `session_id`), which breaks sticky session routing in multi-account setups.
 
+For large vision inputs, prefer the file reference upload flow instead of raising `/responses` body-size limits indefinitely. Upload files to the configured MinIO/S3-compatible object store first, then send `file_id` in inference requests. If you still support legacy inline `data:image/...;base64,...` clients, keep Nginx `client_max_body_size` aligned with `server.max_request_body_size` and `gateway.max_body_size`.
+
 ---
 
 ## Deployment
@@ -228,7 +230,7 @@ curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install
 
 ### Method 2: Docker Compose (Recommended)
 
-Deploy with Docker Compose, including PostgreSQL and Redis containers.
+Deploy with Docker Compose, including PostgreSQL, Redis, and MinIO containers.
 
 #### Prerequisites
 
@@ -257,7 +259,7 @@ docker compose logs -f sub2api
 - Downloads `docker-compose.local.yml` (saved as `docker-compose.yml`) and `.env.example`
 - Generates secure credentials (JWT_SECRET, TOTP_ENCRYPTION_KEY, POSTGRES_PASSWORD)
 - Creates `.env` file with auto-generated secrets
-- Creates data directories (uses local directories for easy backup/migration)
+- Creates data directories (uses local directories for easy backup/migration, including MinIO object storage)
 - Displays generated credentials for your reference
 
 #### Manual Deployment
@@ -335,6 +337,8 @@ docker compose -f docker-compose.local.yml logs -f sub2api
 
 **Recommendation:** Use `docker-compose.local.yml` (deployed by script) for easier data management.
 
+The bundled MinIO service supports the storage-backed `file_id` upload flow that prevents large inline image payloads from hitting reverse proxy `413 Payload Too Large` limits. For production deployments, set `STORAGE_PUBLIC_ENDPOINT` in `.env` to an HTTPS endpoint reachable by clients, such as `https://files.example.com`.
+
 #### Access
 
 Open `http://YOUR_SERVER_IP:8080` in your browser.
@@ -385,7 +389,7 @@ docker compose -f docker-compose.local.yml logs -f
 
 # Remove all data (caution!)
 docker compose -f docker-compose.local.yml down
-rm -rf data/ postgres_data/ redis_data/
+rm -rf data/ postgres_data/ redis_data/ minio_data/
 ```
 
 ---

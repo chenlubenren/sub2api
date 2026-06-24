@@ -766,6 +766,30 @@ concurrency:
   ping_interval: 10
 
 # =============================================================================
+# Object Storage / File Reference Uploads
+# Object storage used by the file_id upload flow for vision inputs.
+# =============================================================================
+storage:
+  # disabled | s3
+  backend: "s3"
+  # Internal endpoint used by the Sub2API server process.
+  endpoint: "http://minio:9000"
+  # Public endpoint embedded into presigned URLs returned to clients. Leave empty
+  # to use endpoint directly, which is suitable for public S3/R2 endpoints.
+  public_endpoint: "http://localhost:9000"
+  region: "us-east-1"
+  bucket: "sub2api-files"
+  access_key: "sub2api"
+  secret_key: "change_this_minio_password"
+  use_path_style: true
+  presign_expire_seconds: 900
+  max_file_size_bytes: 10485760
+  allowed_mime_types:
+    - "image/png"
+    - "image/jpeg"
+    - "image/webp"
+
+# =============================================================================
 # Database Configuration (PostgreSQL)
 # 数据库配置 (PostgreSQL)
 # =============================================================================

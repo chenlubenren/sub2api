@@ -6,15 +6,17 @@ This directory contains files for deploying Sub2API on Linux servers.
 
 | Method | Best For | Setup Wizard |
 |--------|----------|--------------|
-| **Docker Compose** | Quick setup, all-in-one | Not needed (auto-setup) |
-| **Binary Install** | Production servers, systemd | Web-based wizard |
+| **Docker Compose** | Quick setup, all-in-one PostgreSQL + Redis + MinIO | Not needed (auto-setup) |
+| **Binary Install** | Production servers, systemd, external PostgreSQL/Redis/MinIO | Web-based wizard |
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `docker-compose.yml` | Docker Compose configuration (named volumes) |
-| `docker-compose.local.yml` | Docker Compose configuration (local directories, easy migration) |
+| `docker-compose.yml` | Docker Compose configuration (named volumes, includes MinIO) |
+| `docker-compose.local.yml` | Docker Compose configuration (local directories, includes MinIO, easy migration) |
+| `docker-compose.standalone.yml` | Sub2API-only compose file for external PostgreSQL, Redis, and S3/MinIO |
+| `docker-compose.dev.yml` | Local source build with PostgreSQL, Redis, and MinIO |
 | `docker-deploy.sh` | **One-click Docker deployment script (recommended)** |
 | `.env.example` | Docker environment variables template |
 | `DOCKER.md` | Docker Hub documentation |
@@ -47,7 +49,7 @@ chmod +x docker-deploy.sh
 - Downloads `docker-compose.local.yml` and `.env.example`
 - Automatically generates secure secrets (JWT_SECRET, TOTP_ENCRYPTION_KEY, POSTGRES_PASSWORD)
 - Creates `.env` file with generated secrets
-- Creates necessary data directories (data/, postgres_data/, redis_data/)
+- Creates necessary data directories (data/, postgres_data/, redis_data/, minio_data/)
 - **Displays generated credentials** (POSTGRES_PASSWORD, JWT_SECRET, etc.)
 
 **After running the script:**
@@ -85,7 +87,7 @@ echo "JWT_SECRET=${JWT_SECRET}" >> .env
 echo "TOTP_ENCRYPTION_KEY=${TOTP_ENCRYPTION_KEY}" >> .env
 
 # Create data directories
-mkdir -p data postgres_data redis_data
+mkdir -p data postgres_data redis_data minio_data
 
 # Start all services using local directory version
 docker compose -f docker-compose.local.yml up -d
@@ -220,10 +222,26 @@ docker compose down -v
 | `GEMINI_OAUTH_CLIENT_SECRET` | No | *(builtin)* | Google OAuth client secret (Gemini OAuth). Leave empty to use the built-in Gemini CLI client. |
 | `GEMINI_OAUTH_SCOPES` | No | *(default)* | OAuth scopes (Gemini OAuth) |
 | `GEMINI_QUOTA_POLICY` | No | *(empty)* | JSON overrides for Gemini local quota simulation (Code Assist only). |
+| `STORAGE_BACKEND` | No | `s3` | Enables object storage backed file uploads. Use `disabled` to turn off file reference upload APIs. |
+| `STORAGE_ENDPOINT` | Yes when storage enabled | `http://minio:9000` | Internal endpoint used by Sub2API to access MinIO/S3. |
+| `STORAGE_PUBLIC_ENDPOINT` | Recommended | `http://localhost:9000` | Public endpoint embedded in presigned URLs returned to clients. In production, set this to an HTTPS URL reachable by browsers/clients. |
+| `STORAGE_BUCKET` | Yes when storage enabled | `sub2api-files` | Bucket used for uploaded vision files. Compose runs `minio-init` to create it automatically. |
+| `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` | Yes when storage enabled | - | S3/MinIO credentials. Keep these secret. |
+| `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | Docker Compose only | - | Root credentials for the bundled MinIO service. |
 
 See `.env.example` for all available options.
 
 > **Note:** The `docker-deploy.sh` script automatically generates `JWT_SECRET`, `TOTP_ENCRYPTION_KEY`, and `POSTGRES_PASSWORD` for you.
+
+### File Reference Uploads and 413 Prevention
+
+Sub2API uses an object-storage-backed upload flow to keep large image bytes out of `/responses` and `/chat/completions` request bodies. Clients upload files to MinIO/S3 first, then send a small `file_id` in inference requests. This avoids relying on ever-larger reverse proxy body limits.
+
+For Docker Compose deployments, `docker-compose.yml`, `docker-compose.local.yml`, and `docker-compose.dev.yml` include MinIO and a one-shot `minio-init` service that creates `STORAGE_BUCKET`. `docker-compose.standalone.yml` expects an external S3-compatible service.
+
+Set `STORAGE_PUBLIC_ENDPOINT` carefully. `STORAGE_ENDPOINT` is often an internal address such as `http://minio:9000`, while `STORAGE_PUBLIC_ENDPOINT` must be reachable by the client receiving the presigned URL, for example `https://files.example.com`.
+
+If Nginx or another reverse proxy is in front of Sub2API, keep its body-size limit aligned with `server.max_request_body_size` and `gateway.max_body_size` for legacy clients. The preferred path is still file reference upload, not increasing `/responses` body size indefinitely.
 
 ### Easy Migration (Local Directory Version)
 
@@ -463,11 +481,22 @@ If you need to use AI Studio OAuth for Gemini accounts, add the OAuth client cre
 
 The main config file is at `/etc/sub2api/config.yaml` (created by Setup Wizard).
 
+#### Object Storage for File References
+
+Binary/systemd deployments should run or connect to an external S3-compatible object store such as MinIO, AWS S3, Cloudflare R2, or another compatible service. Add the top-level `storage:` section from `deploy/config.example.yaml` to `/etc/sub2api/config.yaml`, then restart:
+
+```bash
+sudo systemctl restart sub2api
+```
+
+Use an internal `storage.endpoint` for the server if needed, but set `storage.public_endpoint` to the HTTPS address clients can reach. If both are the same public S3 endpoint, `public_endpoint` can be left empty.
+
 ### Prerequisites
 
 - Linux server (Ubuntu 20.04+, Debian 11+, CentOS 8+, etc.)
 - PostgreSQL 14+
 - Redis 6+
+- MinIO or another S3-compatible object store when file reference uploads are enabled
 - systemd
 
 ### Directory Structure
@@ -507,7 +536,7 @@ docker compose -f docker-compose.local.yml exec redis redis-cli ping
 docker compose -f docker-compose.local.yml restart
 
 # Check data directories
-ls -la data/ postgres_data/ redis_data/
+ls -la data/ postgres_data/ redis_data/ minio_data/
 ```
 
 For **named volumes version**:

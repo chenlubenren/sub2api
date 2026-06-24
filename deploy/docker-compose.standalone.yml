@@ -65,6 +65,22 @@ services:
       - REDIS_ENABLE_TLS=${REDIS_ENABLE_TLS:-false}
 
       # =======================================================================
+      # Object Storage / File Reference Uploads - Required when enabled
+      # Provide an external MinIO/S3-compatible service in standalone mode.
+      # =======================================================================
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-s3}
+      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:?STORAGE_ENDPOINT is required}
+      - STORAGE_PUBLIC_ENDPOINT=${STORAGE_PUBLIC_ENDPOINT:-}
+      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
+      - STORAGE_BUCKET=${STORAGE_BUCKET:-sub2api-files}
+      - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY:?STORAGE_ACCESS_KEY is required}
+      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY:?STORAGE_SECRET_KEY is required}
+      - STORAGE_USE_PATH_STYLE=${STORAGE_USE_PATH_STYLE:-true}
+      - STORAGE_PRESIGN_EXPIRE_SECONDS=${STORAGE_PRESIGN_EXPIRE_SECONDS:-900}
+      - STORAGE_MAX_FILE_SIZE_BYTES=${STORAGE_MAX_FILE_SIZE_BYTES:-10485760}
+      - STORAGE_ALLOWED_MIME_TYPES=${STORAGE_ALLOWED_MIME_TYPES:-image/png,image/jpeg,image/webp}
+
+      # =======================================================================
       # Admin Account (auto-created on first run)
       # =======================================================================
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@sub2api.local}
