@@ -10,6 +10,9 @@
       <div class="text-sm">
         <span class="text-gray-900 dark:text-white">{{ value || row.user_name || '#' + row.user_id }}</span>
         <span v-if="row.user_notes" class="ml-1 text-xs text-gray-400">({{ row.user_notes }})</span>
+        <span v-if="row.registration_promo_group" class="ml-1 text-xs text-primary-600 dark:text-primary-400" :title="row.registration_promo_code || undefined">
+          ({{ row.registration_promo_group }})
+        </span>
       </div>
     </template>
     <template #cell-pay_amount="{ value, row }">

@@ -123,7 +123,7 @@
       </div>
     </div>
 
-    <div class="mx-auto w-full max-w-[1380px]">
+    <div class="w-full">
       <div class="card px-6 py-5">
         <p class="flex flex-wrap items-center gap-x-3 gap-y-2 text-base font-semibold text-gray-900 dark:text-white">
           <span>算力站本日已为您节省</span>

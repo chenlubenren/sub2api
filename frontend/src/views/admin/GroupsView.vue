@@ -802,7 +802,7 @@
           </div>
           <div class="grid grid-cols-3 gap-3">
             <div>
-              <label class="input-label">1K ($)</label>
+              <label class="input-label">1K (?)</label>
               <input
                 v-model.number="createForm.image_price_1k"
                 type="number"
@@ -813,7 +813,7 @@
               />
             </div>
             <div>
-              <label class="input-label">2K ($)</label>
+              <label class="input-label">2K (?)</label>
               <input
                 v-model.number="createForm.image_price_2k"
                 type="number"
@@ -824,7 +824,7 @@
               />
             </div>
             <div>
-              <label class="input-label">4K ($)</label>
+              <label class="input-label">4K (?)</label>
               <input
                 v-model.number="createForm.image_price_4k"
                 type="number"
@@ -2090,7 +2090,7 @@
           </div>
           <div class="grid grid-cols-3 gap-3">
             <div>
-              <label class="input-label">1K ($)</label>
+              <label class="input-label">1K (?)</label>
               <input
                 v-model.number="editForm.image_price_1k"
                 type="number"
@@ -2101,7 +2101,7 @@
               />
             </div>
             <div>
-              <label class="input-label">2K ($)</label>
+              <label class="input-label">2K (?)</label>
               <input
                 v-model.number="editForm.image_price_2k"
                 type="number"
@@ -2112,7 +2112,7 @@
               />
             </div>
             <div>
-              <label class="input-label">4K ($)</label>
+              <label class="input-label">4K (?)</label>
               <input
                 v-model.number="editForm.image_price_4k"
                 type="number"
@@ -3728,7 +3728,7 @@ const formatImagePricePreview = (value: number | string | null | undefined) => {
   if (!Number.isFinite(price) || price < 0) {
     return t("admin.groups.imagePricing.notConfigured");
   }
-  return `$${price.toFixed(6).replace(/0+$/, "").replace(/\.$/, "")}`;
+  return `?${price.toFixed(6).replace(/0+$/, "").replace(/\.$/, "")}`;
 };
 
 const buildImageFinalPricePreview = (form: ImagePricingFormState) => {

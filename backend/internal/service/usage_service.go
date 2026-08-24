@@ -51,6 +51,7 @@ type UsageStats struct {
 	TotalTokens              int64   `json:"total_tokens"`
 	TotalCost                float64 `json:"total_cost"`
 	TotalActualCost          float64 `json:"total_actual_cost"`
+	TotalAccountCost         *float64 `json:"total_account_cost,omitempty"`
 	AverageDurationMs        float64 `json:"average_duration_ms"`
 }
 
@@ -201,6 +202,7 @@ func (s *UsageService) GetStatsByUser(ctx context.Context, userID int64, startTi
 		TotalTokens:              stats.TotalTokens,
 		TotalCost:                stats.TotalCost,
 		TotalActualCost:          stats.TotalActualCost,
+		TotalAccountCost:         stats.TotalAccountCost,
 		AverageDurationMs:        stats.AverageDurationMs,
 	}, nil
 }
@@ -222,6 +224,7 @@ func (s *UsageService) GetStatsByAPIKey(ctx context.Context, apiKeyID int64, sta
 		TotalTokens:              stats.TotalTokens,
 		TotalCost:                stats.TotalCost,
 		TotalActualCost:          stats.TotalActualCost,
+		TotalAccountCost:         stats.TotalAccountCost,
 		AverageDurationMs:        stats.AverageDurationMs,
 	}, nil
 }

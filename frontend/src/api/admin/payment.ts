@@ -88,6 +88,14 @@ export const adminPaymentAPI = {
     return apiClient.get<BasePaginationResponse<PaymentOrder>>('/admin/payment/orders', { params })
   },
 
+  /** Download successfully paid orders for a date range as CSV */
+  exportOrders(params: { start_date: string; end_date: string; timezone?: string }) {
+    return apiClient.get<Blob>('/admin/payment/orders/export', {
+      params,
+      responseType: 'blob'
+    })
+  },
+
   /** Get a specific order by ID */
   getOrder(id: number) {
     return apiClient.get<PaymentOrder>(`/admin/payment/orders/${id}`)

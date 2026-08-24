@@ -24,6 +24,54 @@ import (
 var (
 	openAIModelDatePattern     = regexp.MustCompile(`-\d{8}$`)
 	openAIModelBasePattern     = regexp.MustCompile(`^(gpt-\d+(?:\.\d+)?)(?:-|$)`)
+	openAIGPT56SolFallbackPricing = &LiteLLMModelPricing{
+		InputCostPerToken:               5e-06,
+		InputCostPerTokenPriority:       10e-06,
+		OutputCostPerToken:              30e-06,
+		OutputCostPerTokenPriority:      60e-06,
+		CacheCreationInputTokenCost:     6.25e-06,
+		CacheReadInputTokenCost:         0.5e-06,
+		CacheReadInputTokenCostPriority: 1e-06,
+		LongContextInputTokenThreshold:  272000,
+		LongContextInputCostMultiplier:  2.0,
+		LongContextOutputCostMultiplier: 1.5,
+		LiteLLMProvider:                 "openai",
+		Mode:                            "chat",
+		SupportsPromptCaching:           true,
+		SupportsServiceTier:             false,
+	}
+	openAIGPT56TerraFallbackPricing = &LiteLLMModelPricing{
+		InputCostPerToken:               2.5e-06,
+		InputCostPerTokenPriority:       5e-06,
+		OutputCostPerToken:              15e-06,
+		OutputCostPerTokenPriority:      30e-06,
+		CacheCreationInputTokenCost:     3.125e-06,
+		CacheReadInputTokenCost:         0.25e-06,
+		CacheReadInputTokenCostPriority: 0.5e-06,
+		LongContextInputTokenThreshold:  272000,
+		LongContextInputCostMultiplier:  2.0,
+		LongContextOutputCostMultiplier: 1.5,
+		LiteLLMProvider:                 "openai",
+		Mode:                            "chat",
+		SupportsPromptCaching:           true,
+		SupportsServiceTier:             false,
+	}
+	openAIGPT56LunaFallbackPricing = &LiteLLMModelPricing{
+		InputCostPerToken:               1e-06,
+		InputCostPerTokenPriority:       2e-06,
+		OutputCostPerToken:              6e-06,
+		OutputCostPerTokenPriority:      12e-06,
+		CacheCreationInputTokenCost:     1.25e-06,
+		CacheReadInputTokenCost:         0.1e-06,
+		CacheReadInputTokenCostPriority: 0.2e-06,
+		LongContextInputTokenThreshold:  272000,
+		LongContextInputCostMultiplier:  2.0,
+		LongContextOutputCostMultiplier: 1.5,
+		LiteLLMProvider:                 "openai",
+		Mode:                            "chat",
+		SupportsPromptCaching:           true,
+		SupportsServiceTier:             false,
+	}
 	openAIGPT54FallbackPricing = &LiteLLMModelPricing{
 		InputCostPerToken:               2.5e-06, // $2.5 per MTok
 		OutputCostPerToken:              1.5e-05, // $15 per MTok
@@ -798,7 +846,22 @@ func (s *PricingService) matchOpenAIModel(model string) *LiteLLMModelPricing {
 		}
 	}
 
-	// GPT-5.5 回退到 GPT-5.4 定价
+	// GPT-5.6 / GPT-5.5 回退到 GPT-5.4 定价
+	if strings.HasPrefix(model, "gpt-5.6-terra") {
+		logger.With(zap.String("component", "service.pricing")).
+			Info(fmt.Sprintf("[Pricing] OpenAI fallback matched %s -> %s", model, "gpt-5.6-terra(static)"))
+		return openAIGPT56TerraFallbackPricing
+	}
+	if strings.HasPrefix(model, "gpt-5.6-luna") {
+		logger.With(zap.String("component", "service.pricing")).
+			Info(fmt.Sprintf("[Pricing] OpenAI fallback matched %s -> %s", model, "gpt-5.6-luna(static)"))
+		return openAIGPT56LunaFallbackPricing
+	}
+	if strings.HasPrefix(model, "gpt-5.6") {
+		logger.With(zap.String("component", "service.pricing")).
+			Info(fmt.Sprintf("[Pricing] OpenAI fallback matched %s -> %s", model, "gpt-5.6-sol(static)"))
+		return openAIGPT56SolFallbackPricing
+	}
 	if strings.HasPrefix(model, "gpt-5.5") {
 		logger.With(zap.String("component", "service.pricing")).
 			Info(fmt.Sprintf("[Pricing] OpenAI fallback matched %s -> %s", model, "gpt-5.4(static)"))

@@ -20,7 +20,7 @@
               {{ pLabel }}
             </span>
           </div>
-          <p v-if="plan.description" class="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-dark-400 line-clamp-2">
+          <p v-if="plan.description" class="mt-0.5 line-clamp-3 cursor-help text-xs leading-relaxed text-gray-500 dark:text-dark-400" :title="plan.description">
             {{ plan.description }}
           </p>
         </div>

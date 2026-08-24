@@ -24,7 +24,7 @@ const i18n = createI18n({
   },
 });
 
-const mountPlanCard = (groupPlatform: string) =>
+const mountPlanCard = (groupPlatform: string, description?: string) =>
   mount(SubscriptionPlanCard, {
     props: {
       plan: {
@@ -32,6 +32,7 @@ const mountPlanCard = (groupPlatform: string) =>
         group_id: 10,
         group_platform: groupPlatform,
         name: "Pro",
+        description,
         price: 10,
         amount: 1000,
         features: [],
@@ -60,5 +61,15 @@ describe("SubscriptionPlanCard", () => {
     expect(text).toContain("Claude");
     expect(text).toContain("Gemini");
     expect(text).toContain("Imagen");
+  });
+
+  it("clamps a description to three lines and keeps the full text in a hover title", () => {
+    const description = "A detailed subscription description that remains available on hover.";
+    const wrapper = mountPlanCard("openai", description);
+    const descriptionElement = wrapper.get('p[title]');
+
+    expect(descriptionElement.classes()).toContain("line-clamp-3");
+    expect(descriptionElement.attributes("title")).toBe(description);
+    expect(descriptionElement.text()).toBe(description);
   });
 });

@@ -843,3 +843,19 @@ func (s *PaymentService) AdminListOrders(ctx context.Context, userID int64, p Or
 	}
 	return orders, total, nil
 }
+
+// AdminExportPaidOrders returns paid orders in the requested paid_at window.
+// Orders that never reached a paid state are intentionally excluded.
+func (s *PaymentService) AdminExportPaidOrders(ctx context.Context, start, end time.Time) ([]*dbent.PaymentOrder, error) {
+	q := s.entClient.PaymentOrder.Query().Where(
+		paymentorder.PaidAtNotNil(),
+		paymentorder.PaidAtGTE(start),
+		paymentorder.PaidAtLT(end),
+		paymentorder.StatusIn(OrderStatusPaid, OrderStatusRecharging, OrderStatusCompleted),
+	)
+	orders, err := q.Order(dbent.Asc(paymentorder.FieldPaidAt)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("query paid orders for export: %w", err)
+	}
+	return orders, nil
+}

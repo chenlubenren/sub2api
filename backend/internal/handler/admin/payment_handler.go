@@ -1,7 +1,13 @@
 package admin
 
 import (
+	"encoding/csv"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
@@ -67,7 +73,77 @@ func (h *PaymentHandler) ListOrders(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	response.Paginated(c, sanitizeAdminPaymentOrdersForResponse(orders), int64(total), page, pageSize)
+	userIDs := make([]int64, 0, len(orders))
+	for _, order := range orders {
+		if order != nil {
+			userIDs = append(userIDs, order.UserID)
+		}
+	}
+	promoInfo, _ := h.paymentService.GetRegistrationPromoInfo(c.Request.Context(), userIDs)
+	response.Paginated(c, adminPaymentOrderResponses(orders, promoInfo), int64(total), page, pageSize)
+}
+
+// ExportOrders exports successfully paid orders as an Excel-friendly UTF-8 CSV.
+// GET /api/v1/admin/payment/orders/export?start_date=...&end_date=...
+func (h *PaymentHandler) ExportOrders(c *gin.Context) {
+	loc := exportLocation(c.Query("timezone"))
+	start, end, err := parseExportDateRange(c.Query("start_date"), c.Query("end_date"), loc)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	orders, err := h.paymentService.AdminExportPaidOrders(c.Request.Context(), start, end)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	userIDs := make([]int64, 0, len(orders))
+	for _, order := range orders {
+		if order != nil {
+			userIDs = append(userIDs, order.UserID)
+		}
+	}
+	promoInfo, _ := h.paymentService.GetRegistrationPromoInfo(c.Request.Context(), userIDs)
+
+	var builder strings.Builder
+	builder.WriteString("\ufeff")
+	w := csv.NewWriter(&builder)
+	_ = w.Write([]string{"充值时间", "充值金额", "充值方式", "用户", "所属分组", "应得分红", "站长获利"})
+	for _, order := range orders {
+		if order == nil || order.PaidAt == nil {
+			continue
+		}
+		info := promoInfo[order.UserID]
+		amount := order.PayAmount
+		dividend, profit := exportDividendAndProfit(amount, info.Code)
+		user := order.UserEmail
+		if strings.TrimSpace(order.UserName) != "" {
+			user = order.UserName + " (" + order.UserEmail + ")"
+		}
+		group := info.Group
+		if group == "" {
+			group = "无优惠码"
+		}
+		_ = w.Write([]string{
+			order.PaidAt.In(loc).Format("2006-01-02 15:04:05"),
+			fmt.Sprintf("%.2f", amount),
+			paymentTypeLabel(order.PaymentType),
+			user,
+			group,
+			fmt.Sprintf("%.2f", dividend),
+			fmt.Sprintf("%.2f", profit),
+		})
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	filename := fmt.Sprintf("payment-orders-%s-to-%s.csv", start.In(loc).Format("20060102"), end.Add(-time.Nanosecond).In(loc).Format("20060102"))
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", []byte(builder.String()))
 }
 
 // GetOrderDetail returns detailed information about a single order.
@@ -83,7 +159,98 @@ func (h *PaymentHandler) GetOrderDetail(c *gin.Context) {
 		return
 	}
 	auditLogs, _ := h.paymentService.GetOrderAuditLogs(c.Request.Context(), orderID)
-	response.Success(c, gin.H{"order": sanitizeAdminPaymentOrderForResponse(order), "auditLogs": auditLogs})
+	promoInfo, _ := h.paymentService.GetRegistrationPromoInfo(c.Request.Context(), []int64{order.UserID})
+	response.Success(c, gin.H{"order": adminPaymentOrderResponse(order, promoInfo[order.UserID]), "auditLogs": auditLogs})
+}
+
+func adminPaymentOrderResponses(orders []*dbent.PaymentOrder, infos map[int64]service.RegistrationPromoInfo) []map[string]any {
+	out := make([]map[string]any, 0, len(orders))
+	for _, order := range orders {
+		if order != nil {
+			out = append(out, adminPaymentOrderResponse(order, infos[order.UserID]))
+		}
+	}
+	return out
+}
+
+func adminPaymentOrderResponse(order *dbent.PaymentOrder, info service.RegistrationPromoInfo) map[string]any {
+	cloned := sanitizeAdminPaymentOrderForResponse(order)
+	b, _ := json.Marshal(cloned)
+	result := make(map[string]any)
+	_ = json.Unmarshal(b, &result)
+	if info.Code != "" {
+		result["registration_promo_code"] = info.Code
+		result["registration_promo_group"] = info.Group
+	}
+	return result
+}
+
+func parseExportDateRange(startRaw, endRaw string, loc *time.Location) (time.Time, time.Time, error) {
+	if loc == nil {
+		loc = time.Local
+	}
+	parse := func(raw string, endOfDay bool) (time.Time, error) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return time.Time{}, fmt.Errorf("start_date and end_date are required")
+		}
+		if t, err := time.Parse(time.RFC3339, raw); err == nil {
+			return t, nil
+		}
+		if t, err := time.ParseInLocation("2006-01-02", raw, loc); err == nil {
+			if endOfDay {
+				return t.AddDate(0, 0, 1), nil
+			}
+			return t, nil
+		}
+		return time.Time{}, fmt.Errorf("invalid date: %s", raw)
+	}
+	start, err := parse(startRaw, false)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	end, err := parse(endRaw, true)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	if !end.After(start) {
+		return time.Time{}, time.Time{}, fmt.Errorf("end_date must be later than start_date")
+	}
+	return start, end, nil
+}
+
+func exportLocation(raw string) *time.Location {
+	if raw != "" {
+		if loc, err := time.LoadLocation(raw); err == nil {
+			return loc
+		}
+	}
+	return time.Local
+}
+
+func paymentTypeLabel(value string) string {
+	switch {
+	case strings.HasPrefix(value, "wxpay"):
+		return "微信支付"
+	case strings.HasPrefix(value, "alipay"):
+		return "支付宝"
+	case strings.HasPrefix(value, "stripe"):
+		return "Stripe"
+	case strings.HasPrefix(value, "airwallex"):
+		return "Airwallex"
+	default:
+		return value
+	}
+}
+
+func exportDividendAndProfit(amount float64, promoCode string) (dividend, profit float64) {
+	dividend = amount * 0.96
+	code := strings.ToUpper(strings.TrimSpace(promoCode))
+	if code == "" || code == "CHENLUREC" {
+		return dividend, dividend
+	}
+	dividend *= 0.85
+	return dividend, amount - dividend
 }
 
 // CancelOrder cancels a pending order (admin).

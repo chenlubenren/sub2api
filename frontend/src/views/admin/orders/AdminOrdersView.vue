@@ -10,7 +10,13 @@
           <Select v-model="orderFilters.status" :options="statusFilterOptions" class="w-36" @change="loadOrders" />
           <Select v-model="orderFilters.payment_type" :options="paymentTypeFilterOptions" class="w-40" @change="loadOrders" />
           <Select v-model="orderFilters.order_type" :options="orderTypeFilterOptions" class="w-36" @change="loadOrders" />
+          <input v-model="exportStartDate" type="date" class="input w-36" :title="t('payment.admin.exportStartDate')" />
+          <input v-model="exportEndDate" type="date" class="input w-36" :title="t('payment.admin.exportEndDate')" />
           <div class="flex flex-1 flex-wrap items-center justify-end gap-2">
+            <button @click="downloadOrders" :disabled="exporting || !exportStartDate || !exportEndDate" class="btn btn-primary" :title="t('payment.admin.exportOrders')">
+              <Icon name="download" size="md" :class="exporting ? 'animate-pulse' : ''" />
+              <span class="hidden sm:inline">{{ exporting ? t('common.processing') : t('payment.admin.exportOrders') }}</span>
+            </button>
             <button @click="loadOrders" :disabled="ordersLoading" class="btn btn-secondary" :title="t('common.refresh')">
               <Icon name="refresh" size="md" :class="ordersLoading ? 'animate-spin' : ''" />
             </button>
@@ -144,6 +150,9 @@ const orders = ref<PaymentOrder[]>([])
 const orderSearch = ref('')
 const orderFilters = reactive({ status: '', payment_type: '', order_type: '' })
 const orderPagination = reactive({ page: 1, page_size: 20, total: 0 })
+const exportStartDate = ref('')
+const exportEndDate = ref('')
+const exporting = ref(false)
 const selectedOrder = ref<PaymentOrder | null>(null)
 const showDetailDialog = ref(false)
 const showRefundDialog = ref(false)
@@ -236,6 +245,35 @@ async function handleRefund(data: { amount: number; reason: string; deduct_balan
 }
 
 function formatDateTime(dateStr: string): string { return formatOrderDateTime(dateStr) }
+
+async function downloadOrders() {
+  if (!exportStartDate.value || !exportEndDate.value) return
+  if (exportEndDate.value < exportStartDate.value) {
+    appStore.showError(t('payment.admin.exportDateRangeInvalid'))
+    return
+  }
+  exporting.value = true
+  try {
+    const res = await adminPaymentAPI.exportOrders({
+      start_date: exportStartDate.value,
+      end_date: exportEndDate.value,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    })
+    const blob = res.data instanceof Blob ? res.data : new Blob([res.data as unknown as string], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `payment-orders-${exportStartDate.value}-to-${exportEndDate.value}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (err: unknown) {
+    appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error')))
+  } finally {
+    exporting.value = false
+  }
+}
 
 onMounted(() => loadOrders())
 </script>

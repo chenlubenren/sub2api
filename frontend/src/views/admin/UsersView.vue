@@ -264,7 +264,7 @@
           :sort-storage-key="USER_SORT_STORAGE_KEY"
           @sort="handleSort"
         >
-          <template #cell-email="{ value }">
+          <template #cell-email="{ value, row }">
             <div class="flex items-center gap-2">
               <div
                 class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30"
@@ -273,7 +273,12 @@
                   {{ value.charAt(0).toUpperCase() }}
                 </span>
               </div>
-              <span class="font-medium text-gray-900 dark:text-white">{{ value }}</span>
+              <div class="min-w-0">
+                <span class="font-medium text-gray-900 dark:text-white">{{ value }}</span>
+                <span v-if="row.registration_promo_group" class="ml-1 text-xs font-normal text-primary-600 dark:text-primary-400" :title="row.registration_promo_code || undefined">
+                  ({{ row.registration_promo_group }})
+                </span>
+              </div>
             </div>
           </template>
 

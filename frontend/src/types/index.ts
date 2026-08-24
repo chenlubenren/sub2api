@@ -108,6 +108,8 @@ export interface AdminUser extends User {
   group_rates?: Record<number, number>
   // 当前并发数（仅管理员列表接口返回）
   current_concurrency?: number
+  registration_promo_group?: string
+  registration_promo_code?: string
 }
 
 export interface LoginRequest {

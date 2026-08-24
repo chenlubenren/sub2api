@@ -848,12 +848,28 @@ func (s *UsageLogRepoSuite) TestGetUserDashboardStats() {
 	apiKey := mustCreateApiKey(s.T(), s.client, &service.APIKey{UserID: user.ID, Key: "sk-userdash", Name: "k"})
 	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-userdash"})
 
-	s.createUsageLog(user, apiKey, account, 10, 20, 0.5, time.Now())
+	multiplier := 0.8
+	_, err := s.repo.Create(s.ctx, &service.UsageLog{
+		UserID:                user.ID,
+		APIKeyID:              apiKey.ID,
+		AccountID:             account.ID,
+		RequestID:             uuid.New().String(),
+		Model:                 "claude-3",
+		InputTokens:           10,
+		OutputTokens:          20,
+		TotalCost:             0.5,
+		ActualCost:            0.5,
+		AccountRateMultiplier: &multiplier,
+		CreatedAt:             time.Now(),
+	})
+	s.Require().NoError(err)
 
 	stats, err := s.repo.GetUserDashboardStats(s.ctx, user.ID)
 	s.Require().NoError(err, "GetUserDashboardStats")
 	s.Require().Equal(int64(1), stats.TotalAPIKeys)
 	s.Require().Equal(int64(1), stats.TotalRequests)
+	s.Require().InEpsilon(0.4, stats.TodayAccountCost, 0.0001)
+	s.Require().InEpsilon(0.4, stats.TotalAccountCost, 0.0001)
 }
 
 // --- GetAccountTodayStats ---

@@ -46,7 +46,7 @@
                     {{ platformLabel(subscription.group?.platform || '') }}
                   </span>
                 </div>
-                <p v-if="subscription.group?.description" class="mt-0.5 text-xs text-gray-500 dark:text-dark-400">
+                <p v-if="subscription.group?.description" class="mt-0.5 line-clamp-3 cursor-help text-xs text-gray-500 dark:text-dark-400" :title="subscription.group.description">
                   {{ subscription.group.description }}
                 </p>
               </div>

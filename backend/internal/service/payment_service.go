@@ -86,6 +86,12 @@ type CreateOrderRequest struct {
 	Locale          string
 }
 
+// GetRegistrationPromoInfo returns the first registration promo code used by
+// each requested user. It is used by admin payment views and exports.
+func (s *PaymentService) GetRegistrationPromoInfo(ctx context.Context, userIDs []int64) (map[int64]RegistrationPromoInfo, error) {
+	return loadRegistrationPromoInfo(ctx, s.entClient, userIDs)
+}
+
 type CreateOrderResponse struct {
 	OrderID      int64                           `json:"order_id"`
 	Amount       float64                         `json:"amount"`

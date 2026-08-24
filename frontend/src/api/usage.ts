@@ -39,6 +39,7 @@ export interface UserDashboardStats {
   total_tokens: number
   total_cost: number // 标准计费
   total_actual_cost: number // 实际扣除
+  total_account_cost: number
   today_requests: number
   today_input_tokens: number
   today_output_tokens: number
@@ -47,6 +48,7 @@ export interface UserDashboardStats {
   today_tokens: number
   today_cost: number // 今日标准计费
   today_actual_cost: number // 今日实际扣除
+  today_account_cost: number
   average_duration_ms: number
   rpm: number // 近5分钟平均每分钟请求数
   tpm: number // 近5分钟平均每分钟Token数

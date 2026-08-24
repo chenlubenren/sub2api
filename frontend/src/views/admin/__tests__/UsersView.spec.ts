@@ -83,6 +83,7 @@ const DataTableStub = {
       <div data-test="columns">{{ columns.map(col => col.key).join(',') }}</div>
       <button data-test="sort-last-used" @click="$emit('sort', 'last_used_at', 'desc')">sort</button>
       <div v-for="row in data" :key="row.id">
+        <slot name="cell-email" :value="row.email" :row="row" />
         <slot name="cell-last_used_at" :value="row.last_used_at" :row="row" />
       </div>
     </div>
@@ -160,5 +161,49 @@ describe('admin UsersView', () => {
       }),
       expect.any(Object)
     )
+  })
+
+  it('shows the registration promo group next to the user and exposes its code on hover', async () => {
+    listUsers.mockResolvedValue({
+      items: [{
+        ...createAdminUser(),
+        registration_promo_group: '第一组',
+        registration_promo_code: 'EARLYCODE'
+      }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+      pages: 1
+    })
+
+    const wrapper = mount(UsersView, {
+      global: {
+        stubs: {
+          AppLayout: { template: '<div><slot /></div>' },
+          TablePageLayout: { template: '<div><slot name="filters" /><slot name="table" /></div>' },
+          DataTable: DataTableStub,
+          Pagination: true,
+          ConfirmDialog: true,
+          EmptyState: true,
+          GroupBadge: true,
+          Select: true,
+          UserAttributesConfigModal: true,
+          UserConcurrencyCell: true,
+          UserCreateModal: true,
+          UserEditModal: true,
+          UserApiKeysModal: true,
+          UserAllowedGroupsModal: true,
+          UserBalanceModal: true,
+          UserBalanceHistoryModal: true,
+          GroupReplaceModal: true,
+          Icon: true,
+          Teleport: true
+        }
+      }
+    })
+
+    await flushPromises()
+
+    expect(wrapper.get('[title="EARLYCODE"]').text()).toBe('(第一组)')
   })
 })

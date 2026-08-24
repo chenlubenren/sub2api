@@ -151,7 +151,7 @@
 
             <div class="terminal-body">
               <div class="code-line line-1">
-                <span class="code-prompt">$</span>
+                <span class="code-prompt">￥</span>
                 <span class="code-cmd">curl</span>
                 <span class="code-flag">-X POST</span>
                 <span class="code-url">/v1/messages</span>
@@ -164,7 +164,7 @@
                 <span class="code-response">{ "content": "Hello!" }</span>
               </div>
               <div class="code-line line-4">
-                <span class="code-prompt">$</span>
+                <span class="code-prompt">￥</span>
                 <span class="cursor"></span>
               </div>
             </div>

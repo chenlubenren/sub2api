@@ -649,7 +649,29 @@ func (s *adminServiceImpl) ListUsers(ctx context.Context, page, pageSize int, fi
 			s.loadUserGroupRatesOneByOne(ctx, users)
 		}
 	}
+	s.enrichRegistrationPromoGroups(ctx, users)
 	return users, result.Total, nil
+}
+
+func (s *adminServiceImpl) enrichRegistrationPromoGroups(ctx context.Context, users []User) {
+	if s.entClient == nil || len(users) == 0 {
+		return
+	}
+	userIDs := make([]int64, 0, len(users))
+	for i := range users {
+		userIDs = append(userIDs, users[i].ID)
+	}
+	infos, err := loadRegistrationPromoInfo(ctx, s.entClient, userIDs)
+	if err != nil {
+		logger.LegacyPrintf("service.admin", "failed to load registration promo groups: err=%v", err)
+		return
+	}
+	for i := range users {
+		if info, ok := infos[users[i].ID]; ok {
+			users[i].RegistrationPromoGroup = info.Group
+			users[i].RegistrationPromoCode = info.Code
+		}
+	}
 }
 
 func (s *adminServiceImpl) loadUserGroupRatesOneByOne(ctx context.Context, users []User) {
@@ -684,6 +706,12 @@ func (s *adminServiceImpl) GetUser(ctx context.Context, id int64) (*User, error)
 			logger.LegacyPrintf("service.admin", "failed to load user group rates: user_id=%d err=%v", id, err)
 		} else {
 			user.GroupRates = rates
+		}
+	}
+	if infos, err := loadRegistrationPromoInfo(ctx, s.entClient, []int64{id}); err == nil {
+		if info, ok := infos[id]; ok {
+			user.RegistrationPromoGroup = info.Group
+			user.RegistrationPromoCode = info.Code
 		}
 	}
 	return user, nil

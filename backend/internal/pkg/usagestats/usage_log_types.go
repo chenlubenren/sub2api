@@ -226,6 +226,7 @@ type UserDashboardStats struct {
 	TotalTokens              int64   `json:"total_tokens"`
 	TotalCost                float64 `json:"total_cost"`        // 累计标准计费
 	TotalActualCost          float64 `json:"total_actual_cost"` // 累计实际扣除
+	TotalAccountCost         float64 `json:"total_account_cost"` // 累计账号成本
 
 	// 今日 Token 使用统计
 	TodayRequests            int64   `json:"today_requests"`
@@ -236,6 +237,7 @@ type UserDashboardStats struct {
 	TodayTokens              int64   `json:"today_tokens"`
 	TodayCost                float64 `json:"today_cost"`        // 今日标准计费
 	TodayActualCost          float64 `json:"today_actual_cost"` // 今日实际扣除
+	TodayAccountCost         float64 `json:"today_account_cost"` // 今日账号成本
 
 	// 性能统计
 	AverageDurationMs float64 `json:"average_duration_ms"`
