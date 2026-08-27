@@ -42,6 +42,22 @@ func TestParseGatewayRequest_ThinkingAdaptiveEnabled(t *testing.T) {
 	require.True(t, parsed.ThinkingEnabled)
 }
 
+func TestParseGatewayRequest_AnthropicFastSpeed(t *testing.T) {
+	parsed, err := ParseGatewayRequest(
+		NewRequestBodyRef([]byte(`{"model":"claude-opus-4-8","speed":" FAST "}`)),
+		domain.PlatformAnthropic,
+	)
+	require.NoError(t, err)
+	require.Equal(t, "fast", parsed.Speed)
+
+	nonAnthropic, err := ParseGatewayRequest(
+		NewRequestBodyRef([]byte(`{"model":"gpt-5.4","speed":"fast"}`)),
+		"responses",
+	)
+	require.NoError(t, err)
+	require.Empty(t, nonAnthropic.Speed)
+}
+
 func TestParseGatewayRequest_MaxTokens(t *testing.T) {
 	body := []byte(`{"model":"claude-haiku-4-5","max_tokens":1}`)
 	parsed, err := ParseGatewayRequest(NewRequestBodyRef(body), "")
@@ -75,6 +91,40 @@ func TestParseGatewayRequest_InvalidStreamType(t *testing.T) {
 	body := []byte(`{"stream":"true"}`)
 	_, err := ParseGatewayRequest(NewRequestBodyRef(body), "")
 	require.Error(t, err)
+}
+
+func TestParseGatewayRequest_AnthropicNormalizesClaudeCodeLongContextModelSuffix(t *testing.T) {
+	tests := []struct {
+		name  string
+		model string
+		want  string
+	}{
+		{name: "lowercase suffix", model: "claude-opus-4-8[1m]", want: "claude-opus-4-8"},
+		{name: "uppercase suffix", model: "claude-opus-4-8[1M]", want: "claude-opus-4-8"},
+		{name: "duplicated suffix", model: "claude-opus-4-8[1M][1m]", want: "claude-opus-4-8"},
+		{name: "suffix in middle", model: "claude-opus-4-8[1m]-preview", want: "claude-opus-4-8[1m]-preview"},
+		{name: "suffix only", model: "[1m]", want: "[1m]"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := []byte(fmt.Sprintf(`{"model":%q,"system":"test","messages":[{"role":"user","content":"hi"}]}`, tt.model))
+			parsed, err := ParseGatewayRequest(NewRequestBodyRef(body), domain.PlatformAnthropic)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, parsed.Model)
+			require.Equal(t, tt.want, gjson.GetBytes(parsed.Body.Bytes(), "model").String())
+			require.Equal(t, `"test"`, string(parsed.SystemRaw()))
+			require.NotEmpty(t, parsed.MessagesRaw())
+		})
+	}
+}
+
+func TestParseGatewayRequest_NonAnthropicPreservesClaudeCodeLongContextModelSuffix(t *testing.T) {
+	body := []byte(`{"model":"claude-opus-4-8[1m]","input":"hi"}`)
+	parsed, err := ParseGatewayRequest(NewRequestBodyRef(body), "responses")
+	require.NoError(t, err)
+	require.Equal(t, "claude-opus-4-8[1m]", parsed.Model)
+	require.Equal(t, "claude-opus-4-8[1m]", gjson.GetBytes(parsed.Body.Bytes(), "model").String())
 }
 
 func TestParseGatewayRequest_ResponsesInput(t *testing.T) {
@@ -1509,6 +1559,99 @@ func TestApplyThinkingEnabledFallback(t *testing.T) {
 			}
 			require.NotNil(t, got)
 			require.Equal(t, *tt.want, *got)
+		})
+	}
+}
+
+func TestNormalizeGLMOpenAIReasoningEffort(t *testing.T) {
+	tests := []struct {
+		name          string
+		model         string
+		input         string
+		wantApplied   bool
+		wantPath      string
+		wantValue     string
+		wantUnchanged bool
+	}{
+		{
+			name:        "flat xhigh maps to max",
+			model:       "glm-5.2",
+			input:       `{"model":"glm-5.2","reasoning_effort":"xhigh","messages":[]}`,
+			wantApplied: true,
+			wantPath:    "reasoning_effort",
+			wantValue:   "max",
+		},
+		{
+			name:        "flat x-high maps to max",
+			model:       "GLM-5.2",
+			input:       `{"model":"glm-5.2","reasoning_effort":"x-high","messages":[]}`,
+			wantApplied: true,
+			wantPath:    "reasoning_effort",
+			wantValue:   "max",
+		},
+		{
+			name:        "flat ultracode maps to max",
+			model:       "glm-5.2",
+			input:       `{"model":"glm-5.2","reasoning_effort":"ultracode","messages":[]}`,
+			wantApplied: true,
+			wantPath:    "reasoning_effort",
+			wantValue:   "max",
+		},
+		{
+			name:        "flat medium maps to high",
+			model:       "glm-5.2",
+			input:       `{"model":"glm-5.2","reasoning_effort":"medium","messages":[]}`,
+			wantApplied: true,
+			wantPath:    "reasoning_effort",
+			wantValue:   "high",
+		},
+		{
+			name:        "nested high case-normalizes",
+			model:       "glm-5.2",
+			input:       `{"model":"glm-5.2","reasoning":{"effort":"HIGH"},"messages":[]}`,
+			wantApplied: true,
+			wantPath:    "reasoning.effort",
+			wantValue:   "high",
+		},
+		{
+			name:          "native max unchanged",
+			model:         "glm-5.2",
+			input:         `{"model":"glm-5.2","reasoning_effort":"max","messages":[]}`,
+			wantApplied:   false,
+			wantUnchanged: true,
+		},
+		{
+			name:          "non glm unchanged",
+			model:         "deepseek-v4-pro",
+			input:         `{"model":"deepseek-v4-pro","reasoning_effort":"xhigh","messages":[]}`,
+			wantApplied:   false,
+			wantUnchanged: true,
+		},
+		{
+			name:          "missing effort unchanged",
+			model:         "glm-5.2",
+			input:         `{"model":"glm-5.2","messages":[]}`,
+			wantApplied:   false,
+			wantUnchanged: true,
+		},
+		{
+			name:          "unknown effort unchanged",
+			model:         "glm-5.2",
+			input:         `{"model":"glm-5.2","reasoning_effort":"banana","messages":[]}`,
+			wantApplied:   false,
+			wantUnchanged: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, applied := NormalizeGLMOpenAIReasoningEffort([]byte(tt.input), tt.model)
+			require.Equal(t, tt.wantApplied, applied)
+			if tt.wantUnchanged {
+				require.Equal(t, tt.input, string(got))
+				return
+			}
+			require.Equal(t, tt.wantValue, gjson.GetBytes(got, tt.wantPath).String())
 		})
 	}
 }

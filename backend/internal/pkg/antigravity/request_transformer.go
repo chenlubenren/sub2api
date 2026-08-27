@@ -143,14 +143,26 @@ func TransformClaudeToGeminiWithOptions(claudeReq *ClaudeRequest, projectID, map
 	// 5. 构建内部请求
 	innerRequest := GeminiRequest{
 		Contents: contents,
+		// 总是生成 sessionId，基于用户消息内容
+		SessionID: generateStableSessionID(contents),
+	}
+
+	// 针对 Gemini Reasoning 模型（如 gemini-3.1-pro-high等）过滤强制空 ToolConfig
+	isReasoning := IsGeminiReasoningModel(targetModel)
+	if !isReasoning || len(tools) > 0 {
 		// 总是设置 toolConfig，与官方客户端一致
-		ToolConfig: &GeminiToolConfig{
+		innerRequest.ToolConfig = &GeminiToolConfig{
 			FunctionCallingConfig: &GeminiFunctionCallingConfig{
 				Mode: "VALIDATED",
 			},
-		},
-		// 总是生成 sessionId，基于用户消息内容
-		SessionID: generateStableSessionID(contents),
+		}
+		// 内置工具（googleSearch）与函数调用混用时，上游要求显式开启
+		// includeServerSideToolInvocations，否则返回 400（issue #5709）。
+		// 与 raw 透传路的 enableMixedGeminiToolInvocations 注入保持同一语义。
+		if hasMixedToolInvocations(tools) {
+			enabled := true
+			innerRequest.ToolConfig.IncludeServerSideToolInvocations = &enabled
+		}
 	}
 
 	if systemInstruction != nil {
@@ -610,7 +622,11 @@ func buildGenerationConfig(req *ClaudeRequest) *GeminiGenerationConfig {
 	maxLimit := maxOutputTokensLimit(req.Model)
 	config := &GeminiGenerationConfig{
 		MaxOutputTokens: defaultMaxOutputTokens, // 默认最大输出
-		StopSequences:   DefaultStopSequences,
+	}
+
+	isReasoning := IsGeminiReasoningModel(req.Model)
+	if !isReasoning {
+		config.StopSequences = DefaultStopSequences
 	}
 
 	// 如果请求中指定了 MaxTokens，使用请求值
@@ -656,14 +672,16 @@ func buildGenerationConfig(req *ClaudeRequest) *GeminiGenerationConfig {
 	}
 
 	// 其他参数
-	if req.Temperature != nil {
-		config.Temperature = req.Temperature
-	}
-	if req.TopP != nil {
-		config.TopP = req.TopP
-	}
-	if req.TopK != nil {
-		config.TopK = req.TopK
+	if !isReasoning {
+		if req.Temperature != nil {
+			config.Temperature = req.Temperature
+		}
+		if req.TopP != nil {
+			config.TopP = req.TopP
+		}
+		if req.TopK != nil {
+			config.TopK = req.TopK
+		}
 	}
 
 	return config
@@ -690,6 +708,21 @@ func isWebSearchTool(tool ClaudeTool) bool {
 	default:
 		return false
 	}
+}
+
+// hasMixedToolInvocations 判断构建后的工具声明是否同时包含函数声明与内置工具
+// （googleSearch）。仅在两者并存时需要开启 includeServerSideToolInvocations。
+func hasMixedToolInvocations(declarations []GeminiToolDeclaration) bool {
+	hasFunc, hasBuiltin := false, false
+	for _, d := range declarations {
+		if len(d.FunctionDeclarations) > 0 {
+			hasFunc = true
+		}
+		if d.GoogleSearch != nil {
+			hasBuiltin = true
+		}
+	}
+	return hasFunc && hasBuiltin
 }
 
 // buildTools 构建 tools

@@ -185,13 +185,33 @@ func (s *queuedHTTPUpstreamStub) DoWithTLS(req *http.Request, proxyURL string, a
 	return s.Do(req, proxyURL, accountID, concurrency)
 }
 
-type antigravitySettingRepoStub struct{}
+type recordingInternal500CounterCache struct {
+	incrementCalls []int64
+	resetCalls     []int64
+}
+
+func (c *recordingInternal500CounterCache) IncrementInternal500Count(_ context.Context, accountID int64) (int64, error) {
+	c.incrementCalls = append(c.incrementCalls, accountID)
+	return int64(len(c.incrementCalls)), nil
+}
+
+func (c *recordingInternal500CounterCache) ResetInternal500Count(_ context.Context, accountID int64) error {
+	c.resetCalls = append(c.resetCalls, accountID)
+	return nil
+}
+
+type antigravitySettingRepoStub struct {
+	values map[string]string
+}
 
 func (s *antigravitySettingRepoStub) Get(ctx context.Context, key string) (*Setting, error) {
 	panic("unexpected Get call")
 }
 
 func (s *antigravitySettingRepoStub) GetValue(ctx context.Context, key string) (string, error) {
+	if value, ok := s.values[key]; ok {
+		return value, nil
+	}
 	return "", ErrSettingNotFound
 }
 
@@ -213,6 +233,254 @@ func (s *antigravitySettingRepoStub) GetAll(ctx context.Context) (map[string]str
 
 func (s *antigravitySettingRepoStub) Delete(ctx context.Context, key string) error {
 	panic("unexpected Delete call")
+}
+
+func TestResolveAntigravityProjectID(t *testing.T) {
+	tests := []struct {
+		name    string
+		account *Account
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "uses onboard project_id first",
+			account: &Account{Credentials: map[string]any{
+				"project_id": " onboard-project ",
+				antigravityProjectIDFallbackCredentialKey: " configured-project ",
+			}},
+			want: "onboard-project",
+		},
+		{
+			name: "uses configured credentials fallback",
+			account: &Account{Credentials: map[string]any{
+				antigravityProjectIDFallbackCredentialKey: " configured-project ",
+			}},
+			want: "configured-project",
+		},
+		{
+			name: "uses configured extra fallback",
+			account: &Account{Extra: map[string]any{
+				antigravityProjectIDFallbackCredentialKey: " extra-project ",
+			}},
+			want: "extra-project",
+		},
+		{
+			name:    "missing project",
+			account: &Account{Credentials: map[string]any{}},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := resolveAntigravityProjectID(tc.account)
+			if tc.wantErr {
+				require.ErrorIs(t, err, errAntigravityProjectIDRequired)
+				require.Empty(t, got)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestAntigravityGatewayService_ForwardGemini_UsesConfiguredProjectFallback(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"contents": []map[string]any{
+			{"role": "user", "parts": []map[string]any{{"text": "hello"}}},
+		},
+	})
+	require.NoError(t, err)
+	c.Request = httptest.NewRequest(http.MethodPost, "/antigravity/v1beta/models/gemini-2.5-flash:streamGenerateContent", bytes.NewReader(body))
+
+	upstreamBody := []byte("data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"}]},\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":1,\"candidatesTokenCount\":1}}}\n\n")
+	upstream := &queuedHTTPUpstreamStub{
+		responses: []*http.Response{
+			{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+				Body:       io.NopCloser(bytes.NewReader(upstreamBody)),
+			},
+		},
+	}
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{}, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSize}}),
+		tokenProvider:  &AntigravityTokenProvider{},
+		httpUpstream:   upstream,
+	}
+
+	account := &Account{
+		ID:          101,
+		Name:        "acc-configured-project",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+		Credentials: map[string]any{
+			"access_token": "token",
+			antigravityProjectIDFallbackCredentialKey: "configured-project",
+			"model_mapping": map[string]any{
+				"gemini-2.5-flash": "gemini-2.5-flash",
+			},
+		},
+	}
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, "gemini-2.5-flash", "streamGenerateContent", true, body, false)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Len(t, upstream.requestBodies, 1)
+
+	var wrapped map[string]any
+	require.NoError(t, json.Unmarshal(upstream.requestBodies[0], &wrapped))
+	require.Equal(t, "configured-project", wrapped["project"])
+}
+
+func TestAntigravityGatewayService_ForwardGemini_ImageUsesDefaultMappingAndOAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+	body := []byte(`{"contents":[{"role":"user","parts":[{"text":"draw a cat"}]}],"generationConfig":{"responseModalities":["TEXT","IMAGE"],"imageConfig":{"aspectRatio":"1:1"}}}`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1beta/models/gemini-3.1-flash-image:generateContent", bytes.NewReader(body))
+
+	upstream := &queuedHTTPUpstreamStub{
+		responses: []*http.Response{{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+			Body: io.NopCloser(strings.NewReader(
+				"data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"inlineData\":{\"mimeType\":\"image/png\",\"data\":\"aGVsbG8=\"}}]},\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":1,\"candidatesTokenCount\":1}}}\n\n",
+			)),
+		}},
+		onCall: func(req *http.Request, _ *queuedHTTPUpstreamStub) {
+			require.Equal(t, "Bearer test-access-token", req.Header.Get("Authorization"))
+			require.Equal(t, "application/json", req.Header.Get("Content-Type"))
+			require.Contains(t, req.URL.String(), "/v1internal:streamGenerateContent?alt=sse")
+		},
+	}
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{}, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSize}}),
+		tokenProvider:  &AntigravityTokenProvider{},
+		httpUpstream:   upstream,
+	}
+	account := &Account{
+		ID:          104,
+		Name:        "antigravity-image",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+		Credentials: map[string]any{
+			"access_token": "test-access-token",
+			"project_id":   "test-project",
+		},
+	}
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, "gemini-3.1-flash-image", "generateContent", true, body, false)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, "gemini-3.1-flash-image", result.Model)
+	require.Equal(t, "gemini-3.1-flash-image", result.UpstreamModel)
+	require.Equal(t, 1, result.ImageCount)
+	require.Len(t, upstream.requestBodies, 1)
+
+	var wrapped map[string]any
+	require.NoError(t, json.Unmarshal(upstream.requestBodies[0], &wrapped))
+	require.Equal(t, "test-project", wrapped["project"])
+	require.Equal(t, "gemini-3.1-flash-image", wrapped["model"])
+	request, ok := wrapped["request"].(map[string]any)
+	require.True(t, ok)
+	generationConfig, ok := request["generationConfig"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, []any{"TEXT", "IMAGE"}, generationConfig["responseModalities"])
+}
+
+func TestAntigravityGatewayService_ForwardGemini_PreservesServerSideToolInvocationConfig(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"contents":[{"role":"user","parts":[{"text":"hello"}]}],"tools":[{"functionDeclarations":[{"name":"get_weather","parameters":{"type":"object","additionalProperties":false}}]},{"googleSearch":{}}],"toolConfig":{"includeServerSideToolInvocations":true}}`)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+	body = bytes.ReplaceAll(body, []byte{92}, nil)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1beta/models/gemini-2.5-flash:generateContent", bytes.NewReader(body))
+
+	upstream := &queuedHTTPUpstreamStub{responses: []*http.Response{{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+		Body:       io.NopCloser(strings.NewReader("data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"}]},\"finishReason\":\"STOP\"}],\"usageMetadata\":{}}}\n\n")),
+	}}}
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{}, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSize}}),
+		tokenProvider:  &AntigravityTokenProvider{},
+		httpUpstream:   upstream,
+	}
+	account := &Account{
+		ID: 103, Name: "native-gemini", Platform: PlatformAntigravity, Type: AccountTypeOAuth, Status: StatusActive, Concurrency: 1,
+		Credentials: map[string]any{"access_token": "token", "project_id": "project-103", "model_mapping": map[string]any{"gemini-2.5-flash": "gemini-2.5-flash"}},
+	}
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, "gemini-2.5-flash", "generateContent", false, body, false)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Len(t, upstream.requestBodies, 1)
+
+	var wrapped map[string]any
+	require.NoError(t, json.Unmarshal(upstream.requestBodies[0], &wrapped))
+	request, ok := wrapped["request"].(map[string]any)
+	require.True(t, ok)
+	toolConfig, ok := request["toolConfig"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, true, toolConfig["includeServerSideToolInvocations"])
+	require.NotContains(t, toolConfig, "include_server_side_tool_invocations")
+}
+
+func TestAntigravityGatewayService_ForwardGemini_MissingProjectReturnsLocalError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"contents": []map[string]any{
+			{"role": "user", "parts": []map[string]any{{"text": "hello"}}},
+		},
+	})
+	require.NoError(t, err)
+	c.Request = httptest.NewRequest(http.MethodPost, "/antigravity/v1beta/models/gemini-2.5-flash:streamGenerateContent", bytes.NewReader(body))
+
+	upstream := &queuedHTTPUpstreamStub{}
+	internal500Cache := &recordingInternal500CounterCache{}
+	svc := &AntigravityGatewayService{
+		tokenProvider:    &AntigravityTokenProvider{},
+		httpUpstream:     upstream,
+		internal500Cache: internal500Cache,
+	}
+
+	account := &Account{
+		ID:          102,
+		Name:        "acc-missing-project",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+		Credentials: map[string]any{
+			"access_token": "token",
+			"model_mapping": map[string]any{
+				"gemini-2.5-flash": "gemini-2.5-flash",
+			},
+		},
+	}
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, "gemini-2.5-flash", "streamGenerateContent", true, body, false)
+	require.Nil(t, result)
+	require.ErrorIs(t, err, errAntigravityProjectIDRequired)
+	require.Equal(t, http.StatusBadRequest, writer.Code)
+	require.Empty(t, upstream.requestBodies)
+	require.Empty(t, internal500Cache.incrementCalls)
+	require.Contains(t, writer.Body.String(), "project_id")
+	require.NotContains(t, writer.Body.String(), `"project":""`)
 }
 
 func TestAntigravityGatewayService_Forward_PromptTooLong(t *testing.T) {
@@ -255,6 +523,7 @@ func TestAntigravityGatewayService_Forward_PromptTooLong(t *testing.T) {
 		Concurrency: 1,
 		Credentials: map[string]any{
 			"access_token": "token",
+			"project_id":   "proj",
 		},
 	}
 
@@ -313,6 +582,7 @@ func TestAntigravityGatewayService_Forward_ModelRateLimitTriggersFailover(t *tes
 		Concurrency: 1,
 		Credentials: map[string]any{
 			"access_token": "token",
+			"project_id":   "proj",
 		},
 		Extra: map[string]any{
 			modelRateLimitsKey: map[string]any{
@@ -369,6 +639,7 @@ func TestAntigravityGatewayService_ForwardGemini_ModelRateLimitTriggersFailover(
 		Concurrency: 1,
 		Credentials: map[string]any{
 			"access_token": "token",
+			"project_id":   "proj",
 		},
 		Extra: map[string]any{
 			modelRateLimitsKey: map[string]any{
@@ -423,6 +694,7 @@ func TestAntigravityGatewayService_Forward_StickySessionForceCacheBilling(t *tes
 		Concurrency: 1,
 		Credentials: map[string]any{
 			"access_token": "token",
+			"project_id":   "proj",
 		},
 		Extra: map[string]any{
 			modelRateLimitsKey: map[string]any{
@@ -478,6 +750,7 @@ func TestAntigravityGatewayService_ForwardGemini_StickySessionForceCacheBilling(
 		Concurrency: 1,
 		Credentials: map[string]any{
 			"access_token": "token",
+			"project_id":   "proj",
 		},
 		Extra: map[string]any{
 			modelRateLimitsKey: map[string]any{
@@ -623,6 +896,7 @@ func TestAntigravityGatewayService_Forward_BillsWithMappedModel(t *testing.T) {
 		Concurrency: 1,
 		Credentials: map[string]any{
 			"access_token": "token",
+			"project_id":   "proj",
 			"model_mapping": map[string]any{
 				"claude-sonnet-4-5": mappedModel,
 			},
@@ -676,6 +950,7 @@ func TestAntigravityGatewayService_ForwardGemini_BillsWithMappedModel(t *testing
 		Concurrency: 1,
 		Credentials: map[string]any{
 			"access_token": "token",
+			"project_id":   "proj",
 			"model_mapping": map[string]any{
 				"gemini-2.5-flash": mappedModel,
 			},
@@ -687,6 +962,73 @@ func TestAntigravityGatewayService_ForwardGemini_BillsWithMappedModel(t *testing
 	require.NotNil(t, result)
 	require.Equal(t, "gemini-2.5-flash", result.Model)
 	require.Equal(t, mappedModel, result.UpstreamModel)
+}
+
+func TestAntigravityGatewayService_ForwardGemini_FallbackReportsActualUpstreamModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body := []byte(`{"contents":[{"role":"user","parts":[{"text":"hello"}]}]}`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1beta/models/gemini-primary:generateContent", bytes.NewReader(body))
+
+	const (
+		originalModel = "gemini-primary"
+		mappedModel   = "gemini-primary-upstream"
+		fallbackModel = "gemini-fallback-upstream"
+	)
+	upstream := &queuedHTTPUpstreamStub{responses: []*http.Response{
+		{
+			StatusCode: http.StatusNotFound,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       io.NopCloser(strings.NewReader(`{"error":{"code":404,"message":"model not found"}}`)),
+		},
+		{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+			Body: io.NopCloser(strings.NewReader(
+				`data: {"response":{"modelVersion":"gemini-fallback-upstream","candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":8,"candidatesTokenCount":3}}}` + "\n\n",
+			)),
+		},
+	}}
+	settings := &antigravitySettingRepoStub{values: map[string]string{
+		SettingKeyEnableModelFallback:      "true",
+		SettingKeyFallbackModelAntigravity: fallbackModel,
+	}}
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(settings, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSize}}),
+		tokenProvider:  &AntigravityTokenProvider{},
+		httpUpstream:   upstream,
+	}
+	account := &Account{
+		ID:          9,
+		Name:        "acc-gemini-fallback",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+		Credentials: map[string]any{
+			"access_token": "token",
+			"project_id":   "proj",
+			"model_mapping": map[string]any{
+				originalModel: mappedModel,
+			},
+		},
+	}
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, originalModel, "generateContent", true, body, false)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, originalModel, result.Model)
+	require.Equal(t, fallbackModel, result.UpstreamModel)
+	require.Equal(t, fallbackModel, result.UpstreamResponseModel)
+	require.False(t, result.UpstreamResponseModelConflict)
+	mismatch := upstreamModelMismatch(result.UpstreamModel, result.UpstreamResponseModel)
+	require.NotNil(t, mismatch)
+	require.False(t, *mismatch)
+	require.Len(t, upstream.requestBodies, 2)
+	require.Contains(t, string(upstream.requestBodies[0]), `"model":"`+mappedModel+`"`)
+	require.Contains(t, string(upstream.requestBodies[1]), `"model":"`+fallbackModel+`"`)
 }
 
 func TestAntigravityGatewayService_ForwardGemini_RetriesCorruptedThoughtSignature(t *testing.T) {
@@ -747,6 +1089,7 @@ func TestAntigravityGatewayService_ForwardGemini_RetriesCorruptedThoughtSignatur
 		Concurrency: 1,
 		Credentials: map[string]any{
 			"access_token": "token",
+			"project_id":   "proj",
 			"model_mapping": map[string]any{
 				originalModel: mappedModel,
 			},
@@ -805,6 +1148,7 @@ func TestAntigravityGatewayService_ForwardGemini_SignatureRetryPropagatesFailove
 		Concurrency: 1,
 		Credentials: map[string]any{
 			"access_token": "token",
+			"project_id":   "proj",
 			"model_mapping": map[string]any{
 				originalModel: mappedModel,
 			},

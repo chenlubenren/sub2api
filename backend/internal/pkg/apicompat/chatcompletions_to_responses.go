@@ -27,12 +27,13 @@ func ChatCompletionsToResponses(req *ChatCompletionsRequest) (*ResponsesRequest,
 	}
 
 	out := &ResponsesRequest{
-		Model:        req.Model,
-		Instructions: req.Instructions,
-		Input:        inputJSON,
-		Stream:       true, // upstream always streams
-		Include:      []string{"reasoning.encrypted_content"},
-		ServiceTier:  req.ServiceTier,
+		Model:             req.Model,
+		Instructions:      req.Instructions,
+		Input:             inputJSON,
+		Stream:            true, // upstream always streams
+		Include:           []string{"reasoning.encrypted_content"},
+		ServiceTier:       req.ServiceTier,
+		ParallelToolCalls: req.ParallelToolCalls,
 	}
 
 	// Reasoning models (gpt-5.x) do not accept sampling parameters.
@@ -67,6 +68,13 @@ func ChatCompletionsToResponses(req *ChatCompletionsRequest) (*ResponsesRequest,
 			Effort:  req.ReasoningEffort,
 			Summary: "auto",
 		}
+	}
+
+	if format := chatResponseFormatToResponsesTextFormat(req.ResponseFormat); len(format) > 0 {
+		if out.Text == nil {
+			out.Text = &ResponsesText{}
+		}
+		out.Text.Format = format
 	}
 
 	// tools[] and legacy functions[] → ResponsesTool[]
@@ -370,6 +378,15 @@ func convertChatContentPartsToResponses(parts []ChatContentPart) []ResponsesCont
 					ImageURL: p.ImageURL.URL,
 				})
 			}
+		case "file":
+			if p.File != nil && (p.File.FileData != "" || p.File.FileID != "") {
+				responseParts = append(responseParts, ResponsesContentPart{
+					Type:     "input_file",
+					Filename: p.File.Filename,
+					FileData: p.File.FileData,
+					FileID:   p.File.FileID,
+				})
+			}
 		}
 	}
 	return responseParts
@@ -411,6 +428,18 @@ func convertChatToolsToResponses(tools []ChatTool, functions []ChatFunction) []R
 	var out []ResponsesTool
 
 	for _, t := range tools {
+		if strings.EqualFold(strings.TrimSpace(t.Type), "x_search") {
+			out = append(out, ResponsesTool{
+				Type:                     "x_search",
+				AllowedXHandles:          t.AllowedXHandles,
+				ExcludedXHandles:         t.ExcludedXHandles,
+				FromDate:                 t.FromDate,
+				ToDate:                   t.ToDate,
+				EnableImageUnderstanding: t.EnableImageUnderstanding,
+				EnableVideoUnderstanding: t.EnableVideoUnderstanding,
+			})
+			continue
+		}
 		if t.Type != "function" || t.Function == nil {
 			continue
 		}

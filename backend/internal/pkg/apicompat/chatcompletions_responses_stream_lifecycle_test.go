@@ -179,6 +179,113 @@ func TestStream_ToolCallLifecycleComplete(t *testing.T) {
 	require.True(t, sawItemDone, "function_call output_item.done missing")
 }
 
+// TestStream_ToolCallArgumentsInFirstChunkNotDoubled guards the GLM/Zhipu shape
+// where a single tool_call delta chunk carries id+name+arguments together.
+// Earlier code copied the whole tool_call (including arguments) into state and
+// then accumulated the same chunk's arguments again, producing a doubled,
+// invalid JSON like {"cmd":"ls"}{"cmd":"ls"} that breaks Codex tool parsing
+// ("trailing characters").
+func TestStream_ToolCallArgumentsInFirstChunkNotDoubled(t *testing.T) {
+	events := collectStreamEvents(t, []string{
+		`{"choices":[{"index":0,"delta":{"role":"assistant"}}]}`,
+		`{"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_a","type":"function","function":{"name":"exec","arguments":"{\"cmd\":\"ls\"}"}}]}}]}`,
+		`{"choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}`,
+	})
+
+	var argsDelta strings.Builder
+	var sawArgsDone, sawItemDone bool
+	for _, e := range events {
+		switch e.Type {
+		case "response.function_call_arguments.delta":
+			_, _ = argsDelta.WriteString(e.Delta)
+		case "response.function_call_arguments.done":
+			sawArgsDone = true
+			require.Equal(t, `{"cmd":"ls"}`, e.Arguments)
+		case "response.output_item.done":
+			if e.Item != nil && e.Item.Type == "function_call" {
+				sawItemDone = true
+				require.Equal(t, `{"cmd":"ls"}`, e.Item.Arguments)
+			}
+		}
+	}
+	require.True(t, sawArgsDone, "function_call_arguments.done missing")
+	require.True(t, sawItemDone, "function_call output_item.done missing")
+	// Accumulated deltas must equal the final arguments exactly (no duplication).
+	require.Equal(t, `{"cmd":"ls"}`, argsDelta.String())
+}
+
+func TestStream_InvalidToolArgumentsAreRejectedBeforeFinalize(t *testing.T) {
+	idx := 0
+	state := NewChatCompletionsToResponsesStreamState("deepseek-v4-flash")
+	chunk := &ChatCompletionsChunk{
+		Choices: []ChatChunkChoice{
+			{
+				Index: 0,
+				Delta: ChatDelta{
+					ToolCalls: []ChatToolCall{
+						{
+							Index: &idx,
+							ID:    "call_bad",
+							Type:  "function",
+							Function: ChatFunctionCall{
+								Name:      "exec_command",
+								Arguments: `{"cmd": "ssh root@HOST`,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	ChatCompletionsChunkToResponsesEvents(chunk, state)
+
+	err := state.ValidateToolCallArguments()
+	require.ErrorContains(t, err, "invalid JSON")
+}
+
+func TestStream_ValidToolCallAtOutputLimitKeepsIncompleteResponse(t *testing.T) {
+	idx := 0
+	state := NewChatCompletionsToResponsesStreamState("deepseek-v4-flash")
+	chunk := &ChatCompletionsChunk{
+		Choices: []ChatChunkChoice{
+			{
+				Index: 0,
+				Delta: ChatDelta{
+					ToolCalls: []ChatToolCall{
+						{
+							Index: &idx,
+							ID:    "call_at_limit",
+							Type:  "function",
+							Function: ChatFunctionCall{
+								Name:      "exec_command",
+								Arguments: `{}`,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	ChatCompletionsChunkToResponsesEvents(chunk, state)
+	state.FinishReason = "length"
+
+	require.NoError(t, state.ValidateToolCallArguments())
+	events := FinalizeChatCompletionsResponsesStream(state)
+	var sawArgsDone, sawIncomplete bool
+	for _, event := range events {
+		switch event.Type {
+		case "response.function_call_arguments.done":
+			sawArgsDone = true
+			require.Equal(t, `{}`, event.Arguments)
+		case "response.completed":
+			require.NotNil(t, event.Response)
+			sawIncomplete = event.Response.Status == "incomplete"
+		}
+	}
+	require.True(t, sawArgsDone)
+	require.True(t, sawIncomplete)
+}
+
 // TestStream_SSEWireComplete drives the full stream through SSE encoding and
 // asserts the function_call events carry complete fields on the wire.
 func TestStream_SSEWireComplete(t *testing.T) {

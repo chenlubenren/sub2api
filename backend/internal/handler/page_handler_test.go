@@ -92,9 +92,12 @@ func TestResolvePageImagePathRejectsSymlinkEscape(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(outside, "secret.png"), []byte("secret"), 0644); err != nil {
 		t.Fatalf("create outside file: %v", err)
 	}
-	if err := os.Symlink(outside, filepath.Join(base, "images")); err != nil {
+	imagesLink := filepath.Join(base, "images")
+	if err := os.Symlink(outside, imagesLink); err != nil {
 		t.Skipf("symlink not supported: %v", err)
 	}
+	// Windows requires the symlink itself to be removed before TempDir cleanup.
+	defer os.Remove(imagesLink)
 
 	if got, ok := resolvePageImagePath(pagesDir, base, "images/secret.png"); ok {
 		t.Fatalf("expected symlink escape to be rejected, got %q", got)
