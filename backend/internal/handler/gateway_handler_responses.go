@@ -68,6 +68,19 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 		h.responsesErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
 		return
 	}
+	originalBody := body
+	body, err = rewriteAndValidateOpenAIRequestBody(
+		c.Request.Context(),
+		h.fileReferenceRewriter,
+		resolveMaxInlineImageBytes(h.cfg),
+		subject.UserID,
+		body,
+	)
+	if err != nil {
+		status, code, _, message := requestBodyPreprocessErrorDetails(err)
+		h.responsesErrorResponse(c, status, code, message)
+		return
+	}
 
 	// Extract model and stream using gjson (like OpenAI handler)
 	modelResult := gjson.GetBytes(body, "model")
@@ -154,7 +167,7 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 	}
 
 	// Parse request for session hash
-	bodyRef := service.NewRequestBodyRef(body)
+	bodyRef := service.NewRequestBodyRef(originalBody)
 	parsedReq, _ := service.ParseGatewayRequest(bodyRef, "responses")
 	if parsedReq == nil {
 		parsedReq = &service.ParsedRequest{Model: reqModel, Stream: reqStream, Body: bodyRef}
@@ -318,7 +331,7 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 		// 6. Record usage
 		userAgent := c.GetHeader("User-Agent")
 		clientIP := ip.GetClientIP(c)
-		requestPayloadHash := service.HashUsageRequestPayload(body)
+		requestPayloadHash := service.HashUsageRequestPayload(originalBody)
 		inboundEndpoint := GetInboundEndpoint(c)
 		upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
 

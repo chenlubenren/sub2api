@@ -900,6 +900,79 @@ var (
 			},
 		},
 	}
+	// FileObjectsColumns holds the columns for the "file_objects" table.
+	FileObjectsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "purpose", Type: field.TypeString, Size: 64, Default: "vision_input"},
+		{Name: "storage_provider", Type: field.TypeString, Size: 32, Default: "s3"},
+		{Name: "bucket", Type: field.TypeString, Size: 255},
+		{Name: "object_key", Type: field.TypeString, Size: 1024},
+		{Name: "original_filename", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "mime_type", Type: field.TypeString, Size: 255},
+		{Name: "size_bytes", Type: field.TypeInt64, Default: 0},
+		{Name: "sha256", Type: field.TypeString, Nullable: true, Size: 64},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "uploaded", "failed", "expired"}, Default: "pending"},
+		{Name: "metadata", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "uploaded_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "api_key_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "owner_user_id", Type: field.TypeInt64},
+	}
+	// FileObjectsTable holds the schema information for the "file_objects" table.
+	FileObjectsTable = &schema.Table{
+		Name:       "file_objects",
+		Columns:    FileObjectsColumns,
+		PrimaryKey: []*schema.Column{FileObjectsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "file_objects_api_keys_file_objects",
+				Columns:    []*schema.Column{FileObjectsColumns[16]},
+				RefColumns: []*schema.Column{APIKeysColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "file_objects_users_file_objects",
+				Columns:    []*schema.Column{FileObjectsColumns[17]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "fileobject_owner_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{FileObjectsColumns[17]},
+			},
+			{
+				Name:    "fileobject_api_key_id",
+				Unique:  false,
+				Columns: []*schema.Column{FileObjectsColumns[16]},
+			},
+			{
+				Name:    "fileobject_status",
+				Unique:  false,
+				Columns: []*schema.Column{FileObjectsColumns[12]},
+			},
+			{
+				Name:    "fileobject_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{FileObjectsColumns[15]},
+			},
+			{
+				Name:    "fileobject_bucket_object_key",
+				Unique:  true,
+				Columns: []*schema.Column{FileObjectsColumns[6], FileObjectsColumns[7]},
+			},
+			{
+				Name:    "fileobject_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{FileObjectsColumns[3]},
+			},
+		},
+	}
 	// GroupsColumns holds the columns for the "groups" table.
 	GroupsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -2103,6 +2176,7 @@ var (
 		ChannelMonitorRequestTemplatesTable,
 		CompositeModelRoutesTable,
 		ErrorPassthroughRulesTable,
+		FileObjectsTable,
 		GroupsTable,
 		IdempotencyRecordsTable,
 		IdentityAdoptionDecisionsTable,
@@ -2191,6 +2265,11 @@ func init() {
 	}
 	ErrorPassthroughRulesTable.Annotation = &entsql.Annotation{
 		Table: "error_passthrough_rules",
+	}
+	FileObjectsTable.ForeignKeys[0].RefTable = APIKeysTable
+	FileObjectsTable.ForeignKeys[1].RefTable = UsersTable
+	FileObjectsTable.Annotation = &entsql.Annotation{
+		Table: "file_objects",
 	}
 	GroupsTable.Annotation = &entsql.Annotation{
 		Table: "groups",

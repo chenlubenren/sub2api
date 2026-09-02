@@ -78,11 +78,13 @@ type APIKeyEdges struct {
 	User *User `json:"user,omitempty"`
 	// Group holds the value of the group edge.
 	Group *Group `json:"group,omitempty"`
+	// FileObjects holds the value of the file_objects edge.
+	FileObjects []*FileObject `json:"file_objects,omitempty"`
 	// UsageLogs holds the value of the usage_logs edge.
 	UsageLogs []*UsageLog `json:"usage_logs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -107,10 +109,19 @@ func (e APIKeyEdges) GroupOrErr() (*Group, error) {
 	return nil, &NotLoadedError{edge: "group"}
 }
 
+// FileObjectsOrErr returns the FileObjects value or an error if the edge
+// was not loaded in eager-loading.
+func (e APIKeyEdges) FileObjectsOrErr() ([]*FileObject, error) {
+	if e.loadedTypes[2] {
+		return e.FileObjects, nil
+	}
+	return nil, &NotLoadedError{edge: "file_objects"}
+}
+
 // UsageLogsOrErr returns the UsageLogs value or an error if the edge
 // was not loaded in eager-loading.
 func (e APIKeyEdges) UsageLogsOrErr() ([]*UsageLog, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.UsageLogs, nil
 	}
 	return nil, &NotLoadedError{edge: "usage_logs"}
@@ -322,6 +333,11 @@ func (_m *APIKey) QueryUser() *UserQuery {
 // QueryGroup queries the "group" edge of the APIKey entity.
 func (_m *APIKey) QueryGroup() *GroupQuery {
 	return NewAPIKeyClient(_m.config).QueryGroup(_m)
+}
+
+// QueryFileObjects queries the "file_objects" edge of the APIKey entity.
+func (_m *APIKey) QueryFileObjects() *FileObjectQuery {
+	return NewAPIKeyClient(_m.config).QueryFileObjects(_m)
 }
 
 // QueryUsageLogs queries the "usage_logs" edge of the APIKey entity.

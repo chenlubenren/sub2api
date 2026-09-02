@@ -57,6 +57,7 @@ type GatewayHandler struct {
 	maxAccountSwitchesGemini  int
 	cfg                       *config.Config
 	settingService            *service.SettingService
+	fileReferenceRewriter     *service.FileReferenceRewriter
 }
 
 // NewGatewayHandler creates a new GatewayHandler
@@ -73,10 +74,32 @@ func NewGatewayHandler(
 	usageRecordWorkerPool *service.UsageRecordWorkerPool,
 	errorPassthroughService *service.ErrorPassthroughService,
 	contentModerationService *service.ContentModerationService,
-	userMsgQueueService *service.UserMessageQueueService,
-	cfg *config.Config,
-	settingService *service.SettingService,
+	optional ...interface{},
 ) *GatewayHandler {
+	var fileReferenceRewriter *service.FileReferenceRewriter
+	var userMsgQueueService *service.UserMessageQueueService
+	var cfg *config.Config
+	var settingService *service.SettingService
+	// Keep the constructor source-compatible with the pre-file-reference
+	// signature used by integrations and tests. New callers pass
+	// (fileRewriter, userMsgQueue, cfg, settings); old callers pass
+	// (userMsgQueue, cfg, settings).
+	if len(optional) >= 4 {
+		fileReferenceRewriter, _ = optional[0].(*service.FileReferenceRewriter)
+		userMsgQueueService, _ = optional[1].(*service.UserMessageQueueService)
+		cfg, _ = optional[2].(*config.Config)
+		settingService, _ = optional[3].(*service.SettingService)
+	} else {
+		if len(optional) > 0 {
+			userMsgQueueService, _ = optional[0].(*service.UserMessageQueueService)
+		}
+		if len(optional) > 1 {
+			cfg, _ = optional[1].(*config.Config)
+		}
+		if len(optional) > 2 {
+			settingService, _ = optional[2].(*service.SettingService)
+		}
+	}
 	pingInterval := time.Duration(0)
 	maxAccountSwitches := 10
 	maxAccountSwitchesGemini := 3
@@ -114,6 +137,7 @@ func NewGatewayHandler(
 		maxAccountSwitchesGemini:  maxAccountSwitchesGemini,
 		cfg:                       cfg,
 		settingService:            settingService,
+		fileReferenceRewriter:     fileReferenceRewriter,
 	}
 }
 

@@ -21,6 +21,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorrequesttemplate"
 	"github.com/Wei-Shaw/sub2api/ent/compositemodelroute"
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
+	"github.com/Wei-Shaw/sub2api/ent/fileobject"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
@@ -986,6 +987,107 @@ func init() {
 	errorpassthroughruleDescSkipMonitoring := errorpassthroughruleFields[11].Descriptor()
 	// errorpassthroughrule.DefaultSkipMonitoring holds the default value on creation for the skip_monitoring field.
 	errorpassthroughrule.DefaultSkipMonitoring = errorpassthroughruleDescSkipMonitoring.Default.(bool)
+	fileobjectMixin := schema.FileObject{}.Mixin()
+	fileobjectMixinHooks1 := fileobjectMixin[1].Hooks()
+	fileobject.Hooks[0] = fileobjectMixinHooks1[0]
+	fileobjectMixinInters1 := fileobjectMixin[1].Interceptors()
+	fileobject.Interceptors[0] = fileobjectMixinInters1[0]
+	fileobjectMixinFields0 := fileobjectMixin[0].Fields()
+	_ = fileobjectMixinFields0
+	fileobjectFields := schema.FileObject{}.Fields()
+	_ = fileobjectFields
+	// fileobjectDescCreatedAt is the schema descriptor for created_at field.
+	fileobjectDescCreatedAt := fileobjectMixinFields0[0].Descriptor()
+	// fileobject.DefaultCreatedAt holds the default value on creation for the created_at field.
+	fileobject.DefaultCreatedAt = fileobjectDescCreatedAt.Default.(func() time.Time)
+	// fileobjectDescUpdatedAt is the schema descriptor for updated_at field.
+	fileobjectDescUpdatedAt := fileobjectMixinFields0[1].Descriptor()
+	// fileobject.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	fileobject.DefaultUpdatedAt = fileobjectDescUpdatedAt.Default.(func() time.Time)
+	// fileobject.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	fileobject.UpdateDefaultUpdatedAt = fileobjectDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// fileobjectDescPurpose is the schema descriptor for purpose field.
+	fileobjectDescPurpose := fileobjectFields[2].Descriptor()
+	// fileobject.DefaultPurpose holds the default value on creation for the purpose field.
+	fileobject.DefaultPurpose = fileobjectDescPurpose.Default.(string)
+	// fileobject.PurposeValidator is a validator for the "purpose" field. It is called by the builders before save.
+	fileobject.PurposeValidator = fileobjectDescPurpose.Validators[0].(func(string) error)
+	// fileobjectDescStorageProvider is the schema descriptor for storage_provider field.
+	fileobjectDescStorageProvider := fileobjectFields[3].Descriptor()
+	// fileobject.DefaultStorageProvider holds the default value on creation for the storage_provider field.
+	fileobject.DefaultStorageProvider = fileobjectDescStorageProvider.Default.(string)
+	// fileobject.StorageProviderValidator is a validator for the "storage_provider" field. It is called by the builders before save.
+	fileobject.StorageProviderValidator = fileobjectDescStorageProvider.Validators[0].(func(string) error)
+	// fileobjectDescBucket is the schema descriptor for bucket field.
+	fileobjectDescBucket := fileobjectFields[4].Descriptor()
+	// fileobject.BucketValidator is a validator for the "bucket" field. It is called by the builders before save.
+	fileobject.BucketValidator = func() func(string) error {
+		validators := fileobjectDescBucket.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(bucket string) error {
+			for _, fn := range fns {
+				if err := fn(bucket); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// fileobjectDescObjectKey is the schema descriptor for object_key field.
+	fileobjectDescObjectKey := fileobjectFields[5].Descriptor()
+	// fileobject.ObjectKeyValidator is a validator for the "object_key" field. It is called by the builders before save.
+	fileobject.ObjectKeyValidator = func() func(string) error {
+		validators := fileobjectDescObjectKey.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(object_key string) error {
+			for _, fn := range fns {
+				if err := fn(object_key); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// fileobjectDescOriginalFilename is the schema descriptor for original_filename field.
+	fileobjectDescOriginalFilename := fileobjectFields[6].Descriptor()
+	// fileobject.OriginalFilenameValidator is a validator for the "original_filename" field. It is called by the builders before save.
+	fileobject.OriginalFilenameValidator = fileobjectDescOriginalFilename.Validators[0].(func(string) error)
+	// fileobjectDescMimeType is the schema descriptor for mime_type field.
+	fileobjectDescMimeType := fileobjectFields[7].Descriptor()
+	// fileobject.MimeTypeValidator is a validator for the "mime_type" field. It is called by the builders before save.
+	fileobject.MimeTypeValidator = func() func(string) error {
+		validators := fileobjectDescMimeType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(mime_type string) error {
+			for _, fn := range fns {
+				if err := fn(mime_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// fileobjectDescSizeBytes is the schema descriptor for size_bytes field.
+	fileobjectDescSizeBytes := fileobjectFields[8].Descriptor()
+	// fileobject.DefaultSizeBytes holds the default value on creation for the size_bytes field.
+	fileobject.DefaultSizeBytes = fileobjectDescSizeBytes.Default.(int64)
+	// fileobjectDescSha256 is the schema descriptor for sha256 field.
+	fileobjectDescSha256 := fileobjectFields[9].Descriptor()
+	// fileobject.Sha256Validator is a validator for the "sha256" field. It is called by the builders before save.
+	fileobject.Sha256Validator = fileobjectDescSha256.Validators[0].(func(string) error)
+	// fileobjectDescMetadata is the schema descriptor for metadata field.
+	fileobjectDescMetadata := fileobjectFields[11].Descriptor()
+	// fileobject.DefaultMetadata holds the default value on creation for the metadata field.
+	fileobject.DefaultMetadata = fileobjectDescMetadata.Default.(func() map[string]interface{})
 	groupMixin := schema.Group{}.Mixin()
 	groupMixinHooks1 := groupMixin[1].Hooks()
 	group.Hooks[0] = groupMixinHooks1[0]

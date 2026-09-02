@@ -1039,3 +1039,34 @@ func TestSanitizeEmptyBase64InputImagesInOpenAIBody(t *testing.T) {
 		]
 	}`, string(body))
 }
+
+func TestValidateInlineImageDataURIsAllowsSmallPayload(t *testing.T) {
+	body := []byte(`{
+		"model":"gpt-5",
+		"input":[
+			{"role":"user","content":[
+				{"type":"input_image","image_url":"data:image/png;base64,aGVsbG8="}
+			]}
+		]
+	}`)
+
+	err := validateInlineImageDataURIs(body, 16)
+
+	require.NoError(t, err)
+}
+
+func TestValidateInlineImageDataURIsRejectsOversizedPayload(t *testing.T) {
+	body := []byte(`{
+		"model":"gpt-5",
+		"input":[
+			{"role":"user","content":[
+				{"type":"input_image","image_url":"data:image/png;base64,QUJDREVGR0g="}
+			]}
+		]
+	}`)
+
+	err := validateInlineImageDataURIs(body, 4)
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "/v1/files")
+}
