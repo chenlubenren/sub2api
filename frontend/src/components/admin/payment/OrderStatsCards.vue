@@ -71,7 +71,12 @@ defineProps<{
   stats: DashboardStats
 }>()
 
-function formatMoney(value: number): string {
-  return value.toFixed(2)
+function formatMoney(value: number | Record<string, number>): string {
+  return amountOf(value).toFixed(2)
+}
+
+function amountOf(value: number | Record<string, number>, currency = 'CNY'): number {
+  if (typeof value === 'number') return value
+  return value[currency] ?? Object.values(value)[0] ?? 0
 }
 </script>

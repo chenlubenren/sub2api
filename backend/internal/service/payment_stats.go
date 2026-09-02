@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"math"
 	"sort"
@@ -22,6 +23,23 @@ func (s *PaymentService) GetDashboardStats(ctx context.Context, days int) (*Dash
 	}
 	now := time.Now()
 	since := now.AddDate(0, 0, -days)
+	return s.getDashboardStatsInRange(ctx, since, now, since)
+}
+
+// GetDashboardStatsWithRange returns payment dashboard statistics for the
+// half-open paid_at interval [start, end). It is used by the admin custom
+// date-range filter and intentionally leaves the existing days API intact.
+func (s *PaymentService) GetDashboardStatsWithRange(ctx context.Context, start, end time.Time) (*DashboardStats, error) {
+	if end.IsZero() || !end.After(start) {
+		return nil, fmt.Errorf("invalid dashboard date range")
+	}
+	// The daily-series helper labels buckets as (seriesSince, ...]. Shift the
+	// anchor back one day so a custom range includes its calendar start date.
+	return s.getDashboardStatsInRange(ctx, start, end, start.AddDate(0, 0, -1))
+}
+
+func (s *PaymentService) getDashboardStatsInRange(ctx context.Context, since, end, seriesSince time.Time) (*DashboardStats, error) {
+	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	paidStatuses := []string{OrderStatusCompleted, OrderStatusPaid, OrderStatusRecharging}
@@ -30,6 +48,7 @@ func (s *PaymentService) GetDashboardStats(ctx context.Context, days int) (*Dash
 		Where(
 			paymentorder.StatusIn(paidStatuses...),
 			paymentorder.PaidAtGTE(since),
+			paymentorder.PaidAtLT(end),
 		).
 		All(ctx)
 	if err != nil {
@@ -46,7 +65,11 @@ func (s *PaymentService) GetDashboardStats(ctx context.Context, days int) (*Dash
 		return nil, err
 	}
 
-	st.DailySeries = buildDailySeries(orders, since, days)
+	days := int(math.Ceil(end.Sub(since).Hours() / 24))
+	if days < 1 {
+		days = 1
+	}
+	st.DailySeries = buildDailySeries(orders, seriesSince, days)
 	st.PaymentMethods = buildMethodDistribution(orders)
 	st.TopUsers = buildTopUsers(orders)
 

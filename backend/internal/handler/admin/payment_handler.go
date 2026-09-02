@@ -35,6 +35,21 @@ func NewPaymentHandler(paymentService *service.PaymentService, configService *se
 // GetDashboard returns payment dashboard statistics.
 // GET /api/v1/admin/payment/dashboard
 func (h *PaymentHandler) GetDashboard(c *gin.Context) {
+	if c.Query("start_date") != "" || c.Query("end_date") != "" {
+		loc := exportLocation(c.Query("timezone"))
+		start, end, err := parseExportDateRange(c.Query("start_date"), c.Query("end_date"), loc)
+		if err != nil {
+			response.BadRequest(c, err.Error())
+			return
+		}
+		stats, err := h.paymentService.GetDashboardStatsWithRange(c.Request.Context(), start, end)
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+		response.Success(c, stats)
+		return
+	}
 	days := 30
 	if d := c.Query("days"); d != "" {
 		if v, err := strconv.Atoi(d); err == nil && v > 0 {
@@ -178,8 +193,10 @@ func adminPaymentOrderResponse(order *dbent.PaymentOrder, info service.Registrat
 	b, _ := json.Marshal(cloned)
 	result := make(map[string]any)
 	_ = json.Unmarshal(b, &result)
-	if info.Code != "" {
-		result["registration_promo_code"] = info.Code
+	if info.Code != "" || info.Group != "" {
+		if info.Code != "" {
+			result["registration_promo_code"] = info.Code
+		}
 		result["registration_promo_group"] = info.Group
 	}
 	return result

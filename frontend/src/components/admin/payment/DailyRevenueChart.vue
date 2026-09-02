@@ -39,7 +39,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 const { t } = useI18n()
 
 const props = defineProps<{
-  data: { date: string; amount: number; count: number }[]
+  data: { date: string; amount: number | Record<string, number>; count: number }[]
   loading?: boolean
 }>()
 
@@ -50,7 +50,7 @@ const chartData = computed(() => {
     datasets: [
       {
         label: t('payment.admin.revenue'),
-        data: props.data.map(d => d.amount),
+        data: props.data.map(d => amountOf(d.amount)),
         borderColor: 'rgb(59, 130, 246)',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
         fill: true,
@@ -72,6 +72,11 @@ const chartData = computed(() => {
     ]
   }
 })
+
+function amountOf(value: number | Record<string, number>, currency = 'CNY'): number {
+  if (typeof value === 'number') return value
+  return value[currency] ?? Object.values(value)[0] ?? 0
+}
 
 const chartOptions = {
   responsive: true,

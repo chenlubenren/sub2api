@@ -214,12 +214,13 @@ export interface CreateOrderResult {
 }
 
 export interface DashboardStats {
-  today_amount: number
-  total_amount: number
+  today_amount: Record<string, number> | number
+  total_amount: Record<string, number> | number
   today_count: number
   total_count: number
-  avg_amount: number
-  daily_series: { date: string; amount: number; count: number }[]
-  payment_methods: { type: string; amount: number; count: number }[]
-  top_users: { user_id: number; email: string; amount: number }[]
+  avg_amount: Record<string, number> | number
+  pending_orders?: number
+  daily_series: { date: string; amount: Record<string, number> | number; count: number }[]
+  payment_methods: { type: string; amount: Record<string, number> | number; count: number }[]
+  top_users: Record<string, { user_id: number; email: string; amount: number }[]> | { user_id: number; email: string; amount: number }[]
 }
