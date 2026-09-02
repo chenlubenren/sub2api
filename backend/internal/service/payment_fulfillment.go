@@ -218,7 +218,7 @@ func (s *PaymentService) executeFulfillment(ctx context.Context, oid int64) erro
 	if err != nil {
 		return fmt.Errorf("get order: %w", err)
 	}
-	if o.OrderType == payment.OrderTypeSubscription {
+	if strings.EqualFold(strings.TrimSpace(o.OrderType), payment.OrderTypeSubscription) {
 		return s.ExecuteSubscriptionFulfillment(ctx, oid)
 	}
 	return s.ExecuteBalanceFulfillment(ctx, oid)
@@ -470,6 +470,13 @@ func (s *PaymentService) ExecuteSubscriptionFulfillment(ctx context.Context, oid
 		return infraerrors.NotFound("NOT_FOUND", "order not found")
 	}
 	if o.Status == OrderStatusCompleted {
+		// Older fulfillment workers could complete a subscription before the
+		// affiliate rebate step was introduced. Re-run the rebate step for
+		// completed subscription orders; its audit claim makes this idempotent
+		// and safely repairs those orders without double-paying commissions.
+		if err := s.applyAffiliateRebateForOrder(ctx, o); err != nil {
+			return err
+		}
 		return nil
 	}
 	if psIsRefundStatus(o.Status) {
@@ -698,7 +705,7 @@ func affiliateRebateBaseAmount(o *dbent.PaymentOrder) float64 {
 	if o == nil {
 		return 0
 	}
-	switch o.OrderType {
+	switch strings.ToLower(strings.TrimSpace(o.OrderType)) {
 	case payment.OrderTypeBalance, payment.OrderTypeSubscription:
 		return o.Amount
 	default:

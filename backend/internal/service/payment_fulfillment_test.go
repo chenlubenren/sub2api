@@ -971,6 +971,39 @@ func TestExecuteSubscriptionFulfillmentAppliesAffiliateRebate(t *testing.T) {
 	require.Contains(t, applied.Detail, `"rebateAmount":1.4985`)
 }
 
+func TestExecuteSubscriptionFulfillmentRepairsCompletedOrderWithoutAffiliateAudit(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	ensurePaymentAuditOrderActionUniqueIndex(t, ctx, client)
+
+	order := createPaymentFulfillmentSubscriptionOrder(t, ctx, client, OrderStatusCompleted, time.Now())
+	inviterID := int64(9002)
+	affiliateRepo := &paymentFulfillmentAffiliateRepoStub{
+		inviteeSummary: &AffiliateSummary{
+			UserID:    order.UserID,
+			AffCode:   "INVITEE",
+			InviterID: &inviterID,
+			CreatedAt: time.Now().Add(-24 * time.Hour),
+		},
+		inviterSummary: &AffiliateSummary{UserID: inviterID, AffCode: "INVITER", CreatedAt: time.Now().Add(-48 * time.Hour)},
+	}
+	settingSvc := NewSettingService(&paymentFulfillmentSettingRepoStub{values: map[string]string{
+		SettingKeyAffiliateEnabled:    "true",
+		SettingKeyAffiliateRebateRate: "10",
+	}}, nil)
+	svc := &PaymentService{
+		entClient:        client,
+		affiliateService: NewAffiliateService(affiliateRepo, settingSvc, nil, nil),
+	}
+
+	require.NoError(t, svc.ExecuteSubscriptionFulfillment(ctx, order.ID))
+	require.Len(t, affiliateRepo.accrueCalls, 1)
+	require.Equal(t, inviterID, affiliateRepo.accrueCalls[0].inviterID)
+	require.Equal(t, order.UserID, affiliateRepo.accrueCalls[0].inviteeUserID)
+	require.InDelta(t, 8, affiliateRepo.accrueCalls[0].amount, 0.00000001)
+	require.NotNil(t, affiliateRepo.accrueCalls[0].sourceOrderID)
+}
+
 func TestExecuteSubscriptionFulfillmentDoesNotDuplicateWorkAfterLegacySuccessAudit(t *testing.T) {
 	ctx := context.Background()
 	client := newPaymentConfigServiceTestClient(t)
