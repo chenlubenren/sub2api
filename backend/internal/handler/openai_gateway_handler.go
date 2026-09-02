@@ -46,6 +46,7 @@ type OpenAIGatewayHandler struct {
 	imageLimiter               *imageConcurrencyLimiter
 	maxAccountSwitches         int
 	cfg                        *config.Config
+	fileReferenceRewriter      *service.FileReferenceRewriter
 }
 
 type openAIWSTurnChannelMappingSnapshot struct {
@@ -320,8 +321,18 @@ func NewOpenAIGatewayHandler(
 	errorPassthroughService *service.ErrorPassthroughService,
 	contentModerationService *service.ContentModerationService,
 	opsService *service.OpsService,
-	cfg *config.Config,
+	optional ...interface{},
 ) *OpenAIGatewayHandler {
+	var fileReferenceRewriter *service.FileReferenceRewriter
+	var cfg *config.Config
+	for _, value := range optional {
+		switch typed := value.(type) {
+		case *service.FileReferenceRewriter:
+			fileReferenceRewriter = typed
+		case *config.Config:
+			cfg = typed
+		}
+	}
 	pingInterval := time.Duration(0)
 	maxAccountSwitches := 3
 	if cfg != nil {
@@ -342,6 +353,7 @@ func NewOpenAIGatewayHandler(
 		imageLimiter:             &imageConcurrencyLimiter{},
 		maxAccountSwitches:       maxAccountSwitches,
 		cfg:                      cfg,
+		fileReferenceRewriter:    fileReferenceRewriter,
 	}
 }
 
@@ -420,6 +432,18 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 	if !gjson.ValidBytes(body) {
 		logRequestBodyParseFailure(reqLog, body, nil)
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
+		return
+	}
+	body, err = rewriteAndValidateOpenAIRequestBody(
+		c.Request.Context(),
+		h.fileReferenceRewriter,
+		resolveMaxInlineImageBytes(h.cfg),
+		subject.UserID,
+		body,
+	)
+	if err != nil {
+		status, _, errType, message := requestBodyPreprocessErrorDetails(err)
+		h.errorResponse(c, status, errType, message)
 		return
 	}
 

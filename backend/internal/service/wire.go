@@ -47,6 +47,13 @@ func ProvideUpdateService(cache UpdateCache, githubClient GitHubReleaseClient, b
 	return NewUpdateService(cache, githubClient, buildInfo.Version, buildInfo.BuildType)
 }
 
+func ProvideStorageProvider(cfg *config.Config) (StorageProvider, error) {
+	if cfg == nil || cfg.Storage.Backend != config.StorageBackendS3 {
+		return nil, nil
+	}
+	return NewS3StorageProvider(context.Background(), cfg)
+}
+
 // ProvideEmailQueueService creates EmailQueueService with default worker count
 func ProvideEmailQueueService(emailService *EmailService) *EmailQueueService {
 	return NewEmailQueueService(emailService, 3)
@@ -841,6 +848,9 @@ var ProviderSet = wire.NewSet(
 	NewAdminService,
 	NewGatewayService,
 	NewOpenAIGatewayService,
+	ProvideStorageProvider,
+	NewFileService,
+	NewFileReferenceRewriter,
 	ProvideImageStorageSettingService,
 	ProvideImageTaskService,
 	ProvideBatchImageModelPricingResolver,

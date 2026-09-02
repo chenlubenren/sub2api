@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
@@ -25,6 +27,52 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
+
+func validateInlineImageDataURIs(body []byte, maxDecodedBytes int64) error {
+	if len(body) == 0 || maxDecodedBytes <= 0 {
+		return nil
+	}
+	var payload any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return fmt.Errorf("parse request body for inline image validation: %w", err)
+	}
+	return validateInlineImageValue(payload, maxDecodedBytes)
+}
+
+func validateInlineImageValue(value any, maxDecodedBytes int64) error {
+	switch typed := value.(type) {
+	case map[string]any:
+		for _, child := range typed {
+			if err := validateInlineImageValue(child, maxDecodedBytes); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for _, item := range typed {
+			if err := validateInlineImageValue(item, maxDecodedBytes); err != nil {
+				return err
+			}
+		}
+	case string:
+		trimmed := strings.TrimSpace(typed)
+		if !strings.HasPrefix(strings.ToLower(trimmed), "data:image/") {
+			return nil
+		}
+		parts := strings.SplitN(trimmed, ",", 2)
+		if len(parts) != 2 || !strings.Contains(strings.ToLower(parts[0]), ";base64") {
+			return nil
+		}
+		decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(parts[1]))
+		if err == nil && int64(len(decoded)) > maxDecodedBytes {
+			return infraerrors.BadRequest("INLINE_IMAGE_TOO_LARGE", fmt.Sprintf("inline image payload exceeds %d bytes; please upload via /v1/files and send file_id instead", maxDecodedBytes))
+		}
+	}
+	return nil
+}
+
+func ValidateInlineImageDataURIsForCompatibility(body []byte, maxDecodedBytes int64) error {
+	return validateInlineImageDataURIs(body, maxDecodedBytes)
+}
 
 const (
 	// ChatGPT internal API for OAuth accounts
