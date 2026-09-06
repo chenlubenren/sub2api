@@ -10,8 +10,9 @@ terminate healthy long generations and streams.
   Go maps it to the corresponding HTTP/2 header-list limit.
 - `server.read_header_timeout: 10` bounds slow-header attacks. It does not
   limit request processing or response streaming.
-- `server.max_request_body_size: 268435456` is the absolute 256 MiB safety net.
-- `gateway.max_body_size: 268435456` remains available to multimodal, Gemini,
+- `server.max_request_body_size: 1073741824` is the 1 GiB safety net used by
+  the live deployment.
+- `gateway.max_body_size: 1073741824` remains available to multimodal, Gemini,
   image, video, and batch-image endpoints.
 - `gateway.text_max_body_size: 33554432` limits the known pure-text
   `/embeddings` and `/alpha/search` endpoints to 32 MiB.

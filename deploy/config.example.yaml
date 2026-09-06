@@ -45,11 +45,11 @@ server:
   trusted_proxies:
     - 127.0.0.1/32
     - ::1/128
-  # Global max request body size in bytes (default: 256MB)
-  # 全局最大请求体大小（字节，默认 256MB）
+  # Global max request body size in bytes (live deployment: 1GB)
+  # 全局最大请求体大小（字节，线上配置为 1GB）
   # Applies to all requests, especially important for h2c first request memory protection
   # 适用于所有请求，对 h2c 第一请求的内存保护尤为重要
-  max_request_body_size: 268435456
+  max_request_body_size: 1073741824
   # HTTP/2 Cleartext (h2c) configuration
   # HTTP/2 Cleartext (h2c) 配置
   h2c:
@@ -226,9 +226,12 @@ gateway:
   openai_first_output_timeout_seconds: 0
   # Optional high/xhigh/max override (seconds, 0=use the standard timeout)
   openai_high_effort_first_output_timeout_seconds: 0
-  # Max request body size in bytes (default: 256MB)
-  # 请求体最大字节数（默认 256MB）
-  max_body_size: 268435456
+  # Max request body size in bytes (live deployment: 1GB)
+  # 请求体最大字节数（线上配置为 1GB）
+  max_body_size: 1073741824
+  # Legacy inline base64 image payload limit (live deployment: 100MB)
+  # 内联 Base64 图片大小（线上配置为 100MB）
+  max_inline_image_bytes: 104857600
   # Pure-text endpoint body limit (embeddings and alpha/search), default 32 MiB.
   # 纯文本端点请求体上限（embeddings、alpha/search），默认 32 MiB。
   text_max_body_size: 33554432

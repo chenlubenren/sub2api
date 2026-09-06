@@ -24,11 +24,12 @@ const (
 )
 
 const (
-	StorageBackendDisabled            = "disabled"
-	StorageBackendS3                  = "s3"
-	DefaultStoragePresignExpire       = 900
-	DefaultStorageMaxFileSizeBytes    = int64(10 * 1024 * 1024)
-	DefaultGatewayMaxInlineImageBytes = int64(512 * 1024)
+	StorageBackendDisabled         = "disabled"
+	StorageBackendS3               = "s3"
+	DefaultStoragePresignExpire    = 900
+	DefaultStorageMaxFileSizeBytes = int64(10 * 1024 * 1024)
+	// Keep the source-run default aligned with the live deployment profile.
+	DefaultGatewayMaxInlineImageBytes = int64(100 * 1024 * 1024)
 )
 
 var DefaultStorageAllowedMimeTypes = []string{"image/png", "image/jpeg", "image/webp"}
@@ -2012,7 +2013,7 @@ func setDefaults() {
 	viper.SetDefault("server.read_header_timeout", 10) // 10秒读取请求头
 	viper.SetDefault("server.max_header_bytes", 64*1024)
 	viper.SetDefault("server.idle_timeout", 120) // 120秒空闲超时
-	viper.SetDefault("server.max_request_body_size", int64(256*1024*1024))
+	viper.SetDefault("server.max_request_body_size", int64(1024*1024*1024))
 	// H2C 默认配置
 	viper.SetDefault("server.h2c.enabled", false)
 	viper.SetDefault("server.h2c.max_concurrent_streams", uint32(50))      // 50 个并发流
@@ -2476,7 +2477,7 @@ func setDefaults() {
 	viper.SetDefault("gateway.image_concurrency.max_waiting_requests", 100)
 	viper.SetDefault("gateway.antigravity_fallback_cooldown_minutes", 1)
 	viper.SetDefault("gateway.antigravity_extra_retries", 10)
-	viper.SetDefault("gateway.max_body_size", int64(256*1024*1024))
+	viper.SetDefault("gateway.max_body_size", int64(1024*1024*1024))
 	viper.SetDefault("gateway.max_inline_image_bytes", DefaultGatewayMaxInlineImageBytes)
 	viper.SetDefault("gateway.text_max_body_size", int64(32*1024*1024))
 	viper.SetDefault("gateway.upstream_response_read_max_bytes", DefaultUpstreamResponseReadMaxBytes)
