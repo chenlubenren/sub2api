@@ -531,8 +531,6 @@ func (s *PricingService) downloadPricingData() error {
 	if err != nil {
 		return fmt.Errorf("parse pricing data: %w", err)
 	}
-	data = s.mergeFallbackPricingData(data)
-	data = s.mergeOverrideOnlyModels(data)
 
 	// 保存到本地文件
 	pricingFile := s.getPricingFilePath()
@@ -647,20 +645,6 @@ func (s *PricingService) parsePricingData(body []byte) (map[string]*LiteLLMModel
 		}
 		if entry.InputCostPerImageToken != nil {
 			pricing.InputCostPerImageToken = *entry.InputCostPerImageToken
-		}
-
-		hasExplicitLongContext := entry.LongContextInputTokenThreshold != nil ||
-			entry.LongContextInputCostMultiplier != nil ||
-			entry.LongContextOutputCostMultiplier != nil
-		if !hasExplicitLongContext {
-			deriveLongContextFromAboveTierFields(rawEntry, pricing)
-			if isLopsidedLongContextLadder(pricing) {
-				lopsidedLadders = append(lopsidedLadders, fmt.Sprintf("%s(input x%.2f, output x%.2f)", modelName,
-					pricing.LongContextInputCostMultiplier, pricing.LongContextOutputCostMultiplier))
-			}
-		}
-		if orphans := orphanCacheTierFields(rawEntry); len(orphans) > 0 {
-			orphanCacheTiers = append(orphanCacheTiers, modelName+"("+strings.Join(orphans, ",")+")")
 		}
 
 		hasExplicitLongContext := entry.LongContextInputTokenThreshold != nil ||
@@ -982,8 +966,6 @@ func (s *PricingService) loadPricingData(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("parse pricing data: %w", err)
 	}
-	pricingData = s.mergeFallbackPricingData(pricingData)
-	pricingData = s.mergeOverrideOnlyModels(pricingData)
 
 	// 计算哈希
 	hash := sha256.Sum256(data)

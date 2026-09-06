@@ -1246,31 +1246,6 @@ type upstreamModelCapabilityEntry struct {
 	Limit                    modelsDevLimit             `json:"limit"`
 }
 
-type upstreamModelEntryMetadata struct {
-	ID           string `json:"id"`
-	Slug         string `json:"slug"`
-	Model        string `json:"model"`
-	ModelID      string `json:"modelId"`
-	ModelIDSnake string `json:"model_id"`
-	Name         string `json:"name"`
-}
-
-type upstreamModelCapabilityEntry struct {
-	upstreamModelEntry
-	DisplayName              string                     `json:"display_name"`
-	Description              string                     `json:"description"`
-	Reasoning                *bool                      `json:"reasoning"`
-	DefaultReasoningLevel    string                     `json:"default_reasoning_level"`
-	SupportedReasoningLevels []json.RawMessage          `json:"supported_reasoning_levels"`
-	ReasoningOptions         []modelsDevReasoningOption `json:"reasoning_options"`
-	InputModalities          []string                   `json:"input_modalities"`
-	Modalities               modelsDevModalities        `json:"modalities"`
-	ContextWindow            int64                      `json:"context_window"`
-	MaxContextWindow         int64                      `json:"max_context_window"`
-	MaxOutputTokens          int64                      `json:"max_output_tokens"`
-	Limit                    modelsDevLimit             `json:"limit"`
-}
-
 func extractUpstreamModelIDs(body []byte) ([]string, error) {
 	return extractUpstreamModelIDsWithSelector(body, upstreamModelEntryID)
 }

@@ -71,18 +71,6 @@ func (s *OpenAIGatewayService) forwardAsChatCompletions(
 	defaultMappedModel string,
 	compatPromptCacheTenantIsolated bool,
 ) (*OpenAIForwardResult, error) {
-	return s.forwardAsChatCompletions(ctx, c, account, body, promptCacheKey, defaultMappedModel, false)
-}
-
-func (s *OpenAIGatewayService) forwardAsChatCompletions(
-	ctx context.Context,
-	c *gin.Context,
-	account *Account,
-	body []byte,
-	promptCacheKey string,
-	defaultMappedModel string,
-	compatPromptCacheTenantIsolated bool,
-) (*OpenAIForwardResult, error) {
 	beginUpstreamResponseModelObservation(c)
 	ClearActualOpenAIUpstreamEndpoint(c)
 	if shouldForwardOpenAIResponsesViaRawChatCompletions(account) {

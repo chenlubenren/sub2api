@@ -317,35 +317,6 @@ func (c *openAIWSToolCallReplayCollector) addAllItem(item gjson.Result) {
 	c.allItems = append(c.allItems, json.RawMessage(raw))
 }
 
-func (c *openAIWSToolCallReplayCollector) AllItems() []json.RawMessage {
-	return cloneOpenAIWSRawMessages(c.allItems)
-}
-
-func (c *openAIWSToolCallReplayCollector) addAllItem(item gjson.Result) {
-	if !item.Exists() || item.Type != gjson.JSON {
-		return
-	}
-	raw := strings.TrimSpace(item.Raw)
-	if raw == "" || !strings.HasPrefix(raw, "{") || strings.TrimSpace(item.Get("type").String()) == "" {
-		return
-	}
-	key := strings.TrimSpace(item.Get("id").String())
-	if key == "" {
-		key = strings.TrimSpace(item.Get("call_id").String())
-	}
-	if key == "" {
-		key = raw
-	}
-	if c.allSeen == nil {
-		c.allSeen = make(map[string]struct{})
-	}
-	if _, ok := c.allSeen[key]; ok {
-		return
-	}
-	c.allSeen[key] = struct{}{}
-	c.allItems = append(c.allItems, json.RawMessage(raw))
-}
-
 func (c *openAIWSToolCallReplayCollector) addItem(item gjson.Result) {
 	if !item.Exists() || item.Type != gjson.JSON {
 		return
