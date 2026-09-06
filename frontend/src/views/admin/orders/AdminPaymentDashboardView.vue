@@ -2,18 +2,7 @@
   <AppLayout>
     <div class="space-y-6">
       <!-- Header with Day Switcher -->
-      <div class="flex flex-wrap items-center justify-end gap-3">
-        <div class="flex items-center gap-2">
-          <input v-model="customStartDate" type="date" class="input w-36" :title="t('payment.admin.customStartDate')" />
-          <span class="text-sm text-gray-400">—</span>
-          <input v-model="customEndDate" type="date" class="input w-36" :title="t('payment.admin.customEndDate')" />
-          <button type="button" class="btn btn-primary" :disabled="loading || !customStartDate || !customEndDate" @click="applyCustomRange">
-            {{ t('payment.admin.applyDateRange') }}
-          </button>
-          <button v-if="customActive" type="button" class="btn btn-secondary" :disabled="loading" @click="clearCustomRange">
-            {{ t('payment.admin.clearDateRange') }}
-          </button>
-        </div>
+      <div class="flex items-center justify-end">
         <div class="flex items-center gap-2">
           <div class="flex rounded-lg border border-gray-200 dark:border-dark-600">
             <button
@@ -24,7 +13,7 @@
               :class="days === d
                 ? 'bg-primary-600 text-white'
                 : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700'"
-              @click="selectDays(d)"
+              @click="days = d"
             >
               {{ d }}{{ t('payment.admin.daySuffix') }}
             </button>
@@ -82,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { adminPaymentAPI } from '@/api/admin/payment'
@@ -99,9 +88,6 @@ const appStore = useAppStore()
 
 const DAYS_OPTIONS = [7, 30, 90] as const
 const days = ref<number>(30)
-const customStartDate = ref('')
-const customEndDate = ref('')
-const customActive = ref(false)
 const loading = ref(false)
 const stats = ref<DashboardStats | null>(null)
 
@@ -140,10 +126,7 @@ function formatMoney(currency: string, amount: number): string {
 async function loadDashboard() {
   loading.value = true
   try {
-    const params = customActive.value
-      ? { start_date: customStartDate.value, end_date: customEndDate.value, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
-      : { days: days.value }
-    const res = await adminPaymentAPI.getDashboard(params)
+    const res = await adminPaymentAPI.getDashboard(days.value)
     stats.value = res.data
   } catch (err: unknown) {
     appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error')))
@@ -152,39 +135,6 @@ async function loadDashboard() {
   }
 }
 
-function selectDays(value: number) {
-  customActive.value = false
-  days.value = value
-}
-
-function applyCustomRange() {
-  if (!customStartDate.value || !customEndDate.value) return
-  if (customEndDate.value < customStartDate.value) {
-    appStore.showError(t('payment.admin.exportDateRangeInvalid'))
-    return
-  }
-  customActive.value = true
-  loadDashboard()
-}
-
-function clearCustomRange() {
-  customStartDate.value = ''
-  customEndDate.value = ''
-  customActive.value = false
-  loadDashboard()
-}
-
-function amountOf(value: number | Record<string, number>, currency = 'CNY'): number {
-  if (typeof value === 'number') return value
-  return value[currency] ?? Object.values(value)[0] ?? 0
-}
-function formatMoney(value: number | Record<string, number>): string { return amountOf(value).toFixed(2) }
-const topUsers = computed(() => {
-  const value = stats.value?.top_users
-  if (!value) return []
-  return Array.isArray(value) ? value : (value.CNY ?? Object.values(value)[0] ?? [])
-})
-
-watch(days, () => { if (!customActive.value) loadDashboard() })
+watch(days, () => loadDashboard())
 onMounted(() => loadDashboard())
 </script>

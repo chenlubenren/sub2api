@@ -85,11 +85,6 @@ const chartData = computed(() => {
   }
 })
 
-function amountOf(value: number | Record<string, number>, currency = 'CNY'): number {
-  if (typeof value === 'number') return value
-  return value[currency] ?? Object.values(value)[0] ?? 0
-}
-
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
