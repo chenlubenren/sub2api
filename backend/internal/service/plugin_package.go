@@ -107,12 +107,7 @@ func (i *PluginPackageInstaller) Install(ctx context.Context, reader io.Reader, 
 	if err != nil {
 		return nil, fmt.Errorf("插件包不是有效的 ZIP: %w", err)
 	}
-	archiveClosed := false
-	defer func() {
-		if !archiveClosed {
-			_ = archive.Close()
-		}
-	}()
+	defer func() { _ = archive.Close() }()
 	manifest, _, signatureStatus, err := i.inspectArchive(&archive.Reader)
 	if err != nil {
 		return nil, err
@@ -142,13 +137,6 @@ func (i *PluginPackageInstaller) Install(ctx context.Context, reader io.Reader, 
 	if err := i.extractArchive(ctx, &archive.Reader, manifest, extractPath); err != nil {
 		return nil, err
 	}
-	// Windows does not allow renaming an open file. Close the ZIP before
-	// committing the uploaded artifact; Unix permits this, but relying on it
-	// makes plugin installation platform-dependent.
-	if err := archive.Close(); err != nil {
-		return nil, fmt.Errorf("关闭插件包: %w", err)
-	}
-	archiveClosed = true
 	if err := os.Rename(extractPath, installPath); err != nil {
 		return nil, fmt.Errorf("提交插件安装目录: %w", err)
 	}

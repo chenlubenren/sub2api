@@ -13,7 +13,26 @@
     </router-link>
 
     <div class="relative z-10 w-full max-w-md">
-      <div class="border-4 border-[#101010] bg-white p-8 shadow-[8px_8px_0_#101010]">
+      <!-- Logo/Brand -->
+      <div class="mb-8 text-center">
+        <!-- Custom Logo or Default Logo -->
+        <template v-if="settingsLoaded">
+          <div
+            class="mb-4 inline-flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-primary-500/30"
+          >
+            <img :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
+          </div>
+          <h1 class="text-gradient mb-2 text-3xl font-bold">
+            {{ siteName }}
+          </h1>
+          <p class="text-sm text-gray-500 dark:text-dark-400">
+            {{ siteSubtitle }}
+          </p>
+        </template>
+      </div>
+
+      <!-- Card Container -->
+      <div class="card-glass rounded-2xl p-8 shadow-glass">
         <slot />
       </div>
 

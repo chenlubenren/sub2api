@@ -975,8 +975,6 @@ type GatewayConfig struct {
 	MaxBodySize int64 `mapstructure:"max_body_size"`
 	// TextMaxBodySize limits endpoints that cannot carry inline image/video payloads.
 	TextMaxBodySize int64 `mapstructure:"text_max_body_size"`
-	// MaxInlineImageBytes limits legacy inline base64 image payloads.
-	MaxInlineImageBytes int64 `mapstructure:"max_inline_image_bytes"`
 	// 非流式上游响应体读取上限（字节），用于防止无界读取导致内存放大
 	UpstreamResponseReadMaxBytes int64 `mapstructure:"upstream_response_read_max_bytes"`
 	// 上游模型列表响应体读取上限（字节）
@@ -2477,7 +2475,6 @@ func setDefaults() {
 	viper.SetDefault("gateway.antigravity_fallback_cooldown_minutes", 1)
 	viper.SetDefault("gateway.antigravity_extra_retries", 10)
 	viper.SetDefault("gateway.max_body_size", int64(256*1024*1024))
-	viper.SetDefault("gateway.max_inline_image_bytes", DefaultGatewayMaxInlineImageBytes)
 	viper.SetDefault("gateway.text_max_body_size", int64(32*1024*1024))
 	viper.SetDefault("gateway.upstream_response_read_max_bytes", DefaultUpstreamResponseReadMaxBytes)
 	viper.SetDefault("gateway.models_list_read_max_bytes", DefaultModelsListReadMaxBytes)
@@ -3297,9 +3294,6 @@ func (c *Config) Validate() error {
 	}
 	if c.Gateway.TextMaxBodySize <= 0 || c.Gateway.TextMaxBodySize > c.Gateway.MaxBodySize {
 		return fmt.Errorf("gateway.text_max_body_size must be positive and no greater than gateway.max_body_size")
-	}
-	if c.Gateway.MaxInlineImageBytes <= 0 {
-		return fmt.Errorf("gateway.max_inline_image_bytes must be positive")
 	}
 	if c.Gateway.UpstreamResponseReadMaxBytes <= 0 {
 		return fmt.Errorf("gateway.upstream_response_read_max_bytes must be positive")

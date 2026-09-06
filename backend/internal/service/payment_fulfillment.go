@@ -705,7 +705,7 @@ func affiliateRebateBaseAmount(o *dbent.PaymentOrder) float64 {
 	if o == nil {
 		return 0
 	}
-	switch strings.ToLower(strings.TrimSpace(o.OrderType)) {
+	switch o.OrderType {
 	case payment.OrderTypeBalance, payment.OrderTypeSubscription:
 		return o.Amount
 	default:

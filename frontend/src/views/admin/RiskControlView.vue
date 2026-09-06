@@ -317,6 +317,9 @@
                     <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-700 dark:text-gray-300">
                       <div>{{ row.highest_category || '-' }}</div>
                       <div class="text-xs text-gray-400">{{ percent(row.highest_score) }}</div>
+                      <div v-if="row.matched_keyword" class="mt-0.5 text-xs font-medium text-red-600 dark:text-red-300" :title="t('admin.riskControl.matchedKeyword') + ': ' + row.matched_keyword">
+                        {{ t('admin.riskControl.matchedKeyword') }}: {{ row.matched_keyword }}
+                      </div>
                     </td>
                     <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-700 dark:text-gray-300">
                       <div>{{ violationCountText(row) }}</div>
@@ -420,6 +423,11 @@
                   <input v-model.number="configForm.sample_rate" type="number" min="0" max="100" step="1" class="input pr-8" />
                   <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
                 </div>
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.riskControl.proxy') }}</label>
+                <ProxySelector v-model="configForm.proxy_id" :proxies="proxies" />
+                <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('admin.riskControl.proxyHint') }}</p>
               </div>
             </div>
 
@@ -1078,6 +1086,10 @@
                 {{ inputDetailRow.highest_category || '-' }} / {{ percent(inputDetailRow.highest_score) }}
               </p>
             </div>
+            <div v-if="inputDetailRow.matched_keyword" class="rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-900/20">
+              <p class="text-xs font-medium text-red-500 dark:text-red-300">{{ t('admin.riskControl.matchedKeyword') }}</p>
+              <p class="mt-1 truncate text-sm font-semibold text-red-700 dark:text-red-200" :title="inputDetailRow.matched_keyword">{{ inputDetailRow.matched_keyword }}</p>
+            </div>
           </div>
 
           <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:border-dark-700 dark:bg-dark-800">
@@ -1116,6 +1128,7 @@ import Select from '@/components/common/Select.vue'
 import Toggle from '@/components/common/Toggle.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import ModelWhitelistSelector from '@/components/account/ModelWhitelistSelector.vue'
+import ProxySelector from '@/components/common/ProxySelector.vue'
 import { adminAPI } from '@/api/admin'
 import type {
   ContentModerationAPIKeyLoad,
@@ -1130,7 +1143,7 @@ import type {
   ModerationMode,
   UpdateContentModerationConfig,
 } from '@/api/admin/riskControl'
-import type { AdminGroup, SelectOption } from '@/types'
+import type { AdminGroup, Proxy, SelectOption } from '@/types'
 import { useAppStore } from '@/stores/app'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import { formatDateTime as formatDateTimeValue } from '@/utils/format'
@@ -1184,6 +1197,7 @@ const riskThresholdCategories = Object.keys(riskThresholdDefaults)
 
 const { t } = useI18n()
 const appStore = useAppStore()
+const defaultBlockMessage = () => t('admin.riskControl.defaultBlockMessage')
 
 const loading = ref(true)
 const saving = ref(false)
@@ -1197,6 +1211,7 @@ const activeSettingsTab = ref<SettingsTab>('basic')
 const groupSearch = ref('')
 const flaggedHashInput = ref('')
 const groups = ref<AdminGroup[]>([])
+const proxies = ref<Proxy[]>([])
 const logs = ref<ContentModerationLog[]>([])
 const status = ref<ContentModerationRuntimeStatus | null>(null)
 const testedApiKeyStatuses = ref<ContentModerationAPIKeyStatus[]>([])
@@ -1213,6 +1228,7 @@ const configForm = reactive({
   mode: 'pre_block' as ModerationMode,
   base_url: 'https://api.openai.com',
   model: 'omni-moderation-latest',
+  proxy_id: null as number | null,
   api_keys_text: '',
   api_key_configured: false,
   api_key_masked: '',
@@ -1230,7 +1246,7 @@ const configForm = reactive({
   worker_count: 4,
   queue_size: 32768,
   block_status: 403,
-  block_message: '内容审计命中风险规则，请调整输入后重试',
+  block_message: defaultBlockMessage(),
   email_on_hit: true,
   auto_ban_enabled: true,
   cyber_policy_exclude_from_ban_count: false,
@@ -1687,6 +1703,7 @@ function applyConfig(config: ContentModerationConfig) {
   configForm.mode = config.mode
   configForm.base_url = config.base_url || 'https://api.openai.com'
   configForm.model = config.model || 'omni-moderation-latest'
+  configForm.proxy_id = config.proxy_id || null
   configForm.api_keys_text = ''
   configForm.api_key_configured = config.api_key_configured
   configForm.api_key_masked = config.api_key_masked || ''
@@ -1707,7 +1724,7 @@ function applyConfig(config: ContentModerationConfig) {
   configForm.worker_count = config.worker_count || 4
   configForm.queue_size = config.queue_size || 32768
   configForm.block_status = config.block_status || 403
-  configForm.block_message = config.block_message || '内容审计命中风险规则，请调整输入后重试'
+  configForm.block_message = config.block_message || defaultBlockMessage()
   configForm.email_on_hit = config.email_on_hit ?? true
   configForm.auto_ban_enabled = config.auto_ban_enabled ?? true
   configForm.cyber_policy_exclude_from_ban_count = config.cyber_policy_exclude_from_ban_count ?? false
@@ -1727,14 +1744,17 @@ function applyConfig(config: ContentModerationConfig) {
 async function loadAll() {
   loading.value = true
   try {
-    const [config, groupItems, runtimeStatus] = await Promise.all([
+    const [config, groupItems, runtimeStatus, proxyItems] = await Promise.all([
       adminAPI.riskControl.getConfig(),
       adminAPI.groups.getAll(),
       adminAPI.riskControl.getStatus(),
+      // 代理列表加载失败不阻塞风控页面（仅影响下拉可选项）
+      adminAPI.proxies.getAll().catch(() => [] as Proxy[]),
     ])
     applyConfig(config)
     groups.value = groupItems
     status.value = runtimeStatus
+    proxies.value = proxyItems
     if (Array.isArray(runtimeStatus.api_key_statuses)) {
       configForm.api_key_statuses = [...runtimeStatus.api_key_statuses]
       prunePendingDeleteAPIKeyHashes()
@@ -1778,6 +1798,8 @@ async function saveConfig() {
       mode: configForm.mode,
       base_url: configForm.base_url,
       model: configForm.model,
+      // 后端语义：0 清除代理（直连），>0 指定代理
+      proxy_id: configForm.proxy_id ?? 0,
       timeout_ms: Number(configForm.timeout_ms) || 3000,
       retry_count: Number(configForm.retry_count) || 0,
       sample_rate: Number(configForm.sample_rate) || 0,
@@ -1788,7 +1810,7 @@ async function saveConfig() {
       worker_count: Number(configForm.worker_count) || 4,
       queue_size: Number(configForm.queue_size) || 32768,
       block_status: Number(configForm.block_status) || 403,
-      block_message: configForm.block_message || '内容审计命中风险规则，请调整输入后重试',
+      block_message: configForm.block_message || defaultBlockMessage(),
       email_on_hit: configForm.email_on_hit,
       auto_ban_enabled: configForm.auto_ban_enabled,
       cyber_policy_exclude_from_ban_count: configForm.cyber_policy_exclude_from_ban_count,
@@ -1976,6 +1998,8 @@ async function testApiKeys(useInputKeys: boolean) {
       base_url: configForm.base_url,
       model: configForm.model,
       timeout_ms: Number(configForm.timeout_ms) || 3000,
+      // 与保存语义一致：0 强制直连，>0 指定代理，确保测试与实际审计走同一条链路
+      proxy_id: configForm.proxy_id ?? 0,
       prompt: moderationTestPrompt.value,
       images: moderationTestImages.value,
     })

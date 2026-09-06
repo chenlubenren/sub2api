@@ -17,6 +17,8 @@ import subscriptionsAPI from './subscriptions'
 import usageAPI from './usage'
 import geminiAPI from './gemini'
 import antigravityAPI from './antigravity'
+import grokAPI from './grok'
+import cnProvidersAPI from './cnProviders'
 import userAttributesAPI from './userAttributes'
 import opsAPI from './ops'
 import errorPassthroughAPI from './errorPassthrough'
@@ -32,6 +34,8 @@ import adminPaymentAPI from './payment'
 import affiliatesAPI from './affiliates'
 import riskControlAPI from './riskControl'
 import adminComplianceAPI from './compliance'
+import auditAPI from './audit'
+import pluginsAPI from './plugins'
 
 /**
  * Unified admin API object for convenient access
@@ -51,6 +55,8 @@ export const adminAPI = {
   usage: usageAPI,
   gemini: geminiAPI,
   antigravity: antigravityAPI,
+  grok: grokAPI,
+  cnProviders: cnProvidersAPI,
   userAttributes: userAttributesAPI,
   ops: opsAPI,
   errorPassthrough: errorPassthroughAPI,
@@ -65,7 +71,9 @@ export const adminAPI = {
   payment: adminPaymentAPI,
   affiliates: affiliatesAPI,
   riskControl: riskControlAPI,
-  compliance: adminComplianceAPI
+  compliance: adminComplianceAPI,
+  audit: auditAPI,
+  plugins: pluginsAPI
 }
 
 export {
@@ -83,6 +91,8 @@ export {
   usageAPI,
   geminiAPI,
   antigravityAPI,
+  grokAPI,
+  cnProvidersAPI,
   userAttributesAPI,
   opsAPI,
   errorPassthroughAPI,
@@ -97,14 +107,23 @@ export {
   adminPaymentAPI,
   affiliatesAPI,
   riskControlAPI,
-  adminComplianceAPI
+  adminComplianceAPI,
+  auditAPI,
+  pluginsAPI
 }
 
 export default adminAPI
 
 // Re-export types used by components
+export type { AuditLog, AuditLogQuery, AuditLogListResponse } from './audit'
 export type { BalanceHistoryItem } from './users'
 export type { ErrorPassthroughRule, CreateRuleRequest, UpdateRuleRequest } from './errorPassthrough'
 export type { BackupAgentHealth, DataManagementConfig } from './dataManagement'
 export type { TLSFingerprintProfile, CreateProfileRequest, UpdateProfileRequest } from './tlsFingerprintProfile'
 export type { ContentModerationConfig, ContentModerationLog, ModerationMode } from './riskControl'
+export type {
+  PluginInstallation,
+  PluginCompatibility,
+  PluginUISession,
+  PluginTestResult
+} from './plugins'

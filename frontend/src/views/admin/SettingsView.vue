@@ -834,7 +834,7 @@
                     </span>
                   </div>
 
-                  <div class="grid grid-cols-2 gap-4">
+                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <!-- Action -->
                     <div>
                       <label
@@ -1128,6 +1128,47 @@
                   </button>
                 </div>
 
+                <div
+                  class="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400"
+                  :data-testid="`openai-fast-policy-summary-${ruleIndex}`"
+                >
+                  <span class="font-medium text-gray-700 dark:text-gray-300">
+                    {{
+                      t(
+                        hasOpenAIFastPolicyTargetModels(rule)
+                          ? "admin.settings.openaiFastPolicy.summaryTargetModels"
+                          : "admin.settings.openaiFastPolicy.summaryAllModels",
+                      )
+                    }}
+                  </span>
+                  <span aria-hidden="true">→</span>
+                  <span
+                    class="inline-flex items-center rounded bg-primary-50 px-2 py-0.5 font-medium text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
+                  >
+                    {{ openaiFastPolicyActionSummary(rule.action) }}
+                  </span>
+                  <template v-if="hasOpenAIFastPolicyTargetModels(rule)">
+                    <span aria-hidden="true">·</span>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">
+                      {{
+                        t(
+                          "admin.settings.openaiFastPolicy.summaryOtherModels",
+                        )
+                      }}
+                    </span>
+                    <span aria-hidden="true">→</span>
+                    <span
+                      class="inline-flex items-center rounded bg-gray-100 px-2 py-0.5 font-medium text-gray-700 dark:bg-dark-600 dark:text-gray-300"
+                    >
+                      {{
+                        openaiFastPolicyActionSummary(
+                          rule.fallback_action || "pass",
+                        )
+                      }}
+                    </span>
+                  </template>
+                </div>
+
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <!-- Service Tier -->
                   <div>
@@ -1158,7 +1199,11 @@
                     <Select
                       :modelValue="rule.action"
                       @update:modelValue="
-                        rule.action = $event as 'pass' | 'filter' | 'block'
+                        rule.action = $event as
+                          | 'pass'
+                          | 'filter'
+                          | 'block'
+                          | 'force_priority'
                       "
                       :options="openaiFastPolicyActionOptions"
                     />
@@ -1185,6 +1230,22 @@
                   </div>
                 </div>
 
+                <!-- User Scope -->
+                <div class="mt-3">
+                  <label
+                    class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
+                  >
+                    {{ t("admin.settings.openaiFastPolicy.userIds") }}
+                  </label>
+                  <p class="mb-2 text-xs text-gray-400 dark:text-gray-500">
+                    {{ t("admin.settings.openaiFastPolicy.userIdsHint") }}
+                  </p>
+                  <OpenAIFastPolicyUserSelector
+                    :model-value="rule.user_ids || []"
+                    @update:model-value="rule.user_ids = $event"
+                  />
+                </div>
+
                 <!-- Error Message (only when action=block) -->
                 <div v-if="rule.action === 'block'" class="mt-3">
                   <label
@@ -1207,14 +1268,23 @@
                   </p>
                 </div>
 
-                <!-- Model Whitelist -->
-                <div class="mt-3">
+                <!-- Target Models -->
+                <div
+                  class="mt-3"
+                  role="group"
+                  :aria-labelledby="`openai-fast-policy-models-label-${ruleIndex}`"
+                  :aria-describedby="`openai-fast-policy-models-hint-${ruleIndex}`"
+                >
                   <label
+                    :id="`openai-fast-policy-models-label-${ruleIndex}`"
                     class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
                   >
                     {{ t("admin.settings.openaiFastPolicy.modelWhitelist") }}
                   </label>
-                  <p class="mb-2 text-xs text-gray-400 dark:text-gray-500">
+                  <p
+                    :id="`openai-fast-policy-models-hint-${ruleIndex}`"
+                    class="mb-2 text-xs text-gray-400 dark:text-gray-500"
+                  >
                     {{
                       t("admin.settings.openaiFastPolicy.modelWhitelistHint")
                     }}
@@ -1278,11 +1348,9 @@
                   </button>
                 </div>
 
-                <!-- Fallback Action (only when model_whitelist is non-empty) -->
+                <!-- Other Models Action (only when target models are non-empty) -->
                 <div
-                  v-if="
-                    rule.model_whitelist && rule.model_whitelist.length > 0
-                  "
+                  v-if="hasOpenAIFastPolicyTargetModels(rule)"
                   class="mt-3"
                 >
                   <label
@@ -1297,6 +1365,7 @@
                         | 'pass'
                         | 'filter'
                         | 'block'
+                        | 'force_priority'
                     "
                     :options="openaiFastPolicyActionOptions"
                   />
@@ -1465,6 +1534,23 @@
                 </p>
               </div>
 
+              <!-- Email Domain Quota -->
+              <div
+                class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
+              >
+                <div>
+                  <label class="font-medium text-gray-900 dark:text-white">{{
+                    t("admin.settings.registration.emailDomainQuota")
+                  }}</label>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.registration.emailDomainQuotaHint") }}
+                  </p>
+                </div>
+                <Toggle
+                  v-model="form.registration_email_domain_quota_enabled"
+                />
+              </div>
+
               <!-- Promo Code -->
               <div
                 class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
@@ -1556,6 +1642,115 @@
                   :disabled="!form.totp_encryption_key_configured"
                 />
               </div>
+
+              <!-- Passkey sign-in -->
+              <div
+                class="border-t border-gray-100 pt-4 dark:border-dark-700"
+                data-testid="passkey-settings"
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <label class="font-medium text-gray-900 dark:text-white">{{
+                      t("admin.settings.security.passkey")
+                    }}</label>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.security.passkeyHint") }}
+                    </p>
+                  </div>
+                  <Toggle
+                    v-model="form.passkey_enabled"
+                    data-testid="passkey-toggle"
+                    :disabled="!form.passkey_configured"
+                  />
+                </div>
+                <div
+                  class="mt-3 rounded-lg border px-3 py-2 text-sm"
+                  :class="
+                    form.passkey_configured
+                      ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300'
+                      : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300'
+                  "
+                  data-testid="passkey-config-status"
+                >
+                  <p class="font-medium">
+                    {{
+                      form.passkey_configured
+                        ? t("admin.settings.security.passkeyConfigured")
+                        : t("admin.settings.security.passkeyNotConfigured")
+                    }}
+                  </p>
+                  <p class="mt-1 break-all">
+                    {{ t("admin.settings.security.passkeyRPID") }}:
+                    {{
+                      form.passkey_rp_id ||
+                      t("admin.settings.security.passkeyValueNotConfigured")
+                    }}
+                  </p>
+                  <p class="mt-1 break-all">
+                    {{ t("admin.settings.security.passkeyOrigins") }}:
+                    {{
+                      form.passkey_rp_origins.length > 0
+                        ? form.passkey_rp_origins.join(", ")
+                        : t(
+                            "admin.settings.security.passkeyValueNotConfigured",
+                          )
+                    }}
+                  </p>
+                  <p v-if="!form.passkey_configured" class="mt-2">
+                    {{ t("admin.settings.security.passkeyDeploymentHint") }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- 敏感操作 step-up 2FA -->
+              <div
+                class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
+              >
+                <div>
+                  <label class="font-medium text-gray-900 dark:text-white">{{
+                    t("admin.settings.security.stepUp")
+                  }}</label>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.security.stepUpHint") }}
+                  </p>
+                </div>
+                <Toggle v-model="form.step_up_enabled" />
+              </div>
+
+              <!-- 会话 IP/UA 绑定 -->
+              <div
+                class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
+              >
+                <div>
+                  <label class="font-medium text-gray-900 dark:text-white">{{
+                    t("admin.settings.security.sessionBinding")
+                  }}</label>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.security.sessionBindingHint") }}
+                  </p>
+                </div>
+                <Toggle v-model="form.session_binding_enabled" />
+              </div>
+
+              <!-- 审计日志保留天数 -->
+              <div
+                class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
+              >
+                <div>
+                  <label class="font-medium text-gray-900 dark:text-white">{{
+                    t("admin.settings.security.auditRetention")
+                  }}</label>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.security.auditRetentionHint") }}
+                  </p>
+                </div>
+                <input
+                  v-model.number="form.audit_log_retention_days"
+                  type="number"
+                  min="0"
+                  class="input w-28 text-right"
+                />
+              </div>
             </div>
           </div>
 
@@ -1583,41 +1778,351 @@
                 </div>
                 <Toggle v-model="form.api_key_acl_trust_forwarded_ip" />
               </div>
+
+              <div
+                v-if="form.api_key_acl_trust_forwarded_ip"
+                class="border-t border-gray-100 pt-4 dark:border-dark-700"
+              >
+                <label
+                  for="forwarded-client-ip-headers"
+                  class="font-medium text-gray-900 dark:text-white"
+                >
+                  {{ t("admin.settings.apiKeyAcl.forwardedClientIpHeaders") }}
+                </label>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {{ t("admin.settings.apiKeyAcl.forwardedClientIpHeadersHint") }}
+                </p>
+                <div
+                  class="mt-3 rounded-lg border border-gray-300 bg-white p-2 dark:border-dark-500 dark:bg-dark-700"
+                >
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      v-for="header in form.forwarded_client_ip_headers"
+                      :key="header"
+                      data-testid="forwarded-client-ip-header-tag"
+                      class="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs font-mono text-gray-700 dark:bg-dark-600 dark:text-gray-200"
+                    >
+                      <span>{{ header }}</span>
+                      <button
+                        type="button"
+                        class="rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-dark-500 dark:hover:text-white"
+                        :aria-label="t('admin.settings.apiKeyAcl.removeForwardedClientIpHeader', { header })"
+                        @click="removeForwardedClientIpHeader(header)"
+                      >
+                        <Icon
+                          name="x"
+                          size="xs"
+                          class="h-3.5 w-3.5"
+                          :stroke-width="2"
+                        />
+                      </button>
+                    </span>
+                    <div
+                      class="flex min-w-[220px] flex-1 items-center gap-1 rounded border border-transparent px-2 py-1 focus-within:border-primary-300 dark:focus-within:border-primary-700"
+                    >
+                      <input
+                        id="forwarded-client-ip-headers"
+                        v-model="forwardedClientIpHeaderDraft"
+                        data-testid="forwarded-client-ip-headers-input"
+                        type="text"
+                        class="w-full bg-transparent text-sm font-mono text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
+                        :placeholder="t('admin.settings.apiKeyAcl.forwardedClientIpHeadersPlaceholder')"
+                        @keydown="handleForwardedClientIpHeaderKeydown"
+                        @blur="commitForwardedClientIpHeaderDraft"
+                        @paste="handleForwardedClientIpHeaderPaste"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t("admin.settings.apiKeyAcl.forwardedClientIpHeadersRiskHint") }}
+                </p>
+              </div>
             </div>
           </div>
 
-          <!-- Cloudflare Turnstile Settings -->
+          <!-- Panel API Rate Limit Settings -->
+          <div class="card">
+            <div
+              class="border-b border-gray-100 px-6 py-4 dark:border-dark-700"
+            >
+              <div class="flex items-center gap-2">
+                <Icon
+                  name="shield"
+                  size="md"
+                  class="text-primary-500"
+                />
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                  {{ t("admin.settings.panelRateLimit.title") }}
+                </h2>
+              </div>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ t("admin.settings.panelRateLimit.description") }}
+              </p>
+            </div>
+            <div class="space-y-5 p-6">
+              <div
+                v-if="panelRateLimitLoading"
+                class="flex items-center gap-2 text-gray-500"
+              >
+                <div
+                  class="h-4 w-4 animate-spin rounded-full border-b-2 border-primary-600"
+                ></div>
+                {{ t("common.loading") }}
+              </div>
+
+              <template v-else>
+                <!-- 计数维度说明：按账号计数，反代部署无误伤 -->
+                <div
+                  class="rounded-lg border border-sky-200 bg-sky-50 p-4 dark:border-sky-800 dark:bg-sky-900/20"
+                >
+                  <div class="flex items-start">
+                    <Icon
+                      name="infoCircle"
+                      size="md"
+                      class="mt-0.5 flex-shrink-0 text-sky-500"
+                    />
+                    <p class="ml-3 text-sm text-sky-700 dark:text-sky-300">
+                      {{ t("admin.settings.panelRateLimit.proxySafeNote") }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <label class="font-medium text-gray-900 dark:text-white">{{
+                      t("admin.settings.panelRateLimit.enabled")
+                    }}</label>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.panelRateLimit.enabledHint") }}
+                    </p>
+                  </div>
+                  <Toggle v-model="panelRateLimitForm.enabled" />
+                </div>
+
+                <div
+                  v-if="panelRateLimitForm.enabled"
+                  class="space-y-5 border-t border-gray-100 pt-4 dark:border-dark-700"
+                >
+                  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                      <label
+                        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        {{ t("admin.settings.panelRateLimit.userRpm") }}
+                      </label>
+                      <div class="flex items-center gap-2">
+                        <input
+                          v-model.number="panelRateLimitForm.user_rpm"
+                          data-testid="panel-rate-limit-user-rpm"
+                          type="number"
+                          min="0"
+                          max="100000"
+                          class="input w-32"
+                        />
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                          {{ t("admin.settings.panelRateLimit.perMinute") }}
+                        </span>
+                      </div>
+                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{ t("admin.settings.panelRateLimit.userRpmHint") }}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label
+                        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        {{ t("admin.settings.panelRateLimit.heavyRpm") }}
+                      </label>
+                      <div class="flex items-center gap-2">
+                        <input
+                          v-model.number="panelRateLimitForm.heavy_rpm"
+                          type="number"
+                          min="0"
+                          max="100000"
+                          class="input w-32"
+                        />
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                          {{ t("admin.settings.panelRateLimit.perMinute") }}
+                        </span>
+                      </div>
+                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{ t("admin.settings.panelRateLimit.heavyRpmHint") }}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label
+                        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        {{ t("admin.settings.panelRateLimit.publicIpRpm") }}
+                      </label>
+                      <div class="flex items-center gap-2">
+                        <input
+                          v-model.number="panelRateLimitForm.public_ip_rpm"
+                          type="number"
+                          min="0"
+                          max="100000"
+                          class="input w-32"
+                        />
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                          {{ t("admin.settings.panelRateLimit.perMinute") }}
+                        </span>
+                      </div>
+                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{ t("admin.settings.panelRateLimit.publicIpRpmHint") }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
+                  >
+                    <div>
+                      <label class="font-medium text-gray-900 dark:text-white">{{
+                        t("admin.settings.panelRateLimit.exemptAdmin")
+                      }}</label>
+                      <p class="text-sm text-gray-500 dark:text-gray-400">
+                        {{ t("admin.settings.panelRateLimit.exemptAdminHint") }}
+                      </p>
+                    </div>
+                    <Toggle v-model="panelRateLimitForm.exempt_admin" />
+                  </div>
+                </div>
+
+                <div
+                  class="flex justify-end border-t border-gray-100 pt-4 dark:border-dark-700"
+                >
+                  <button
+                    type="button"
+                    data-testid="panel-rate-limit-save"
+                    @click="savePanelRateLimitSettings"
+                    :disabled="panelRateLimitSaving"
+                    class="btn btn-primary btn-sm"
+                  >
+                    <svg
+                      v-if="panelRateLimitSaving"
+                      class="mr-1 h-4 w-4 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    {{
+                      panelRateLimitSaving
+                        ? t("common.saving")
+                        : t("common.save")
+                    }}
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- 人机验证 Settings -->
           <div class="card">
             <div
               class="border-b border-gray-100 px-6 py-4 dark:border-dark-700"
             >
               <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-                {{ t("admin.settings.turnstile.title") }}
+                {{ t("admin.settings.captcha.title") }}
               </h2>
               <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {{ t("admin.settings.turnstile.description") }}
+                {{ t("admin.settings.captcha.description") }}
               </p>
             </div>
             <div class="space-y-5 p-6">
-              <!-- Enable Turnstile -->
+              <!-- Enable Captcha -->
               <div class="flex items-center justify-between">
                 <div>
                   <label class="font-medium text-gray-900 dark:text-white">{{
-                    t("admin.settings.turnstile.enableTurnstile")
+                    t("admin.settings.captcha.enable")
                   }}</label>
                   <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ t("admin.settings.turnstile.enableTurnstileHint") }}
+                    {{ t("admin.settings.captcha.enableHint") }}
                   </p>
                 </div>
-                <Toggle v-model="form.turnstile_enabled" />
+                <Toggle
+                  v-model="captchaMasterEnabled"
+                  data-testid="captcha-enabled-toggle"
+                />
               </div>
 
-              <!-- Turnstile Keys - Only show when enabled -->
+              <!-- Provider fields - Only show when enabled -->
               <div
-                v-if="form.turnstile_enabled"
+                v-if="captchaMasterEnabled"
                 class="border-t border-gray-100 pt-4 dark:border-dark-700"
               >
-                <div class="grid grid-cols-1 gap-6">
+                <!-- Provider Selector -->
+                <div class="mb-6">
+                  <label
+                    class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.captcha.provider") }}
+                  </label>
+                  <div
+                    class="grid grid-cols-3 gap-2 rounded-lg bg-gray-100 p-1 dark:bg-dark-700"
+                  >
+                    <button
+                      type="button"
+                      data-testid="captcha-provider-turnstile"
+                      class="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition"
+                      :class="
+                        captchaProviderSelection === 'turnstile'
+                          ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
+                          : 'text-gray-600 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'
+                      "
+                      @click="selectCaptchaProvider('turnstile')"
+                    >
+                      {{ t("admin.settings.captcha.providerTurnstile") }}
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="captcha-provider-tencent"
+                      class="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition"
+                      :class="
+                        captchaProviderSelection === 'tencent'
+                          ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
+                          : 'text-gray-600 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'
+                      "
+                      @click="selectCaptchaProvider('tencent')"
+                    >
+                      {{ t("admin.settings.captcha.providerTencent") }}
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="captcha-provider-aliyun"
+                      class="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition"
+                      :class="
+                        captchaProviderSelection === 'aliyun'
+                          ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
+                          : 'text-gray-600 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'
+                      "
+                      @click="selectCaptchaProvider('aliyun')"
+                    >
+                      {{ t("admin.settings.captcha.providerAliyun") }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Cloudflare Turnstile fields -->
+                <div
+                  v-if="captchaProviderSelection === 'turnstile'"
+                  class="grid grid-cols-1 gap-6"
+                >
                   <div>
                     <label
                       class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -1661,6 +2166,268 @@
                               "admin.settings.turnstile.secretKeyConfiguredHint",
                             )
                           : t("admin.settings.turnstile.secretKeyHint")
+                      }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Tencent Captcha fields -->
+                <div v-else-if="captchaProviderSelection === 'tencent'">
+                  <div class="mb-6 max-w-sm">
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {{ t("admin.settings.tencentCaptcha.region") }}
+                    </label>
+                    <div class="grid grid-cols-2 gap-2 rounded-lg bg-gray-100 p-1 dark:bg-dark-700">
+                      <button
+                        type="button"
+                        data-testid="tencent-captcha-region-cn"
+                        class="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition"
+                        :class="
+                          form.tencent_captcha_region !== 'intl'
+                            ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
+                            : 'text-gray-600 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'
+                        "
+                        @click="form.tencent_captcha_region = 'cn'"
+                      >
+                        {{ t("admin.settings.tencentCaptcha.regionCn") }}
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="tencent-captcha-region-intl"
+                        class="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition"
+                        :class="
+                          form.tencent_captcha_region === 'intl'
+                            ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
+                            : 'text-gray-600 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'
+                        "
+                        @click="form.tencent_captcha_region = 'intl'"
+                      >
+                        {{ t("admin.settings.tencentCaptcha.regionIntl") }}
+                      </button>
+                    </div>
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.tencentCaptcha.regionHint") }}
+                    </p>
+                  </div>
+                  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div class="md:col-span-2">
+                      <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                        {{ t("admin.settings.tencentCaptcha.appCredentialsTitle") }}
+                      </h3>
+                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {{ t("admin.settings.tencentCaptcha.appCredentialsHint") }}
+                      </p>
+                    </div>
+                    <div>
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ t("admin.settings.tencentCaptcha.appId") }}
+                      </label>
+                      <input
+                        v-model="form.tencent_captcha_app_id"
+                        type="text"
+                        inputmode="numeric"
+                        class="input font-mono text-sm"
+                        placeholder="123456789"
+                      />
+                    </div>
+                    <div>
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ t("admin.settings.tencentCaptcha.appSecretKey") }}
+                      </label>
+                      <input
+                        v-model="form.tencent_captcha_app_secret_key"
+                        type="password"
+                        autocomplete="new-password"
+                        class="input font-mono text-sm"
+                        :placeholder="t('admin.settings.tencentCaptcha.keepExisting')"
+                      />
+                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{ form.tencent_captcha_app_secret_key_configured ? t("admin.settings.tencentCaptcha.configured") : t("admin.settings.tencentCaptcha.required") }}
+                      </p>
+                    </div>
+                    <div class="border-t border-gray-100 pt-5 md:col-span-2 dark:border-dark-700">
+                      <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                        {{ t("admin.settings.tencentCaptcha.cloudCredentialsTitle") }}
+                      </h3>
+                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {{ t("admin.settings.tencentCaptcha.cloudCredentialsHint") }}
+                      </p>
+                    </div>
+                    <div>
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ t("admin.settings.tencentCaptcha.cloudSecretId") }}
+                      </label>
+                      <input
+                        v-model="form.tencent_captcha_cloud_secret_id"
+                        type="password"
+                        autocomplete="new-password"
+                        class="input font-mono text-sm"
+                        :placeholder="t('admin.settings.tencentCaptcha.keepExisting')"
+                      />
+                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{ form.tencent_captcha_cloud_secret_id_configured ? t("admin.settings.tencentCaptcha.configured") : t("admin.settings.tencentCaptcha.required") }}
+                      </p>
+                    </div>
+                    <div>
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ t("admin.settings.tencentCaptcha.cloudSecretKey") }}
+                      </label>
+                      <input
+                        v-model="form.tencent_captcha_cloud_secret_key"
+                        type="password"
+                        autocomplete="new-password"
+                        class="input font-mono text-sm"
+                        :placeholder="t('admin.settings.tencentCaptcha.keepExisting')"
+                      />
+                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{ form.tencent_captcha_cloud_secret_key_configured ? t("admin.settings.tencentCaptcha.configured") : t("admin.settings.tencentCaptcha.required") }}
+                      </p>
+                    </div>
+                  </div>
+                  <p class="mt-5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.tencentCaptcha.camPermissionHint") }}
+                  </p>
+                  <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.tencentCaptcha.aidEncryptedHint") }}
+                  </p>
+                  <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                    <a
+                      :href="tencentCaptchaLinks.console"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-primary-600 hover:text-primary-500"
+                    >
+                      {{ t("admin.settings.tencentCaptcha.openCaptchaConsole") }}
+                    </a>
+                    <a
+                      :href="tencentCaptchaLinks.cloudKeys"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-primary-600 hover:text-primary-500"
+                    >
+                      {{ t("admin.settings.tencentCaptcha.createCloudKeys") }}
+                    </a>
+                    <a
+                      :href="tencentCaptchaLinks.webDocs"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-primary-600 hover:text-primary-500"
+                    >
+                      {{ t("admin.settings.tencentCaptcha.openWebDocs") }}
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Aliyun Captcha 2.0 fields -->
+                <div v-else class="grid grid-cols-1 gap-6">
+                  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                      <label
+                        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        {{ t("admin.settings.aliyunCaptcha.region") }}
+                      </label>
+                      <div
+                        class="grid grid-cols-2 gap-2 rounded-lg bg-gray-100 p-1 dark:bg-dark-700"
+                      >
+                        <button
+                          type="button"
+                          class="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition"
+                          :class="
+                            form.aliyun_captcha_region !== 'sgp'
+                              ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
+                              : 'text-gray-600 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'
+                          "
+                          @click="form.aliyun_captcha_region = 'cn'"
+                        >
+                          {{ t("admin.settings.aliyunCaptcha.regionCn") }}
+                        </button>
+                        <button
+                          type="button"
+                          class="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition"
+                          :class="
+                            form.aliyun_captcha_region === 'sgp'
+                              ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
+                              : 'text-gray-600 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'
+                          "
+                          @click="form.aliyun_captcha_region = 'sgp'"
+                        >
+                          {{ t("admin.settings.aliyunCaptcha.regionSgp") }}
+                        </button>
+                      </div>
+                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{ t("admin.settings.aliyunCaptcha.regionHint") }}
+                      </p>
+                    </div>
+                    <div>
+                      <label
+                        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        {{ t("admin.settings.aliyunCaptcha.prefix") }}
+                      </label>
+                      <input
+                        v-model="form.aliyun_captcha_prefix"
+                        type="text"
+                        class="input font-mono text-sm"
+                        placeholder="14xxxxx"
+                      />
+                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{ t("admin.settings.aliyunCaptcha.prefixHint") }}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      {{ t("admin.settings.aliyunCaptcha.sceneId") }}
+                    </label>
+                    <input
+                      v-model="form.aliyun_captcha_scene_id"
+                      type="text"
+                      class="input font-mono text-sm"
+                      placeholder="1cxxxxxx"
+                    />
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.aliyunCaptcha.sceneIdHint") }}
+                    </p>
+                  </div>
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      {{ t("admin.settings.aliyunCaptcha.accessKeyId") }}
+                    </label>
+                    <input
+                      v-model="form.aliyun_captcha_access_key_id"
+                      type="text"
+                      class="input font-mono text-sm"
+                      placeholder="LTAI..."
+                    />
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.aliyunCaptcha.accessKeyIdHint") }}
+                    </p>
+                  </div>
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      {{ t("admin.settings.aliyunCaptcha.accessKeySecret") }}
+                    </label>
+                    <input
+                      v-model="form.aliyun_captcha_access_key_secret"
+                      type="password"
+                      autocomplete="new-password"
+                      class="input font-mono text-sm"
+                      placeholder="••••••••"
+                    />
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      {{
+                        form.aliyun_captcha_access_key_secret_configured
+                          ? t(
+                              "admin.settings.aliyunCaptcha.accessKeySecretConfiguredHint",
+                            )
+                          : t("admin.settings.aliyunCaptcha.accessKeySecretHint")
                       }}
                     </p>
                   </div>
@@ -2537,7 +3304,7 @@
                         <input
                           v-model="form.dingtalk_connect_sync_display_name_attr_name"
                           type="text"
-                          placeholder="钉钉姓名"
+                          :placeholder="localText('钉钉姓名', 'DingTalk Name')"
                           class="input text-sm flex-1 max-w-xs"
                         />
                       </div>
@@ -2583,7 +3350,7 @@
                         <input
                           v-model="form.dingtalk_connect_sync_corp_email_attr_name"
                           type="text"
-                          placeholder="钉钉企业邮箱"
+                          :placeholder="localText('钉钉企业邮箱', 'DingTalk Corporate Email')"
                           class="input text-sm flex-1 max-w-xs"
                         />
                       </div>
@@ -2629,7 +3396,7 @@
                         <input
                           v-model="form.dingtalk_connect_sync_dept_attr_name"
                           type="text"
-                          placeholder="钉钉部门"
+                          :placeholder="localText('钉钉部门', 'DingTalk Department')"
                           class="input text-sm flex-1 max-w-xs"
                         />
                       </div>
@@ -3287,7 +4054,7 @@
                       </tr>
                     </thead>
                     <tbody class="space-y-2">
-                      <tr v-for="p in (['anthropic', 'openai', 'gemini', 'antigravity'] as const)" :key="p" class="align-top">
+                      <tr v-for="p in (['anthropic', 'openai', 'gemini', 'antigravity', 'grok'] as const)" :key="p" class="align-top">
                         <td class="pr-4 py-1">
                           <span class="font-mono text-xs text-gray-700 dark:text-gray-300">{{ p }}</span>
                         </td>
@@ -3622,7 +4389,7 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="p in (['anthropic', 'openai', 'gemini', 'antigravity'] as const)" :key="`${authSource.source}-pq-${p}`" class="align-top">
+                            <tr v-for="p in (['anthropic', 'openai', 'gemini', 'antigravity', 'grok'] as const)" :key="`${authSource.source}-pq-${p}`" class="align-top">
                               <td class="pr-4 py-1">
                                 <span class="font-mono text-xs text-gray-700 dark:text-gray-300">{{ p }}</span>
                               </td>
@@ -3724,6 +4491,424 @@
             </div>
           </div>
 
+          <!-- Codex Settings -->
+          <div class="card">
+            <div
+              class="border-b border-gray-100 px-6 py-4 dark:border-dark-700"
+            >
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ t("admin.settings.gatewayForwarding.codexHardeningTitle") }}
+              </h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                  <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+                    {{ t("admin.settings.gatewayForwarding.codexClientRestrictionTitle") }}
+                  </h3>
+                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.gatewayForwarding.codexHardeningDesc") }}
+                  </p>
+                </div>
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      {{ t("admin.settings.gatewayForwarding.minCodexVersion") }}
+                    </label>
+                    <input
+                      v-model="form.min_codex_version"
+                      type="text"
+                      class="input w-full font-mono text-sm"
+                      :placeholder="
+                        t(
+                          'admin.settings.gatewayForwarding.minCodexVersionPlaceholder',
+                        )
+                      "
+                    />
+                  </div>
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      {{ t("admin.settings.gatewayForwarding.maxCodexVersion") }}
+                    </label>
+                    <input
+                      v-model="form.max_codex_version"
+                      type="text"
+                      class="input w-full font-mono text-sm"
+                      :placeholder="
+                        t(
+                          'admin.settings.gatewayForwarding.maxCodexVersionPlaceholder',
+                        )
+                      "
+                    />
+                  </div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ t("admin.settings.gatewayForwarding.codexVersionHint") }}
+                </p>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.gatewayForwarding.codexFingerprintSignals") }}
+                  </label>
+                  <p class="mb-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.gatewayForwarding.codexFingerprintSignalsDesc") }}
+                  </p>
+                  <div
+                    v-for="(row, i) in codexFingerprintRows"
+                    :key="`codex-fp-${i}`"
+                    class="mb-2 flex items-center gap-2"
+                  >
+                    <select v-model="row.type" class="input w-32 text-sm">
+                      <option value="header_exact">{{ t("admin.settings.gatewayForwarding.codexFpTypeHeaderExact") }}</option>
+                      <option value="header_prefix">{{ t("admin.settings.gatewayForwarding.codexFpTypeHeaderPrefix") }}</option>
+                      <option value="body_path">{{ t("admin.settings.gatewayForwarding.codexFpTypeBodyPath") }}</option>
+                    </select>
+                    <input
+                      v-model="row.match"
+                      type="text"
+                      class="input flex-1 font-mono text-sm"
+                      :placeholder="t('admin.settings.gatewayForwarding.codexFpMatchPlaceholder')"
+                    />
+                    <label class="flex shrink-0 items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                      <input v-model="row.required" type="checkbox" />
+                      {{ t("admin.settings.gatewayForwarding.codexFpRequired") }}
+                    </label>
+                    <button
+                      type="button"
+                      class="btn btn-secondary btn-sm shrink-0 text-red-600 hover:text-red-700 dark:text-red-400"
+                      @click="removeCodexFingerprintRow(i)"
+                    >
+                      {{ t("admin.settings.gatewayForwarding.codexRemoveRow") }}
+                    </button>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" @click="addCodexFingerprintRow">
+                    {{ t("admin.settings.gatewayForwarding.codexAddRow") }}
+                  </button>
+                  <p
+                    v-if="codexFingerprintNoRequired"
+                    class="mt-2 text-xs text-amber-600 dark:text-amber-500"
+                  >
+                    {{ t("admin.settings.gatewayForwarding.codexFingerprintNoRequiredWarn") }}
+                  </p>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div class="pr-4">
+                    <label
+                      class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      {{
+                        t("admin.settings.gatewayForwarding.codexAllowAppServer")
+                      }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {{
+                        t(
+                          "admin.settings.gatewayForwarding.codexAllowAppServerDesc",
+                        )
+                      }}
+                    </p>
+                  </div>
+                  <Toggle
+                    v-model="form.codex_cli_only_allow_app_server_clients"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.gatewayForwarding.codexBlacklist") }}
+                  </label>
+                  <p class="mb-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.gatewayForwarding.codexBlacklistDesc") }}
+                  </p>
+                  <div
+                    v-for="(row, i) in codexBlacklistRows"
+                    :key="`codex-bl-${i}`"
+                    class="mb-2 flex gap-2"
+                  >
+                    <input
+                      v-model="row.originator"
+                      type="text"
+                      class="input w-1/3 font-mono text-sm"
+                      :placeholder="
+                        t(
+                          'admin.settings.gatewayForwarding.codexOriginatorPlaceholder',
+                        )
+                      "
+                    />
+                    <input
+                      v-model="row.uaContains"
+                      type="text"
+                      class="input flex-1 font-mono text-sm"
+                      :placeholder="
+                        t(
+                          'admin.settings.gatewayForwarding.codexUaContainsPlaceholder',
+                        )
+                      "
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-secondary btn-sm shrink-0 text-red-600 hover:text-red-700 dark:text-red-400"
+                      @click="removeCodexBlacklistRow(i)"
+                    >
+                      {{ t("admin.settings.gatewayForwarding.codexRemoveRow") }}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    @click="addCodexBlacklistRow"
+                  >
+                    {{ t("admin.settings.gatewayForwarding.codexAddRow") }}
+                  </button>
+                </div>
+
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.gatewayForwarding.codexWhitelist") }}
+                  </label>
+                  <p class="mb-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.gatewayForwarding.codexWhitelistDesc") }}
+                  </p>
+                  <div
+                    v-for="(row, i) in codexWhitelistRows"
+                    :key="`codex-wl-${i}`"
+                    class="mb-2 flex gap-2"
+                  >
+                    <input
+                      v-model="row.originator"
+                      type="text"
+                      class="input w-1/3 font-mono text-sm"
+                      :placeholder="
+                        t(
+                          'admin.settings.gatewayForwarding.codexOriginatorPlaceholder',
+                        )
+                      "
+                    />
+                    <input
+                      v-model="row.uaContains"
+                      type="text"
+                      class="input flex-1 font-mono text-sm"
+                      :placeholder="
+                        t(
+                          'admin.settings.gatewayForwarding.codexUaContainsPlaceholder',
+                        )
+                      "
+                    />
+                    <label
+                      class="flex shrink-0 items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
+                      :title="
+                        t(
+                          'admin.settings.gatewayForwarding.codexWhitelistSkipFingerprintTooltip',
+                        )
+                      "
+                    >
+                      <input
+                        v-model="row.skipEngineFingerprint"
+                        type="checkbox"
+                      />
+                      {{
+                        t(
+                          'admin.settings.gatewayForwarding.codexWhitelistSkipFingerprint',
+                        )
+                      }}
+                    </label>
+                    <button
+                      type="button"
+                      class="btn btn-secondary btn-sm shrink-0 text-red-600 hover:text-red-700 dark:text-red-400"
+                      @click="removeCodexWhitelistRow(i)"
+                    >
+                      {{ t("admin.settings.gatewayForwarding.codexRemoveRow") }}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    @click="addCodexWhitelistRow"
+                  >
+                    {{ t("admin.settings.gatewayForwarding.codexAddRow") }}
+                  </button>
+                </div>
+            </div>
+          </div>
+
+          <!-- Upstream Billing Probe Settings -->
+          <div class="card" data-testid="upstream-billing-probe-settings">
+            <div
+              class="border-b border-gray-100 px-6 py-4 dark:border-dark-700"
+            >
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ t("admin.settings.upstreamBillingProbe.title") }}
+              </h2>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ t("admin.settings.upstreamBillingProbe.description") }}
+              </p>
+            </div>
+            <div class="space-y-5 p-6">
+              <div
+                v-if="upstreamBillingProbeLoading"
+                class="flex items-center gap-2 text-gray-500"
+              >
+                <div
+                  class="h-4 w-4 animate-spin rounded-full border-b-2 border-primary-600"
+                ></div>
+                {{ t("common.loading") }}
+              </div>
+
+              <template v-else>
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <label class="font-medium text-gray-900 dark:text-white">
+                      {{ t("admin.settings.upstreamBillingProbe.enabled") }}
+                    </label>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.upstreamBillingProbe.enabledHint") }}
+                    </p>
+                  </div>
+                  <Toggle
+                    v-model="upstreamBillingProbeForm.enabled"
+                    :aria-label="t('admin.settings.upstreamBillingProbe.enabled')"
+                    data-testid="upstream-billing-probe-enabled"
+                  />
+                </div>
+
+                <div
+                  v-if="upstreamBillingProbeForm.enabled"
+                  class="border-t border-gray-100 pt-4 dark:border-dark-700"
+                >
+                  <label
+                    class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    for="upstream-billing-probe-interval"
+                  >
+                    {{ t("admin.settings.upstreamBillingProbe.intervalMinutes") }}
+                  </label>
+                  <input
+                    id="upstream-billing-probe-interval"
+                    v-model.number="upstreamBillingProbeForm.interval_minutes"
+                    type="number"
+                    min="5"
+                    max="1440"
+                    class="input w-32"
+                    data-testid="upstream-billing-probe-interval"
+                    @keydown.enter.prevent="saveUpstreamBillingProbeSettings"
+                  />
+                  <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.upstreamBillingProbe.intervalHint") }}
+                  </p>
+                </div>
+
+                <div
+                  class="flex justify-end border-t border-gray-100 pt-4 dark:border-dark-700"
+                >
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    :disabled="upstreamBillingProbeSaving"
+                    data-testid="upstream-billing-probe-save"
+                    @click="saveUpstreamBillingProbeSettings"
+                  >
+                    {{
+                      upstreamBillingProbeSaving
+                        ? t("common.saving")
+                        : t("common.save")
+                    }}
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Ollama Cloud Usage Settings -->
+          <div class="card" data-testid="ollama-cloud-usage-global-settings">
+            <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ t("admin.settings.ollamaCloudUsage.title") }}
+              </h2>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ t("admin.settings.ollamaCloudUsage.description") }}
+              </p>
+            </div>
+            <div class="space-y-5 p-6">
+              <div v-if="ollamaCloudUsageLoading" class="flex items-center gap-2 text-gray-500">
+                <div class="h-4 w-4 animate-spin rounded-full border-b-2 border-primary-600"></div>
+                {{ t("common.loading") }}
+              </div>
+              <template v-else>
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <label class="font-medium text-gray-900 dark:text-white">
+                      {{ t("admin.settings.ollamaCloudUsage.enabled") }}
+                    </label>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.ollamaCloudUsage.enabledHint") }}
+                    </p>
+                  </div>
+                  <Toggle
+                    v-model="ollamaCloudUsageForm.enabled"
+                    :aria-label="t('admin.settings.ollamaCloudUsage.enabled')"
+                    data-testid="ollama-cloud-usage-global-enabled"
+                  />
+                </div>
+                <div v-if="ollamaCloudUsageForm.enabled" class="space-y-4 border-t border-gray-100 pt-4 dark:border-dark-700">
+                  <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ollama-cloud-usage-debounce">
+                      {{ t("admin.settings.ollamaCloudUsage.debounceMinutes") }}
+                    </label>
+                    <input
+                      id="ollama-cloud-usage-debounce"
+                      v-model.number="ollamaCloudUsageForm.debounce_minutes"
+                      type="number"
+                      min="1"
+                      max="60"
+                      class="input w-32"
+                      data-testid="ollama-cloud-usage-global-debounce"
+                      @keydown.enter.prevent="saveOllamaCloudUsageSettings"
+                    />
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.ollamaCloudUsage.debounceHint") }}
+                    </p>
+                  </div>
+                  <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ollama-cloud-usage-interval">
+                      {{ t("admin.settings.ollamaCloudUsage.intervalMinutes") }}
+                    </label>
+                    <input
+                      id="ollama-cloud-usage-interval"
+                      v-model.number="ollamaCloudUsageForm.interval_minutes"
+                      type="number"
+                      min="15"
+                      max="1440"
+                      class="input w-32"
+                      data-testid="ollama-cloud-usage-global-interval"
+                      @keydown.enter.prevent="saveOllamaCloudUsageSettings"
+                    />
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.ollamaCloudUsage.intervalHint") }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex justify-end border-t border-gray-100 pt-4 dark:border-dark-700">
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    :disabled="ollamaCloudUsageSaving"
+                    data-testid="ollama-cloud-usage-global-save"
+                    @click="saveOllamaCloudUsageSettings"
+                  >
+                    {{ ollamaCloudUsageSaving ? t("common.saving") : t("common.save") }}
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+
           <!-- Gateway Scheduling Settings -->
           <div class="card">
             <div
@@ -3751,7 +4936,133 @@
                 <Toggle v-model="form.allow_ungrouped_key_scheduling" />
               </div>
 
-              <div class="flex items-center justify-between">
+              <div class="border-t border-gray-100 pt-4 dark:border-dark-700">
+                <div class="mb-3">
+                  <label class="font-medium text-gray-900 dark:text-white">
+                    {{
+                      t(
+                        "admin.settings.scheduling.accountSchedulingThresholdsTitle",
+                      )
+                    }}
+                  </label>
+                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {{
+                      t(
+                        "admin.settings.scheduling.accountSchedulingThresholdsDescription",
+                      )
+                    }}
+                  </p>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      t(
+                        "admin.settings.scheduling.accountSchedulingThresholdsGlobalHint",
+                      )
+                    }}
+                  </p>
+                  <p class="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
+                    {{
+                      t(
+                        "admin.settings.scheduling.accountSchedulingThresholdsDisabledHint",
+                      )
+                    }}
+                  </p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  <div
+                    v-for="platform in schedulingThresholdPlatforms"
+                    :key="platform"
+                    class="rounded-lg border border-gray-200 p-4 dark:border-dark-700"
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <label
+                          class="font-mono text-sm font-medium text-gray-900 dark:text-white"
+                        >
+                          {{ platform }}
+                        </label>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                          {{
+                            t(
+                              "admin.settings.scheduling.accountSchedulingThresholdsRangeHint",
+                            )
+                          }}
+                        </p>
+                      </div>
+                      <span
+                        class="rounded bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-dark-700 dark:text-gray-300"
+                      >
+                        %
+                      </span>
+                    </div>
+                    <input
+                      v-model.number="form.account_scheduling_thresholds[platform]"
+                      type="number"
+                      min="1"
+                      max="100"
+                      step="1"
+                      class="input mt-3"
+                      :data-testid="`account-scheduling-threshold-${platform}`"
+                      placeholder="100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div
+                v-if="!form.openai_advanced_scheduler_enabled"
+                class="flex items-center justify-between border-t border-gray-100 pt-5 dark:border-dark-700"
+              >
+                <div>
+                  <label
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.openaiExperimentalScheduler.lowRatePriorityTitle") }}
+                  </label>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      t("admin.settings.openaiExperimentalScheduler.lowRatePriorityDescription")
+                    }}
+                  </p>
+                </div>
+                <Toggle
+                  v-model="form.openai_low_upstream_rate_priority_enabled"
+                  data-testid="openai-low-rate-priority-toggle"
+                />
+              </div>
+
+              <div
+                v-if="!form.openai_advanced_scheduler_enabled && form.openai_low_upstream_rate_priority_enabled"
+                class="flex flex-col items-stretch gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 dark:border-dark-700"
+              >
+                <div class="min-w-0">
+                  <label
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                    for="openai-oauth-scheduling-rate-multiplier"
+                  >
+                    {{ t("admin.settings.openaiExperimentalScheduler.oauthRateTitle") }}
+                  </label>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.openaiExperimentalScheduler.oauthRatePriorityDescription") }}
+                  </p>
+                </div>
+                <div class="relative w-full shrink-0 sm:w-32">
+                  <input
+                    id="openai-oauth-scheduling-rate-multiplier"
+                    v-model.number="form.openai_oauth_scheduling_rate_multiplier"
+                    class="input pr-8"
+                    data-testid="openai-oauth-scheduling-rate-multiplier"
+                    min="0"
+                    required
+                    step="0.01"
+                    type="number"
+                  />
+                  <span
+                    class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400"
+                  >x</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between border-t border-gray-100 pt-5 dark:border-dark-700">
                 <div>
                   <label
                     class="text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -3764,7 +5075,117 @@
                     }}
                   </p>
                 </div>
-                <Toggle v-model="form.openai_advanced_scheduler_enabled" />
+                <Toggle
+                  v-model="form.openai_advanced_scheduler_enabled"
+                  data-testid="openai-advanced-scheduler-toggle"
+                />
+              </div>
+
+              <div
+                v-if="form.openai_advanced_scheduler_enabled"
+                class="flex items-center justify-between border-t border-gray-100 pt-5 dark:border-dark-700"
+              >
+                <div>
+                  <label
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.openaiExperimentalScheduler.stickyWeightedTitle") }}
+                  </label>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      t("admin.settings.openaiExperimentalScheduler.stickyWeightedDescription")
+                    }}
+                  </p>
+                </div>
+                <Toggle v-model="form.openai_advanced_scheduler_sticky_weighted_enabled" />
+              </div>
+
+              <div
+                v-if="form.openai_advanced_scheduler_enabled"
+                class="flex items-center justify-between border-t border-gray-100 pt-5 dark:border-dark-700"
+              >
+                <div>
+                  <label
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.openaiExperimentalScheduler.subscriptionPriorityTitle") }}
+                  </label>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      t("admin.settings.openaiExperimentalScheduler.subscriptionPriorityDescription")
+                    }}
+                  </p>
+                </div>
+                <Toggle v-model="form.openai_advanced_scheduler_subscription_priority_enabled" />
+              </div>
+
+              <div
+                v-if="form.openai_advanced_scheduler_enabled"
+                class="flex flex-col items-stretch gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 dark:border-dark-700"
+              >
+                <div class="min-w-0">
+                  <label
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                    for="openai-oauth-scheduling-rate-multiplier"
+                  >
+                    {{ t("admin.settings.openaiExperimentalScheduler.oauthRateTitle") }}
+                  </label>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.openaiExperimentalScheduler.oauthRateWeightedDescription") }}
+                  </p>
+                </div>
+                <div class="relative w-full shrink-0 sm:w-32">
+                  <input
+                    id="openai-oauth-scheduling-rate-multiplier"
+                    v-model.number="form.openai_oauth_scheduling_rate_multiplier"
+                    class="input pr-8"
+                    data-testid="openai-oauth-scheduling-rate-multiplier"
+                    min="0"
+                    required
+                    step="0.01"
+                    type="number"
+                  />
+                  <span
+                    class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400"
+                  >x</span>
+                </div>
+              </div>
+
+              <div
+                v-if="form.openai_advanced_scheduler_enabled"
+                class="border-t border-gray-100 pt-5 dark:border-dark-700"
+              >
+                <div>
+                  <label
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.openaiExperimentalScheduler.weightsTitle") }}
+                  </label>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      t("admin.settings.openaiExperimentalScheduler.weightsDescription")
+                    }}
+                  </p>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+                  <label
+                    v-for="field in openAIAdvancedSchedulerWeightFields"
+                    :key="field.key"
+                    class="block"
+                  >
+                    <span class="text-xs font-medium text-gray-600 dark:text-gray-400">
+                      {{ field.label }}
+                    </span>
+                    <input
+                      v-model="form[field.key]"
+                      class="input mt-1"
+                      inputmode="decimal"
+                      :placeholder="field.placeholder"
+                      type="text"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -3782,6 +5203,97 @@
               </p>
             </div>
             <div class="space-y-5 p-6">
+              <div class="grid gap-5 border-b border-gray-100 pb-5 dark:border-dark-700 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                <div>
+                  <label
+                    for="grok-default-text-model"
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.gatewayForwarding.grokDefaultTextModel") }}
+                  </label>
+                  <input
+                    id="grok-default-text-model"
+                    v-model.trim="form.grok_default_text_model"
+                    type="text"
+                    class="input mt-2 w-full"
+                    list="grok-default-text-model-options"
+                    data-testid="grok-default-text-model"
+                    placeholder="grok-4.5"
+                  />
+                  <datalist id="grok-default-text-model-options">
+                    <option value="grok-4.5" />
+                    <option value="grok-4.1-fast" />
+                    <option value="grok-4" />
+                  </datalist>
+                  <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.gatewayForwarding.grokDefaultTextModelHint") }}
+                  </p>
+                </div>
+                <div class="flex items-center justify-between gap-5 md:min-w-72">
+                  <div>
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {{ t("admin.settings.gatewayForwarding.grokCrossClientMap") }}
+                    </label>
+                    <p class="mt-0.5 max-w-sm text-xs text-gray-500 dark:text-gray-400">
+                      {{ t("admin.settings.gatewayForwarding.grokCrossClientMapHint") }}
+                    </p>
+                  </div>
+                  <Toggle
+                    v-model="form.grok_cross_client_model_map_enabled"
+                    data-testid="grok-cross-client-model-map-toggle"
+                  />
+                </div>
+                </div>
+                <div class="md:col-span-2">
+                  <label
+                    for="grok-default-base-url-mode"
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.gatewayForwarding.grokDefaultBaseURLMode") }}
+                  </label>
+                  <select
+                    id="grok-default-base-url-mode"
+                    v-model="form.grok_default_base_url_mode"
+                    class="input mt-2 w-full"
+                    data-testid="grok-default-base-url-mode"
+                  >
+                    <option value="cli">{{ t("admin.settings.gatewayForwarding.grokBaseURLModeCLI") }}</option>
+                    <option value="api">{{ t("admin.settings.gatewayForwarding.grokBaseURLModeAPI") }}</option>
+                    <option value="us-east-1">{{ t("admin.settings.gatewayForwarding.grokBaseURLModeUSEast1") }}</option>
+                    <option value="us-west-2">{{ t("admin.settings.gatewayForwarding.grokBaseURLModeUSWest2") }}</option>
+                    <option value="eu-west-1">{{ t("admin.settings.gatewayForwarding.grokBaseURLModeEUWest1") }}</option>
+                  </select>
+                  <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.gatewayForwarding.grokDefaultBaseURLModeHint") }}
+                  </p>
+                </div>
+
+              <!-- OpenAI Responses 首 token 统计 -->
+              <div class="border-b border-gray-100 pb-5 dark:border-dark-700 md:col-span-2">
+                <label
+                  for="openai-ttft-mode"
+                  class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {{ t("admin.settings.gatewayForwarding.openaiTTFTMode") }}
+                </label>
+                <select
+                  id="openai-ttft-mode"
+                  v-model="form.openai_ttft_mode"
+                  class="input mt-2 w-full"
+                  data-testid="openai-ttft-mode"
+                >
+                  <option value="semantic">
+                    {{ t("admin.settings.gatewayForwarding.openaiTTFTModeSemantic") }}
+                  </option>
+                  <option value="visible">
+                    {{ t("admin.settings.gatewayForwarding.openaiTTFTModeVisible") }}
+                  </option>
+                </select>
+                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t("admin.settings.gatewayForwarding.openaiTTFTModeHint") }}
+                </p>
+              </div>
+
               <!-- Fingerprint Unification -->
               <div class="flex items-center justify-between">
                 <div>
@@ -4120,6 +5632,31 @@
                 <Toggle v-model="form.rewrite_message_cache_control" />
               </div>
 
+              <!-- 客户端 dateline 归一化（仅 Anthropic OAuth/SetupToken） -->
+              <div class="flex items-center justify-between">
+                <div>
+                  <label
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{
+                      t(
+                        "admin.settings.gatewayForwarding.clientDatelineNormalization",
+                      )
+                    }}
+                  </label>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      t(
+                        "admin.settings.gatewayForwarding.clientDatelineNormalizationHint",
+                      )
+                    }}
+                  </p>
+                </div>
+                <Toggle
+                  v-model="form.enable_client_dateline_normalization"
+                />
+              </div>
+
               <!-- Antigravity UA 版本 -->
               <div>
                 <label
@@ -4180,20 +5717,68 @@
                 </p>
               </div>
 
-              <!-- 是否允许在 Claude Code 中使用 Codex 插件（全局开关） -->
+              <!-- Codex 客户端版本号 -->
+              <div>
+                <label
+                  class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {{
+                    t(
+                      "admin.settings.gatewayForwarding.openaiCodexClientVersion",
+                    )
+                  }}
+                </label>
+                <input
+                  v-model="form.openai_codex_client_version"
+                  type="text"
+                  class="input w-full font-mono text-sm"
+                  :placeholder="
+                    t(
+                      'admin.settings.gatewayForwarding.openaiCodexClientVersionPlaceholder',
+                    )
+                  "
+                />
+                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{
+                    t(
+                      "admin.settings.gatewayForwarding.openaiCodexClientVersionHint",
+                    )
+                  }}
+                </p>
+              </div>
+
+              <!-- Codex 版本号自动同步 -->
               <div class="flex items-center justify-between">
-                <div class="pr-4">
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {{ t("admin.settings.gatewayForwarding.openaiAllowClaudeCodeCodexPlugin") }}
+                <div>
+                  <label
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{
+                      t(
+                        "admin.settings.gatewayForwarding.openaiCodexVersionAutoSync",
+                      )
+                    }}
                   </label>
-                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {{ t("admin.settings.gatewayForwarding.openaiAllowClaudeCodeCodexPluginDesc") }}
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      t(
+                        "admin.settings.gatewayForwarding.openaiCodexVersionAutoSyncHint",
+                      )
+                    }}
+                  </p>
+                  <p
+                    v-if="codexSyncedVersionLabel"
+                    class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"
+                  >
+                    {{ codexSyncedVersionLabel }}
                   </p>
                 </div>
-                <Toggle v-model="form.openai_allow_claude_code_codex_plugin" />
+                <Toggle v-model="form.openai_codex_version_auto_sync_enabled" />
               </div>
+
             </div>
           </div>
+
           <!-- Web Search Emulation -->
           <div class="card">
             <div
@@ -5000,6 +6585,19 @@
                 </p>
               </div>
 
+              <!-- Compact Home Page -->
+              <div class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700">
+                <div>
+                  <label class="font-medium text-gray-900 dark:text-white">{{
+                    t("admin.settings.site.compactHome")
+                  }}</label>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.site.compactHomeHint") }}
+                  </p>
+                </div>
+                <Toggle v-model="form.compact_home_enabled" data-testid="compact-home-toggle" />
+              </div>
+
               <!-- Hide CCS Import Button -->
               <div
                 class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
@@ -5446,21 +7044,89 @@
               <Toggle v-model="form.channel_monitor_enabled" />
             </div>
 
-            <div v-if="form.channel_monitor_enabled">
-              <label class="input-label">
-                {{ t('admin.settings.features.channelMonitor.defaultInterval') }}
-                <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model.number="form.channel_monitor_default_interval_seconds"
-                type="number"
-                min="15"
-                max="3600"
-                class="input"
-              />
-              <p class="mt-1 text-xs text-gray-400">
-                {{ t('admin.settings.features.channelMonitor.defaultIntervalHint') }}
-              </p>
+            <div v-if="form.channel_monitor_enabled" class="space-y-5">
+              <div>
+                <label class="input-label">
+                  {{ t('admin.settings.features.channelMonitor.mode') }}
+                </label>
+                <div class="mt-1.5 inline-flex w-full max-w-md rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-dark-600 dark:bg-dark-900/40">
+                  <button
+                    type="button"
+                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition"
+                    :class="
+                      form.channel_monitor_mode === 'v2'
+                        ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
+                        : 'text-gray-600 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'
+                    "
+                    @click="form.channel_monitor_mode = 'v2'"
+                  >
+                    {{ t('admin.settings.features.channelMonitor.modeV2') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition"
+                    :class="
+                      form.channel_monitor_mode === 'v1'
+                        ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
+                        : 'text-gray-600 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'
+                    "
+                    @click="form.channel_monitor_mode = 'v1'"
+                  >
+                    {{ t('admin.settings.features.channelMonitor.modeV1') }}
+                  </button>
+                </div>
+                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{
+                    form.channel_monitor_mode === 'v1'
+                      ? t('admin.settings.features.channelMonitor.modeV1Hint')
+                      : t('admin.settings.features.channelMonitor.modeV2Hint')
+                  }}
+                </p>
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                  {{ t('admin.settings.features.channelMonitor.modeHint') }}
+                </p>
+              </div>
+
+              <div v-if="form.channel_monitor_mode === 'v1'">
+                <label class="input-label">
+                  {{ t('admin.settings.features.channelMonitor.defaultInterval') }}
+                  <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model.number="form.channel_monitor_default_interval_seconds"
+                  type="number"
+                  min="15"
+                  max="3600"
+                  class="input"
+                />
+                <p class="mt-1 text-xs text-gray-400">
+                  {{ t('admin.settings.features.channelMonitor.defaultIntervalHint') }}
+                </p>
+              </div>
+
+              <div v-if="form.channel_monitor_mode === 'v2'" class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">
+                    {{ t('admin.settings.features.channelMonitor.hideThroughput') }}
+                  </p>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t('admin.settings.features.channelMonitor.hideThroughputHint') }}
+                  </p>
+                </div>
+                <Toggle v-model="form.channel_monitor_hide_throughput" />
+              </div>
+
+              <div v-if="form.channel_monitor_mode === 'v1'" class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">
+                    {{ t('admin.settings.features.channelMonitor.showQuota') }}
+                  </p>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t('admin.settings.features.channelMonitor.showQuotaHint') }}
+                  </p>
+                </div>
+                <Toggle v-model="form.channel_monitor_show_quota" />
+              </div>
             </div>
           </div>
         </div>
@@ -5494,6 +7160,80 @@
                 </p>
               </div>
               <Toggle v-model="form.available_channels_enabled" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ t('admin.settings.features.modelPlaza.title') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {{ t('admin.settings.features.modelPlaza.description') }}
+            </p>
+          </div>
+          <div class="space-y-5 p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('admin.settings.features.modelPlaza.enabled') }}
+                </label>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t('admin.settings.features.modelPlaza.enabledHint') }}
+                </p>
+              </div>
+              <Toggle v-model="form.model_plaza_enabled" />
+            </div>
+
+            <div v-if="form.model_plaza_enabled" class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('admin.settings.features.modelPlaza.requireAuth') }}
+                </label>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t('admin.settings.features.modelPlaza.requireAuthHint') }}
+                </p>
+              </div>
+              <Toggle v-model="form.model_plaza_require_auth" />
+            </div>
+
+            <div v-if="form.model_plaza_enabled">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {{ t('admin.settings.features.modelPlaza.priceDescription') }}
+              </label>
+              <p class="mb-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                {{ t('admin.settings.features.modelPlaza.priceDescriptionHint') }}
+              </p>
+              <textarea
+                v-model="form.model_plaza_description"
+                rows="6"
+                class="input font-mono text-sm"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ t('admin.settings.features.pluginManagement.title') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {{ t('admin.settings.features.pluginManagement.description') }}
+            </p>
+          </div>
+          <div class="space-y-5 p-6">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('admin.settings.features.pluginManagement.enabled') }}
+                </label>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t('admin.settings.features.pluginManagement.enabledHint') }}
+                </p>
+              </div>
+              <Toggle v-model="form.plugin_management_enabled" />
             </div>
           </div>
         </div>
@@ -5580,6 +7320,18 @@
             </div>
 
             <div v-if="form.affiliate_enabled" class="space-y-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t('admin.settings.features.affiliate.adminRechargeRebate') }}
+                  </label>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t('admin.settings.features.affiliate.adminRechargeRebateHint') }}
+                  </p>
+                </div>
+                <Toggle v-model="form.affiliate_admin_recharge_enabled" />
+              </div>
+
               <div>
                 <label class="input-label">
                   {{ t('admin.settings.features.affiliate.rebateRate') }}
@@ -5689,7 +7441,7 @@
                   </button>
                 </div>
 
-                <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-dark-700">
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-dark-700">
                   <table class="min-w-full divide-y divide-gray-200 dark:divide-dark-700">
                     <thead class="bg-gray-50 dark:bg-dark-800">
                       <tr>
@@ -6009,7 +7761,7 @@
               </div>
               <template v-if="form.payment_enabled">
                 <!-- Row 1: Product name -->
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
                     <label class="input-label">{{
                       t("admin.settings.payment.productNamePrefix")
@@ -6140,6 +7892,34 @@
                             1
                           ).toFixed(2),
                         })
+                      }}
+                    </p>
+                  </div>
+                  <div>
+                    <label class="input-label">{{
+                      t("admin.settings.payment.subscriptionUsdToCnyRate")
+                    }}</label>
+                    <input
+                      :value="form.payment_subscription_usd_to_cny_rate || ''"
+                      @input="
+                        form.payment_subscription_usd_to_cny_rate =
+                          parseFloat(
+                            ($event.target as HTMLInputElement).value,
+                          ) || 0
+                      "
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="input"
+                      :placeholder="
+                        t(
+                          'admin.settings.payment.subscriptionUsdToCnyRateDisabled',
+                        )
+                      "
+                    />
+                    <p class="mt-0.5 text-xs text-gray-400">
+                      {{
+                        t("admin.settings.payment.subscriptionUsdToCnyRateHint")
                       }}
                     </p>
                   </div>
@@ -6352,6 +8132,38 @@
                       }}</span>
                     </div>
                   </div>
+                  <div>
+                    <label class="input-label">{{
+                      t("admin.settings.payment.alipayMobilePrecreateDeepLink")
+                    }}</label>
+                    <div class="flex items-center gap-2">
+                      <button
+                        type="button"
+                        :class="[
+                          'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
+                          form.payment_alipay_mobile_precreate_deep_link
+                            ? 'bg-primary-500'
+                            : 'bg-gray-300 dark:bg-dark-600',
+                        ]"
+                        @click="
+                          form.payment_alipay_mobile_precreate_deep_link =
+                            !form.payment_alipay_mobile_precreate_deep_link
+                        "
+                      >
+                        <span
+                          :class="[
+                            'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                            form.payment_alipay_mobile_precreate_deep_link
+                              ? 'translate-x-5'
+                              : 'translate-x-0',
+                          ]"
+                        />
+                      </button>
+                      <span class="text-sm text-gray-500 dark:text-gray-400">{{
+                        t("admin.settings.payment.alipayMobilePrecreateDeepLinkHint")
+                      }}</span>
+                    </div>
+                  </div>
                 </div>
                 <!-- Row 4: Enabled payment types (provider badges like sub2apipay) -->
                 <div>
@@ -6400,7 +8212,7 @@
                   </p>
                 </div>
                 <!-- Row 5: Help image + text -->
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label class="input-label">{{
                       t("admin.settings.payment.helpImage")
@@ -6944,6 +8756,8 @@
         @confirm="handleAffiliateConfirm"
         @cancel="cancelAffiliateConfirm"
       />
+      <!-- 关闭 step-up 开关等敏感保存操作触发的 TOTP 二次验证 -->
+      <TotpStepUpDialog :controller="settingsStepUp" />
     </div>
   </AppLayout>
 </template>
@@ -6955,8 +8769,11 @@ import { adminAPI } from "@/api";
 import {
   appendAuthSourceDefaultsToUpdateRequest,
   buildAuthSourceDefaultsState,
+  normalizeAccountSchedulingThresholdsMap,
   normalizePlatformQuotasMap,
+  sanitizeAccountSchedulingThresholdsMap,
   sanitizePlatformQuotasMap,
+  SCHEDULING_THRESHOLD_PLATFORMS,
   defaultWeChatConnectScopesForMode,
   deriveWeChatConnectStoredMode,
   normalizeDefaultSubscriptionSettings,
@@ -6995,7 +8812,15 @@ import ProxySelector from "@/components/common/ProxySelector.vue";
 import ImageUpload from "@/components/common/ImageUpload.vue";
 import BackupSettings from "@/views/admin/BackupView.vue";
 import EmailTemplateEditor from "@/views/admin/settings/EmailTemplateEditor.vue";
+import OpenAIFastPolicyUserSelector from "@/views/admin/settings/OpenAIFastPolicyUserSelector.vue";
 import { useClipboard } from "@/composables/useClipboard";
+import {
+  useStepUp,
+  isStepUpCancelled,
+  isStepUpBlocked,
+  stepUpBlockReason,
+} from "@/composables/useStepUp";
+import TotpStepUpDialog from "@/components/auth/TotpStepUpDialog.vue";
 import { affiliatesAPI, type AffiliateAdminEntry, type SimpleUser as AffiliateSimpleUser } from "@/api/admin/affiliates";
 import { extractApiErrorMessage, extractI18nErrorMessage } from "@/utils/apiError";
 import { useAppStore } from "@/stores";
@@ -7007,9 +8832,17 @@ import {
   normalizeRegistrationEmailSuffixDomains,
   parseRegistrationEmailSuffixWhitelistInput,
 } from "@/utils/registrationEmailPolicy";
+import {
+  parseFingerprintSignalsToRows,
+  serializeFingerprintRowsToJSON,
+  defaultFingerprintSignalRows,
+  type FingerprintSignalRow,
+} from "./codexFingerprintSignals";
 
 const { t, locale } = useI18n();
 const appStore = useAppStore();
+// 关闭 step-up 开关是敏感操作：后端返回 STEP_UP_REQUIRED 时弹 TOTP 码重试
+const settingsStepUp = useStepUp();
 const adminSettingsStore = useAdminSettingsStore();
 const isZhLocale = computed(() => locale.value.startsWith("zh"));
 
@@ -7113,6 +8946,7 @@ const smtpPasswordManuallyEdited = ref(false);
 const testEmailAddress = ref("");
 const registrationEmailSuffixWhitelistTags = ref<string[]>([]);
 const registrationEmailSuffixWhitelistDraft = ref("");
+const forwardedClientIpHeaderDraft = ref("");
 const tablePageSizeOptionsInput = ref("10, 20, 50, 100");
 
 // Admin API Key 状态
@@ -7122,6 +8956,22 @@ const adminApiKeyMasked = ref("");
 const adminApiKeyOperating = ref(false);
 const newAdminApiKey = ref("");
 const subscriptionGroups = ref<AdminGroup[]>([]);
+
+// Upstream billing probe state
+const upstreamBillingProbeLoading = ref(true);
+const upstreamBillingProbeSaving = ref(false);
+const upstreamBillingProbeForm = reactive({
+  enabled: true,
+  interval_minutes: 30,
+});
+
+const ollamaCloudUsageLoading = ref(true);
+const ollamaCloudUsageSaving = ref(false);
+const ollamaCloudUsageForm = reactive({
+  enabled: false,
+  interval_minutes: 60,
+  debounce_minutes: 1,
+});
 
 // Overload Cooldown (529) 状态
 const overloadCooldownLoading = ref(true);
@@ -7137,6 +8987,17 @@ const rateLimit429CooldownSaving = ref(false);
 const rateLimit429CooldownForm = reactive({
   enabled: true,
   cooldown_seconds: 5,
+});
+
+// Panel API Rate Limit 状态
+const panelRateLimitLoading = ref(true);
+const panelRateLimitSaving = ref(false);
+const panelRateLimitForm = reactive({
+  enabled: true,
+  user_rpm: 240,
+  heavy_rpm: 60,
+  exempt_admin: true,
+  public_ip_rpm: 300,
 });
 
 // Stream Timeout 状态
@@ -7192,22 +9053,22 @@ function defaultLoginAgreementDocuments(): LoginAgreementDocument[] {
   return [
     {
       id: "terms",
-      title: "服务条款",
+      title: localText("服务条款", "Terms of Service"),
       content_md: "",
     },
     {
       id: "usage-policy",
-      title: "使用政策",
+      title: localText("使用政策", "Usage Policy"),
       content_md: "",
     },
     {
       id: "supported-regions",
-      title: "支持的国家和地区",
+      title: localText("支持的国家和地区", "Supported Countries and Regions"),
       content_md: "",
     },
     {
       id: "service-specific-terms",
-      title: "服务特定条款",
+      title: localText("服务特定条款", "Service-Specific Terms"),
       content_md: "",
     },
   ];
@@ -7619,8 +9480,15 @@ type SettingsForm = Omit<
   | "wechat_connect_mp_enabled"
   | "wechat_connect_mobile_enabled"
 > & {
+  /** Form always binds a concrete boolean (SystemSettings marks this optional). */
+  channel_monitor_hide_throughput: boolean;
+  channel_monitor_show_quota: boolean;
   smtp_password: string;
   turnstile_secret_key: string;
+  tencent_captcha_app_secret_key: string;
+  tencent_captcha_cloud_secret_id: string;
+  tencent_captcha_cloud_secret_key: string;
+  aliyun_captcha_access_key_secret: string;
   linuxdo_connect_client_secret: string;
   dingtalk_connect_client_secret: string;
   wechat_connect_app_secret: string;
@@ -7634,30 +9502,58 @@ type SettingsForm = Omit<
   github_oauth_client_secret: string;
   google_oauth_client_secret: string;
   force_email_on_third_party_signup: boolean;
+  openai_low_upstream_rate_priority_enabled: boolean;
+  openai_oauth_scheduling_rate_multiplier: number;
   openai_advanced_scheduler_enabled: boolean;
+  openai_advanced_scheduler_sticky_weighted_enabled: boolean;
+  openai_advanced_scheduler_subscription_priority_enabled: boolean;
+  openai_advanced_scheduler_lb_top_k: string;
+  openai_advanced_scheduler_weight_priority: string;
+  openai_advanced_scheduler_weight_load: string;
+  openai_advanced_scheduler_weight_queue: string;
+  openai_advanced_scheduler_weight_error_rate: string;
+  openai_advanced_scheduler_weight_ttft: string;
+  openai_advanced_scheduler_weight_reset: string;
+  openai_advanced_scheduler_weight_quota_headroom: string;
+  openai_advanced_scheduler_weight_upstream_cost: string;
+  openai_advanced_scheduler_weight_previous_response: string;
+  openai_advanced_scheduler_weight_session_sticky: string;
   // 系统全局平台限额 map；form 内始终归一化为全 4 平台对象（模板非空绑定依赖此不变量）
   default_platform_quotas: DefaultPlatformQuotasMap;
+  account_scheduling_thresholds: ReturnType<typeof normalizeAccountSchedulingThresholdsMap>;
 };
+
+const schedulingThresholdPlatforms = SCHEDULING_THRESHOLD_PLATFORMS;
 
 const form = reactive<SettingsForm>({
   registration_enabled: true,
   email_verify_enabled: false,
   registration_email_suffix_whitelist: [],
+  registration_email_domain_quota_enabled: false,
   promo_code_enabled: true,
   invitation_code_enabled: false,
   password_reset_enabled: false,
   totp_enabled: false,
   totp_encryption_key_configured: false,
+  passkey_enabled: false,
+  passkey_configured: false,
+  passkey_rp_id: "",
+  passkey_rp_origins: [],
+  session_binding_enabled: false,
+  step_up_enabled: false,
+  audit_log_retention_days: 180,
   login_agreement_enabled: false,
   login_agreement_mode: "modal",
   login_agreement_updated_at: "2026-03-31",
   login_agreement_documents: defaultLoginAgreementDocuments(),
   default_balance: 0,
   default_platform_quotas: normalizePlatformQuotasMap() as DefaultPlatformQuotasMap,
+  account_scheduling_thresholds: normalizeAccountSchedulingThresholdsMap(),
   affiliate_rebate_rate: 20,
   affiliate_rebate_freeze_hours: 0,
   affiliate_rebate_duration_days: 0,
   affiliate_rebate_per_invitee_cap: 0,
+  affiliate_admin_recharge_enabled: false,
   default_concurrency: 1,
   default_subscriptions: [],
   force_email_on_third_party_signup: false,
@@ -7669,6 +9565,7 @@ const form = reactive<SettingsForm>({
   contact_info: "",
   doc_url: "",
   home_content: "",
+  compact_home_enabled: false,
   backend_mode_enabled: false,
   hide_ccs_import_button: false,
   payment_enabled: false,
@@ -7682,6 +9579,7 @@ const form = reactive<SettingsForm>({
   payment_order_timeout_minutes: 30,
   payment_balance_disabled: false,
   payment_balance_recharge_multiplier: 1,
+  payment_subscription_usd_to_cny_rate: 0,
   payment_recharge_fee_rate: 0,
   payment_enabled_types: [],
   payment_help_image_url: "",
@@ -7695,6 +9593,7 @@ const form = reactive<SettingsForm>({
   payment_cancel_rate_limit_unit: "day",
   payment_cancel_rate_limit_window_mode: "rolling",
   payment_alipay_force_qrcode: false,
+  payment_alipay_mobile_precreate_deep_link: false,
   table_default_page_size: tablePageSizeDefault,
   table_page_size_options: [10, 20, 50, 100],
   custom_menu_items: [] as Array<{
@@ -7724,7 +9623,24 @@ const form = reactive<SettingsForm>({
   turnstile_site_key: "",
   turnstile_secret_key: "",
   turnstile_secret_key_configured: false,
-  api_key_acl_trust_forwarded_ip: false,
+  tencent_captcha_enabled: false,
+  tencent_captcha_app_id: "",
+  tencent_captcha_app_secret_key: "",
+  tencent_captcha_app_secret_key_configured: false,
+  tencent_captcha_cloud_secret_id: "",
+  tencent_captcha_cloud_secret_id_configured: false,
+  tencent_captcha_cloud_secret_key: "",
+  tencent_captcha_cloud_secret_key_configured: false,
+  tencent_captcha_region: "cn",
+  aliyun_captcha_enabled: false,
+  aliyun_captcha_access_key_id: "",
+  aliyun_captcha_access_key_secret: "",
+  aliyun_captcha_access_key_secret_configured: false,
+  aliyun_captcha_scene_id: "",
+  aliyun_captcha_prefix: "",
+  aliyun_captcha_region: "cn",
+  api_key_acl_trust_forwarded_ip: true,
+  forwarded_client_ip_headers: [],
   // LinuxDo Connect OAuth 登录
   linuxdo_connect_enabled: false,
   linuxdo_connect_client_id: "",
@@ -7746,9 +9662,9 @@ const form = reactive<SettingsForm>({
   dingtalk_connect_sync_corp_email_attr_key: "dingtalk_email",
   dingtalk_connect_sync_display_name_attr_key: "dingtalk_name",
   dingtalk_connect_sync_dept_attr_key: "dingtalk_department",
-  dingtalk_connect_sync_corp_email_attr_name: "钉钉企业邮箱",
-  dingtalk_connect_sync_display_name_attr_name: "钉钉姓名",
-  dingtalk_connect_sync_dept_attr_name: "钉钉部门",
+  dingtalk_connect_sync_corp_email_attr_name: localText("钉钉企业邮箱", "DingTalk Corporate Email"),
+  dingtalk_connect_sync_display_name_attr_name: localText("钉钉姓名", "DingTalk Name"),
+  dingtalk_connect_sync_dept_attr_name: localText("钉钉部门", "DingTalk Department"),
   wechat_connect_enabled: false,
   wechat_connect_app_id: "",
   wechat_connect_app_secret: "",
@@ -7812,6 +9728,9 @@ const form = reactive<SettingsForm>({
   fallback_model_openai: "gpt-4o",
   fallback_model_gemini: "gemini-2.5-pro",
   fallback_model_antigravity: "gemini-2.5-pro",
+  grok_default_text_model: "grok-4.5",
+  grok_cross_client_model_map_enabled: false,
+  grok_default_base_url_mode: "cli",
   // Identity patch (Claude -> Gemini)
   enable_identity_patch: true,
   identity_patch_prompt: "",
@@ -7825,8 +9744,24 @@ const form = reactive<SettingsForm>({
   max_claude_code_version: "",
   // 分组隔离
   allow_ungrouped_key_scheduling: false,
+  openai_low_upstream_rate_priority_enabled: false,
+  openai_oauth_scheduling_rate_multiplier: 1,
   openai_advanced_scheduler_enabled: false,
+  openai_advanced_scheduler_sticky_weighted_enabled: false,
+  openai_advanced_scheduler_subscription_priority_enabled: false,
+  openai_advanced_scheduler_lb_top_k: "",
+  openai_advanced_scheduler_weight_priority: "",
+  openai_advanced_scheduler_weight_load: "",
+  openai_advanced_scheduler_weight_queue: "",
+  openai_advanced_scheduler_weight_error_rate: "",
+  openai_advanced_scheduler_weight_ttft: "",
+  openai_advanced_scheduler_weight_reset: "",
+  openai_advanced_scheduler_weight_quota_headroom: "",
+  openai_advanced_scheduler_weight_upstream_cost: "",
+  openai_advanced_scheduler_weight_previous_response: "",
+  openai_advanced_scheduler_weight_session_sticky: "",
   // Gateway forwarding behavior
+  openai_ttft_mode: "semantic",
   enable_fingerprint_unification: true,
   enable_metadata_passthrough: false,
   enable_cch_signing: false,
@@ -7835,9 +9770,20 @@ const form = reactive<SettingsForm>({
   claude_oauth_system_prompt_blocks: defaultClaudeOAuthSystemPromptBlocks,
   enable_anthropic_cache_ttl_1h_injection: false,
   rewrite_message_cache_control: false,
+  enable_client_dateline_normalization: true,
   antigravity_user_agent_version: "",
   openai_codex_user_agent: "",
-  openai_allow_claude_code_codex_plugin: false,
+  openai_codex_client_version: "",
+  // 只读展示：自动同步任务写入的官方最新稳定版，不参与提交（提交载荷按字段显式构造）
+  openai_codex_client_version_synced: "",
+  openai_codex_version_auto_sync_enabled: true,
+  // codex_cli_only 加固
+  min_codex_version: "",
+  max_codex_version: "",
+  codex_cli_only_blacklist: "",
+  codex_cli_only_whitelist: "",
+  codex_cli_only_allow_app_server_clients: false,
+  codex_cli_only_engine_fingerprint_signals: "",
   // 余额、订阅到期与账号限额通知
   balance_low_notify_enabled: false,
   balance_low_notify_threshold: 0,
@@ -7847,13 +9793,178 @@ const form = reactive<SettingsForm>({
   account_quota_notify_emails: [] as NotifyEmailEntry[],
   // Channel Monitor feature switch
   channel_monitor_enabled: true,
+  channel_monitor_mode: 'v1' as 'v1' | 'v2',
   channel_monitor_default_interval_seconds: 60,
+  channel_monitor_hide_throughput: false,
+  channel_monitor_show_quota: false,
   // Available Channels feature switch
   available_channels_enabled: false,
+  // Model Plaza feature switches + description
+  model_plaza_enabled: false,
+  model_plaza_require_auth: false,
+  model_plaza_description: '',
+  // Plugin management menu visibility; plugin runtime is unaffected.
+  plugin_management_enabled: false,
   // Affiliate (邀请返利) feature switch
   affiliate_enabled: false,
   // Allow user view error requests
   allow_user_view_error_requests: false,
+});
+
+// 人机验证 UI 状态：单卡片「总开关 + 服务商单选」，落库仍是三个独立
+// enabled 键（与上游一致），由下面的映射保证同一时间至多一家启用。
+type CaptchaProviderSelection = "turnstile" | "tencent" | "aliyun";
+
+const captchaProviderSelection = ref<CaptchaProviderSelection>("turnstile");
+
+function applyCaptchaSelection(provider: CaptchaProviderSelection | null): void {
+  form.turnstile_enabled = provider === "turnstile";
+  form.tencent_captcha_enabled = provider === "tencent";
+  form.aliyun_captcha_enabled = provider === "aliyun";
+}
+
+const captchaMasterEnabled = computed({
+  get: () =>
+    form.turnstile_enabled ||
+    form.tencent_captcha_enabled ||
+    form.aliyun_captcha_enabled,
+  set: (enabled: boolean) =>
+    applyCaptchaSelection(enabled ? captchaProviderSelection.value : null),
+});
+
+function selectCaptchaProvider(provider: CaptchaProviderSelection): void {
+  captchaProviderSelection.value = provider;
+  applyCaptchaSelection(provider);
+}
+
+// 天御中国站与国际站是两套独立账号体系，控制台与文档入口不通用，
+// 按当前选择的站点给出对应链接，避免管理员在错误的控制台里找不到 CaptchaAppId。
+const tencentCaptchaLinks = computed(() =>
+  form.tencent_captcha_region === "intl"
+    ? {
+        console: "https://console.tencentcloud.com/captcha/graphical",
+        cloudKeys: "https://console.tencentcloud.com/cam/capi",
+        webDocs: "https://www.tencentcloud.com/document/product/1159/49680",
+      }
+    : {
+        console: "https://console.cloud.tencent.com/captcha",
+        cloudKeys: "https://console.cloud.tencent.com/cam/capi",
+        webDocs: "https://cloud.tencent.com/document/product/1110/36841",
+      },
+);
+
+function syncCaptchaProviderSelection(): void {
+  if (form.tencent_captcha_enabled) {
+    captchaProviderSelection.value = "tencent";
+  } else if (form.aliyun_captcha_enabled) {
+    captchaProviderSelection.value = "aliyun";
+  } else if (form.turnstile_enabled) {
+    captchaProviderSelection.value = "turnstile";
+  }
+}
+
+type OpenAIAdvancedSchedulerOverrideKey =
+  | "openai_advanced_scheduler_lb_top_k"
+  | "openai_advanced_scheduler_weight_priority"
+  | "openai_advanced_scheduler_weight_load"
+  | "openai_advanced_scheduler_weight_queue"
+  | "openai_advanced_scheduler_weight_error_rate"
+  | "openai_advanced_scheduler_weight_ttft"
+  | "openai_advanced_scheduler_weight_reset"
+  | "openai_advanced_scheduler_weight_quota_headroom"
+  | "openai_advanced_scheduler_weight_upstream_cost"
+  | "openai_advanced_scheduler_weight_previous_response"
+  | "openai_advanced_scheduler_weight_session_sticky";
+
+type OpenAIAdvancedSchedulerEffectiveKey =
+  | "openai_advanced_scheduler_effective_lb_top_k"
+  | "openai_advanced_scheduler_effective_weight_priority"
+  | "openai_advanced_scheduler_effective_weight_load"
+  | "openai_advanced_scheduler_effective_weight_queue"
+  | "openai_advanced_scheduler_effective_weight_error_rate"
+  | "openai_advanced_scheduler_effective_weight_ttft"
+  | "openai_advanced_scheduler_effective_weight_reset"
+  | "openai_advanced_scheduler_effective_weight_quota_headroom"
+  | "openai_advanced_scheduler_effective_weight_upstream_cost"
+  | "openai_advanced_scheduler_effective_weight_previous_response"
+  | "openai_advanced_scheduler_effective_weight_session_sticky";
+
+const openAIAdvancedSchedulerWeightFields = computed<
+  Array<{
+    key: OpenAIAdvancedSchedulerOverrideKey;
+    label: string;
+    placeholder: string;
+  }>
+>(() => {
+  const placeholder = (
+    effectiveKey: OpenAIAdvancedSchedulerEffectiveKey,
+    fallbackValue: string,
+  ) => {
+    const effectiveValue = String(
+      (form as Record<string, unknown>)[effectiveKey] ?? "",
+    ).trim();
+    return t("admin.settings.openaiExperimentalScheduler.defaultPlaceholder", {
+      value: effectiveValue || fallbackValue,
+    });
+  };
+
+  return [
+    {
+      key: "openai_advanced_scheduler_lb_top_k",
+      label: t("admin.settings.openaiExperimentalScheduler.topKLabel"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_lb_top_k", "7"),
+    },
+    {
+      key: "openai_advanced_scheduler_weight_priority",
+      label: t("admin.settings.openaiExperimentalScheduler.priorityWeight"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_weight_priority", "1"),
+    },
+    {
+      key: "openai_advanced_scheduler_weight_load",
+      label: t("admin.settings.openaiExperimentalScheduler.loadWeight"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_weight_load", "1"),
+    },
+    {
+      key: "openai_advanced_scheduler_weight_queue",
+      label: t("admin.settings.openaiExperimentalScheduler.queueWeight"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_weight_queue", "0.7"),
+    },
+    {
+      key: "openai_advanced_scheduler_weight_error_rate",
+      label: t("admin.settings.openaiExperimentalScheduler.errorRateWeight"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_weight_error_rate", "0.8"),
+    },
+    {
+      key: "openai_advanced_scheduler_weight_ttft",
+      label: t("admin.settings.openaiExperimentalScheduler.ttftWeight"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_weight_ttft", "0.5"),
+    },
+    {
+      key: "openai_advanced_scheduler_weight_reset",
+      label: t("admin.settings.openaiExperimentalScheduler.resetWeight"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_weight_reset", "0"),
+    },
+    {
+      key: "openai_advanced_scheduler_weight_quota_headroom",
+      label: t("admin.settings.openaiExperimentalScheduler.quotaHeadroomWeight"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_weight_quota_headroom", "0"),
+    },
+    {
+      key: "openai_advanced_scheduler_weight_upstream_cost",
+      label: t("admin.settings.openaiExperimentalScheduler.upstreamCostWeight"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_weight_upstream_cost", "0"),
+    },
+    {
+      key: "openai_advanced_scheduler_weight_previous_response",
+      label: t("admin.settings.openaiExperimentalScheduler.previousResponseWeight"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_weight_previous_response", "5"),
+    },
+    {
+      key: "openai_advanced_scheduler_weight_session_sticky",
+      label: t("admin.settings.openaiExperimentalScheduler.sessionStickyWeight"),
+      placeholder: placeholder("openai_advanced_scheduler_effective_weight_session_sticky", "3"),
+    },
+  ];
 });
 
 const authSourceDefaults = reactive<AuthSourceDefaultsState>(
@@ -7899,7 +10010,7 @@ const authSourceDefaultsMeta = computed(() => [
   },
   {
     source: "dingtalk" as AuthSourceType,
-    title: "钉钉",
+    title: t("auth.dingtalkProviderName"),
     description: localText(
       "通过钉钉首次注册或首次绑定时应用。",
       "Applied on first signup or first bind through DingTalk.",
@@ -8177,6 +10288,143 @@ function handleRegistrationEmailSuffixWhitelistPaste(event: ClipboardEvent) {
   }
 }
 
+const forwardedClientIpHeaderSeparatorKeys = new Set([
+  " ",
+  ",",
+  "，",
+  "Enter",
+  "Tab",
+]);
+const forwardedClientIpHeaderTokenPattern = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+const maxForwardedClientIpHeaders = 16;
+
+type ForwardedClientIpHeaderResult = "added" | "duplicate" | "invalid" | "full";
+
+function normalizeForwardedClientIpHeader(raw: string): string {
+  const header = raw.trim();
+  if (!forwardedClientIpHeaderTokenPattern.test(header)) {
+    return "";
+  }
+
+  return header
+    .toLowerCase()
+    .split("-")
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join("-");
+}
+
+function normalizeForwardedClientIpHeaders(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const headers: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of value) {
+    if (typeof raw !== "string") {
+      continue;
+    }
+    const header = normalizeForwardedClientIpHeader(raw);
+    const key = header.toLowerCase();
+    if (!header || seen.has(key) || headers.length >= maxForwardedClientIpHeaders) {
+      continue;
+    }
+    seen.add(key);
+    headers.push(header);
+  }
+  return headers;
+}
+
+function removeForwardedClientIpHeader(header: string) {
+  form.forwarded_client_ip_headers = form.forwarded_client_ip_headers.filter(
+    (item) => item !== header,
+  );
+}
+
+function addForwardedClientIpHeader(raw: string): ForwardedClientIpHeaderResult {
+  const header = normalizeForwardedClientIpHeader(raw);
+  if (!header) {
+    return "invalid";
+  }
+  if (
+    form.forwarded_client_ip_headers.some(
+      (item) => item.toLowerCase() === header.toLowerCase(),
+    )
+  ) {
+    return "duplicate";
+  }
+  if (form.forwarded_client_ip_headers.length >= maxForwardedClientIpHeaders) {
+    return "full";
+  }
+  form.forwarded_client_ip_headers = [
+    ...form.forwarded_client_ip_headers,
+    header,
+  ];
+  return "added";
+}
+
+function showForwardedClientIpHeaderError(result: ForwardedClientIpHeaderResult) {
+  if (result === "invalid") {
+    appStore.showError(t("admin.settings.apiKeyAcl.forwardedClientIpHeaderInvalid"));
+  } else if (result === "full") {
+    appStore.showError(
+      t("admin.settings.apiKeyAcl.forwardedClientIpHeadersLimit", {
+        max: maxForwardedClientIpHeaders,
+      }),
+    );
+  }
+}
+
+function commitForwardedClientIpHeaderDraft() {
+  const draft = forwardedClientIpHeaderDraft.value;
+  if (!draft) {
+    return;
+  }
+  const result = addForwardedClientIpHeader(draft);
+  showForwardedClientIpHeaderError(result);
+  forwardedClientIpHeaderDraft.value = "";
+}
+
+function handleForwardedClientIpHeaderKeydown(event: KeyboardEvent) {
+  if (event.isComposing) {
+    return;
+  }
+  if (forwardedClientIpHeaderSeparatorKeys.has(event.key)) {
+    event.preventDefault();
+    commitForwardedClientIpHeaderDraft();
+    return;
+  }
+  if (
+    event.key === "Backspace" &&
+    !forwardedClientIpHeaderDraft.value &&
+    form.forwarded_client_ip_headers.length > 0
+  ) {
+    form.forwarded_client_ip_headers.pop();
+  }
+}
+
+function handleForwardedClientIpHeaderPaste(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData("text") || "";
+  if (!text.trim()) {
+    return;
+  }
+  event.preventDefault();
+
+  let error: ForwardedClientIpHeaderResult | undefined;
+  for (const token of text.split(/[,，;\r\n]+/)) {
+    if (!token.trim()) {
+      continue;
+    }
+    const result = addForwardedClientIpHeader(token);
+    if (result === "invalid" || result === "full") {
+      error = result;
+    }
+  }
+  if (error) {
+    showForwardedClientIpHeaderError(error);
+  }
+}
+
 // Quota notify email helpers
 const addQuotaNotifyEmail = () => {
   if (!form.account_quota_notify_emails) {
@@ -8192,13 +10440,15 @@ const addQuotaNotifyEmail = () => {
 const currentOrigin =
   typeof window !== "undefined" ? window.location.origin : "";
 
+function buildApiCallbackUrl(path: string): string {
+  const base = (form.api_base_url || currentOrigin).replace(/\/+$/, "");
+  const apiRoot = base.endsWith("/api/v1") ? base : `${base}/api/v1`;
+  return `${apiRoot}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 // LinuxDo OAuth redirect URL suggestion
 const linuxdoRedirectUrlSuggestion = computed(() => {
-  if (typeof window === "undefined") return "";
-  const origin =
-    window.location.origin ||
-    `${window.location.protocol}//${window.location.host}`;
-  return `${origin}/api/v1/auth/oauth/linuxdo/callback`;
+  return buildApiCallbackUrl("/auth/oauth/linuxdo/callback");
 });
 
 async function setAndCopyLinuxdoRedirectUrl() {
@@ -8215,19 +10465,11 @@ async function setAndCopyLinuxdoRedirectUrl() {
 type EmailOAuthProvider = "github" | "google";
 
 const githubOAuthRedirectUrlSuggestion = computed(() => {
-  if (typeof window === "undefined") return "";
-  const origin =
-    window.location.origin ||
-    `${window.location.protocol}//${window.location.host}`;
-  return `${origin}/api/v1/auth/oauth/github/callback`;
+  return buildApiCallbackUrl("/auth/oauth/github/callback");
 });
 
 const googleOAuthRedirectUrlSuggestion = computed(() => {
-  if (typeof window === "undefined") return "";
-  const origin =
-    window.location.origin ||
-    `${window.location.protocol}//${window.location.host}`;
-  return `${origin}/api/v1/auth/oauth/google/callback`;
+  return buildApiCallbackUrl("/auth/oauth/google/callback");
 });
 
 async function setAndCopyEmailOAuthRedirectUrl(provider: EmailOAuthProvider) {
@@ -8249,11 +10491,7 @@ async function setAndCopyEmailOAuthRedirectUrl(provider: EmailOAuthProvider) {
 }
 
 const wechatRedirectUrlSuggestion = computed(() => {
-  if (typeof window === "undefined") return "";
-  const origin =
-    window.location.origin ||
-    `${window.location.protocol}//${window.location.host}`;
-  return `${origin}/api/v1/auth/oauth/wechat/callback`;
+  return buildApiCallbackUrl("/auth/oauth/wechat/callback");
 });
 
 function syncWeChatConnectMode(preferredMode?: WeChatConnectMode) {
@@ -8318,11 +10556,7 @@ async function setAndCopyWeChatRedirectUrl() {
 }
 
 const oidcRedirectUrlSuggestion = computed(() => {
-  if (typeof window === "undefined") return "";
-  const origin =
-    window.location.origin ||
-    `${window.location.protocol}//${window.location.host}`;
-  return `${origin}/api/v1/auth/oauth/oidc/callback`;
+  return buildApiCallbackUrl("/auth/oauth/oidc/callback");
 });
 
 async function setAndCopyOIDCRedirectUrl() {
@@ -8443,6 +10677,90 @@ function parseTablePageSizeOptionsInput(raw: string): number[] | null {
   return deduped;
 }
 
+// ── codex_cli_only 黑/白名单结构化编辑（行 ↔ JSON）──
+interface CodexClientRow {
+  originator: string;
+  uaContains: string; // 逗号分隔，序列化时拆成 ua_contains 数组
+  skipEngineFingerprint?: boolean; // 仅白名单：命中即跳过引擎指纹门
+}
+const codexBlacklistRows = ref<CodexClientRow[]>([]);
+const codexWhitelistRows = ref<CodexClientRow[]>([]);
+const codexFingerprintRows = ref<FingerprintSignalRow[]>([]);
+const codexFingerprintNoRequired = computed(
+  () => !codexFingerprintRows.value.some((r) => r.required),
+);
+function addCodexFingerprintRow(): void {
+  codexFingerprintRows.value.push({ type: "header_exact", match: "", required: false });
+}
+function removeCodexFingerprintRow(i: number): void {
+  codexFingerprintRows.value.splice(i, 1);
+}
+
+function parseCodexEntriesToRows(raw: string): CodexClientRow[] {
+  if (!raw || !raw.trim()) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.map((e) => ({
+      originator: typeof e?.originator === "string" ? e.originator : "",
+      uaContains: Array.isArray(e?.ua_contains)
+        ? e.ua_contains
+            .filter((x: unknown) => typeof x === "string")
+            .join(", ")
+        : "",
+      skipEngineFingerprint: e?.skip_engine_fingerprint === true,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function serializeCodexRowsToJSON(rows: CodexClientRow[]): string {
+  const entries = rows
+    .map((r) => {
+      const entry: {
+        originator: string;
+        ua_contains: string[];
+        skip_engine_fingerprint?: boolean;
+      } = {
+        originator: r.originator.trim(),
+        ua_contains: r.uaContains
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0),
+      };
+      if (r.skipEngineFingerprint) entry.skip_engine_fingerprint = true;
+      return entry;
+    })
+    .filter((e) => e.originator !== "" || e.ua_contains.length > 0);
+  return entries.length > 0 ? JSON.stringify(entries) : "";
+}
+
+function addCodexBlacklistRow(): void {
+  codexBlacklistRows.value.push({ originator: "", uaContains: "" });
+}
+function removeCodexBlacklistRow(i: number): void {
+  codexBlacklistRows.value.splice(i, 1);
+}
+function addCodexWhitelistRow(): void {
+  codexWhitelistRows.value.push({
+    originator: "",
+    uaContains: "",
+    skipEngineFingerprint: false,
+  });
+}
+function removeCodexWhitelistRow(i: number): void {
+  codexWhitelistRows.value.splice(i, 1);
+}
+
+const codexSyncedVersionLabel = computed(() => {
+  const synced = form.openai_codex_client_version_synced?.trim();
+  if (!synced) return "";
+  return t("admin.settings.gatewayForwarding.openaiCodexVersionSyncedValue", {
+    version: synced,
+  });
+});
+
 async function loadSettings() {
   loading.value = true;
   loadFailed.value = false;
@@ -8456,6 +10774,7 @@ async function loadSettings() {
         (form as Record<string, unknown>)[key] = value;
       }
     }
+    syncCaptchaProviderSelection();
     if (!form.claude_oauth_system_prompt_blocks?.trim()) {
       form.claude_oauth_system_prompt_blocks =
         defaultClaudeOAuthSystemPromptBlocks;
@@ -8465,8 +10784,25 @@ async function loadSettings() {
       form.claude_oauth_system_prompt,
     );
     syncClaudeOAuthSystemPromptBlocksFormField();
+    codexBlacklistRows.value = parseCodexEntriesToRows(
+      form.codex_cli_only_blacklist,
+    );
+    codexWhitelistRows.value = parseCodexEntriesToRows(
+      form.codex_cli_only_whitelist,
+    );
+    codexFingerprintRows.value = form.codex_cli_only_engine_fingerprint_signals
+      ? parseFingerprintSignalsToRows(form.codex_cli_only_engine_fingerprint_signals)
+      : defaultFingerprintSignalRows();
     form.login_agreement_mode =
       settings.login_agreement_mode === "checkbox" ? "checkbox" : "modal";
+    form.channel_monitor_mode =
+      settings.channel_monitor_mode === "v2" ? "v2" : "v1";
+    form.channel_monitor_hide_throughput = Boolean(
+      settings.channel_monitor_hide_throughput
+    );
+    form.channel_monitor_show_quota = Boolean(
+      settings.channel_monitor_show_quota
+    );
     form.login_agreement_updated_at =
       settings.login_agreement_updated_at || "2026-03-31";
     form.login_agreement_documents =
@@ -8480,6 +10816,9 @@ async function loadSettings() {
         : defaultLoginAgreementDocuments();
     Object.assign(authSourceDefaults, buildAuthSourceDefaultsState(settings));
     form.default_platform_quotas = normalizePlatformQuotasMap(settings.default_platform_quotas);
+    form.account_scheduling_thresholds = normalizeAccountSchedulingThresholdsMap(
+      settings.account_scheduling_thresholds,
+    );
     form.backend_mode_enabled = settings.backend_mode_enabled;
     form.default_subscriptions = normalizeDefaultSubscriptionSettings(
       settings.default_subscriptions,
@@ -8488,6 +10827,10 @@ async function loadSettings() {
       normalizeRegistrationEmailSuffixDomains(
         settings.registration_email_suffix_whitelist,
       );
+    form.forwarded_client_ip_headers = normalizeForwardedClientIpHeaders(
+      settings.forwarded_client_ip_headers,
+    );
+    forwardedClientIpHeaderDraft.value = "";
     tablePageSizeOptionsInput.value = formatTablePageSizeOptions(
       Array.isArray(settings.table_page_size_options)
         ? settings.table_page_size_options
@@ -8497,6 +10840,10 @@ async function loadSettings() {
     form.smtp_password = "";
     smtpPasswordManuallyEdited.value = false;
     form.turnstile_secret_key = "";
+    form.tencent_captcha_app_secret_key = "";
+    form.tencent_captcha_cloud_secret_id = "";
+    form.tencent_captcha_cloud_secret_key = "";
+    form.aliyun_captcha_access_key_secret = "";
     form.linuxdo_connect_client_secret = "";
     form.dingtalk_connect_client_secret = "";
     form.github_oauth_client_secret = "";
@@ -8568,6 +10915,7 @@ async function loadSettings() {
       openaiFastPolicyForm.rules =
         settings.openai_fast_policy_settings.rules.map((rule) => ({
           ...rule,
+          user_ids: rule.user_ids ? [...rule.user_ids] : [],
           model_whitelist: rule.model_whitelist
             ? [...rule.model_whitelist]
             : [],
@@ -8728,6 +11076,9 @@ async function saveSettings() {
     form.login_agreement_mode =
       form.login_agreement_mode === "checkbox" ? "checkbox" : "modal";
     form.login_agreement_documents = normalizedLoginAgreementDocuments;
+    form.forwarded_client_ip_headers = normalizeForwardedClientIpHeaders(
+      form.forwarded_client_ip_headers,
+    );
 
     const normalizedDefaultSubscriptions = normalizeDefaultSubscriptionSettings(
       form.default_subscriptions,
@@ -8808,10 +11159,20 @@ async function saveSettings() {
         registrationEmailSuffixWhitelistTags.value.map((suffix) =>
           suffix.startsWith("*.") ? suffix : `@${suffix}`,
         ),
+      registration_email_domain_quota_enabled:
+        form.registration_email_domain_quota_enabled,
       promo_code_enabled: form.promo_code_enabled,
       invitation_code_enabled: form.invitation_code_enabled,
       password_reset_enabled: form.password_reset_enabled,
       totp_enabled: form.totp_enabled,
+      passkey_enabled: form.passkey_enabled,
+      session_binding_enabled: form.session_binding_enabled,
+      step_up_enabled: form.step_up_enabled,
+      // 清空数字框时 v-model.number 会得到空串，后端 int 字段解析空串会 400 拒绝整次保存；
+      // 空/非法值回退默认 180（与后端 parseAuditLogRetentionDays("") 语义一致，0 仍表示永久保留）。
+      audit_log_retention_days: Number.isFinite(form.audit_log_retention_days)
+        ? form.audit_log_retention_days
+        : 180,
       login_agreement_enabled: form.login_agreement_enabled,
       login_agreement_mode: form.login_agreement_mode,
       login_agreement_updated_at: form.login_agreement_updated_at,
@@ -8824,6 +11185,7 @@ async function saveSettings() {
       affiliate_rebate_freeze_hours: Math.max(0, Math.min(720, Number(form.affiliate_rebate_freeze_hours) || 0)),
       affiliate_rebate_duration_days: Math.max(0, Math.min(3650, Math.floor(Number(form.affiliate_rebate_duration_days) || 0))),
       affiliate_rebate_per_invitee_cap: Math.max(0, Number(form.affiliate_rebate_per_invitee_cap) || 0),
+      affiliate_admin_recharge_enabled: form.affiliate_admin_recharge_enabled,
       default_concurrency: form.default_concurrency,
       default_subscriptions: normalizedDefaultSubscriptions,
       force_email_on_third_party_signup: form.force_email_on_third_party_signup,
@@ -8835,6 +11197,7 @@ async function saveSettings() {
       contact_info: form.contact_info,
       doc_url: form.doc_url,
       home_content: form.home_content,
+      compact_home_enabled: form.compact_home_enabled,
       backend_mode_enabled: form.backend_mode_enabled,
       hide_ccs_import_button: form.hide_ccs_import_button,
       table_default_page_size: form.table_default_page_size,
@@ -8852,7 +11215,24 @@ async function saveSettings() {
       turnstile_enabled: form.turnstile_enabled,
       turnstile_site_key: form.turnstile_site_key,
       turnstile_secret_key: form.turnstile_secret_key || undefined,
+      tencent_captcha_enabled: form.tencent_captcha_enabled,
+      tencent_captcha_app_id: form.tencent_captcha_app_id,
+      tencent_captcha_app_secret_key:
+        form.tencent_captcha_app_secret_key || undefined,
+      tencent_captcha_cloud_secret_id:
+        form.tencent_captcha_cloud_secret_id || undefined,
+      tencent_captcha_cloud_secret_key:
+        form.tencent_captcha_cloud_secret_key || undefined,
+      tencent_captcha_region: form.tencent_captcha_region,
+      aliyun_captcha_enabled: form.aliyun_captcha_enabled,
+      aliyun_captcha_access_key_id: form.aliyun_captcha_access_key_id,
+      aliyun_captcha_access_key_secret:
+        form.aliyun_captcha_access_key_secret || undefined,
+      aliyun_captcha_scene_id: form.aliyun_captcha_scene_id,
+      aliyun_captcha_prefix: form.aliyun_captcha_prefix,
+      aliyun_captcha_region: form.aliyun_captcha_region,
       api_key_acl_trust_forwarded_ip: form.api_key_acl_trust_forwarded_ip,
+      forwarded_client_ip_headers: form.forwarded_client_ip_headers,
       linuxdo_connect_enabled: form.linuxdo_connect_enabled,
       linuxdo_connect_client_id: form.linuxdo_connect_client_id,
       linuxdo_connect_client_secret:
@@ -8945,11 +11325,18 @@ async function saveSettings() {
       fallback_model_openai: form.fallback_model_openai,
       fallback_model_gemini: form.fallback_model_gemini,
       fallback_model_antigravity: form.fallback_model_antigravity,
+      grok_default_text_model:
+        form.grok_default_text_model.trim() || "grok-4.5",
+      grok_cross_client_model_map_enabled:
+        form.grok_cross_client_model_map_enabled,
+      grok_default_base_url_mode: form.grok_default_base_url_mode,
       enable_identity_patch: form.enable_identity_patch,
       identity_patch_prompt: form.identity_patch_prompt,
       min_claude_code_version: form.min_claude_code_version,
       max_claude_code_version: form.max_claude_code_version,
       allow_ungrouped_key_scheduling: form.allow_ungrouped_key_scheduling,
+      openai_ttft_mode:
+        form.openai_ttft_mode === "visible" ? "visible" : "semantic",
       enable_fingerprint_unification: form.enable_fingerprint_unification,
       enable_metadata_passthrough: form.enable_metadata_passthrough,
       enable_cch_signing: form.enable_cch_signing,
@@ -8962,11 +11349,29 @@ async function saveSettings() {
       enable_anthropic_cache_ttl_1h_injection:
         form.enable_anthropic_cache_ttl_1h_injection,
       rewrite_message_cache_control: form.rewrite_message_cache_control,
+      enable_client_dateline_normalization:
+        form.enable_client_dateline_normalization,
       antigravity_user_agent_version:
         form.antigravity_user_agent_version?.trim() || "",
       openai_codex_user_agent:
         form.openai_codex_user_agent?.trim() || "",
-      openai_allow_claude_code_codex_plugin: form.openai_allow_claude_code_codex_plugin,
+      openai_codex_client_version:
+        form.openai_codex_client_version?.trim() || "",
+      openai_codex_version_auto_sync_enabled:
+        form.openai_codex_version_auto_sync_enabled,
+      min_codex_version: form.min_codex_version?.trim() || "",
+      max_codex_version: form.max_codex_version?.trim() || "",
+      codex_cli_only_allow_app_server_clients:
+        form.codex_cli_only_allow_app_server_clients,
+      codex_cli_only_engine_fingerprint_signals: serializeFingerprintRowsToJSON(
+        codexFingerprintRows.value,
+      ),
+      codex_cli_only_blacklist: serializeCodexRowsToJSON(
+        codexBlacklistRows.value,
+      ),
+      codex_cli_only_whitelist: serializeCodexRowsToJSON(
+        codexWhitelistRows.value,
+      ),
       // Payment configuration
       payment_enabled: form.payment_enabled,
       risk_control_enabled: form.risk_control_enabled,
@@ -8982,6 +11387,8 @@ async function saveSettings() {
       payment_balance_disabled: form.payment_balance_disabled,
       payment_balance_recharge_multiplier:
         Number(form.payment_balance_recharge_multiplier) || 1,
+      payment_subscription_usd_to_cny_rate:
+        Number(form.payment_subscription_usd_to_cny_rate) || 0,
       payment_recharge_fee_rate: Number(form.payment_recharge_fee_rate) || 0,
       payment_enabled_types: form.payment_enabled_types,
       payment_load_balance_strategy: form.payment_load_balance_strategy,
@@ -8998,7 +11405,39 @@ async function saveSettings() {
       payment_cancel_rate_limit_window_mode:
         form.payment_cancel_rate_limit_window_mode,
       payment_alipay_force_qrcode: form.payment_alipay_force_qrcode,
+      payment_alipay_mobile_precreate_deep_link:
+        form.payment_alipay_mobile_precreate_deep_link,
+      openai_low_upstream_rate_priority_enabled:
+        form.openai_low_upstream_rate_priority_enabled,
+      openai_oauth_scheduling_rate_multiplier:
+        form.openai_oauth_scheduling_rate_multiplier,
       openai_advanced_scheduler_enabled: form.openai_advanced_scheduler_enabled,
+      openai_advanced_scheduler_sticky_weighted_enabled:
+        form.openai_advanced_scheduler_sticky_weighted_enabled,
+      openai_advanced_scheduler_subscription_priority_enabled:
+        form.openai_advanced_scheduler_subscription_priority_enabled,
+      openai_advanced_scheduler_lb_top_k:
+        form.openai_advanced_scheduler_lb_top_k.trim(),
+      openai_advanced_scheduler_weight_priority:
+        form.openai_advanced_scheduler_weight_priority.trim(),
+      openai_advanced_scheduler_weight_load:
+        form.openai_advanced_scheduler_weight_load.trim(),
+      openai_advanced_scheduler_weight_queue:
+        form.openai_advanced_scheduler_weight_queue.trim(),
+      openai_advanced_scheduler_weight_error_rate:
+        form.openai_advanced_scheduler_weight_error_rate.trim(),
+      openai_advanced_scheduler_weight_ttft:
+        form.openai_advanced_scheduler_weight_ttft.trim(),
+      openai_advanced_scheduler_weight_reset:
+        form.openai_advanced_scheduler_weight_reset.trim(),
+      openai_advanced_scheduler_weight_quota_headroom:
+        form.openai_advanced_scheduler_weight_quota_headroom.trim(),
+      openai_advanced_scheduler_weight_upstream_cost:
+        form.openai_advanced_scheduler_weight_upstream_cost.trim(),
+      openai_advanced_scheduler_weight_previous_response:
+        form.openai_advanced_scheduler_weight_previous_response.trim(),
+      openai_advanced_scheduler_weight_session_sticky:
+        form.openai_advanced_scheduler_weight_session_sticky.trim(),
       // 余额、订阅到期与账号限额通知
       balance_low_notify_enabled: form.balance_low_notify_enabled,
       balance_low_notify_threshold:
@@ -9013,10 +11452,18 @@ async function saveSettings() {
       ).filter((e) => e.email.trim() !== ""),
       // Channel Monitor feature switch
       channel_monitor_enabled: form.channel_monitor_enabled,
+      channel_monitor_mode: form.channel_monitor_mode === 'v1' ? 'v1' : 'v2',
       channel_monitor_default_interval_seconds:
         Number(form.channel_monitor_default_interval_seconds) || 60,
+      channel_monitor_hide_throughput: Boolean(form.channel_monitor_hide_throughput),
+      channel_monitor_show_quota: Boolean(form.channel_monitor_show_quota),
       // Available Channels feature switch
       available_channels_enabled: form.available_channels_enabled,
+      // Model Plaza feature switches + description
+      model_plaza_enabled: form.model_plaza_enabled,
+      model_plaza_require_auth: form.model_plaza_require_auth,
+      model_plaza_description: form.model_plaza_description,
+      plugin_management_enabled: form.plugin_management_enabled,
       // Affiliate (邀请返利) feature switch
       affiliate_enabled: form.affiliate_enabled,
       allow_user_view_error_requests: form.allow_user_view_error_requests,
@@ -9035,6 +11482,10 @@ async function saveSettings() {
             service_tier: rule.service_tier,
             action: rule.action,
             scope: rule.scope,
+            user_ids:
+              rule.user_ids && rule.user_ids.length > 0
+                ? [...rule.user_ids]
+                : undefined,
             error_message:
               rule.action === "block" ? rule.error_message : undefined,
             model_whitelist: hasWhitelist ? whitelist : undefined,
@@ -9051,9 +11502,14 @@ async function saveSettings() {
     }
 
     payload.default_platform_quotas = sanitizePlatformQuotasMap(form.default_platform_quotas);
+    payload.account_scheduling_thresholds = sanitizeAccountSchedulingThresholdsMap(
+      form.account_scheduling_thresholds,
+    );
     appendAuthSourceDefaultsToUpdateRequest(payload, authSourceDefaults);
 
-    const updated = await adminAPI.settings.updateSettings(payload);
+    const updated = await settingsStepUp.run(() =>
+      adminAPI.settings.updateSettings(payload),
+    );
     for (const [key, value] of Object.entries(updated)) {
       if (key === "openai_fast_policy_settings") continue;
       if (value !== null && value !== undefined) {
@@ -9062,10 +11518,17 @@ async function saveSettings() {
     }
     Object.assign(authSourceDefaults, buildAuthSourceDefaultsState(updated));
     form.default_platform_quotas = normalizePlatformQuotasMap(updated.default_platform_quotas);
+    form.account_scheduling_thresholds = normalizeAccountSchedulingThresholdsMap(
+      updated.account_scheduling_thresholds,
+    );
     registrationEmailSuffixWhitelistTags.value =
       normalizeRegistrationEmailSuffixDomains(
         updated.registration_email_suffix_whitelist,
       );
+    form.forwarded_client_ip_headers = normalizeForwardedClientIpHeaders(
+      updated.forwarded_client_ip_headers,
+    );
+    forwardedClientIpHeaderDraft.value = "";
     tablePageSizeOptionsInput.value = formatTablePageSizeOptions(
       Array.isArray(updated.table_page_size_options)
         ? updated.table_page_size_options
@@ -9075,6 +11538,7 @@ async function saveSettings() {
     form.smtp_password = "";
     smtpPasswordManuallyEdited.value = false;
     form.turnstile_secret_key = "";
+    form.aliyun_captcha_access_key_secret = "";
     form.linuxdo_connect_client_secret = "";
     form.dingtalk_connect_client_secret = "";
     form.github_oauth_client_secret = "";
@@ -9111,6 +11575,7 @@ async function saveSettings() {
       openaiFastPolicyForm.rules =
         updated.openai_fast_policy_settings.rules.map((rule) => ({
           ...rule,
+          user_ids: rule.user_ids ? [...rule.user_ids] : [],
           model_whitelist: rule.model_whitelist
             ? [...rule.model_whitelist]
             : [],
@@ -9126,6 +11591,25 @@ async function saveSettings() {
       appStore.showSuccess(t("admin.settings.settingsSaved"));
     }
   } catch (error: unknown) {
+    // 用户取消 step-up 验证：静默返回，不弹错误
+    if (isStepUpCancelled(error)) {
+      return;
+    }
+    if (isStepUpBlocked(error)) {
+      appStore.showError(
+        stepUpBlockReason(error) === "STEP_UP_ADMIN_API_KEY_FORBIDDEN"
+          ? t("stepUp.adminApiKeyForbidden")
+          : t("stepUp.notEnabled"),
+      );
+      return;
+    }
+    // 开启 step-up 开关但本人未启用 2FA：给出可操作的专用提示
+    if (
+      (error as { reason?: string })?.reason === "STEP_UP_ENABLE_REQUIRES_TOTP"
+    ) {
+      appStore.showError(t("admin.settings.security.stepUpEnableRequiresTotp"));
+      return;
+    }
     appStore.showError(
       extractApiErrorMessage(error, t("admin.settings.failedToSave")),
     );
@@ -9254,6 +11738,71 @@ function copyNewKey() {
     });
 }
 
+async function loadUpstreamBillingProbeSettings() {
+  upstreamBillingProbeLoading.value = true;
+  try {
+    Object.assign(
+      upstreamBillingProbeForm,
+      await adminAPI.accounts.getUpstreamBillingProbeSettings(),
+    );
+  } catch (_error: unknown) {
+    // Keep defaults when this optional setting cannot be loaded.
+  } finally {
+    upstreamBillingProbeLoading.value = false;
+  }
+}
+
+async function saveUpstreamBillingProbeSettings() {
+  upstreamBillingProbeSaving.value = true;
+  try {
+    const updated = await adminAPI.accounts.updateUpstreamBillingProbeSettings({
+      ...upstreamBillingProbeForm,
+    });
+    Object.assign(upstreamBillingProbeForm, updated);
+    appStore.showSuccess(t("admin.settings.upstreamBillingProbe.saved"));
+  } catch (error: unknown) {
+    appStore.showError(
+      extractApiErrorMessage(
+        error,
+        t("admin.settings.upstreamBillingProbe.saveFailed"),
+      ),
+    );
+  } finally {
+    upstreamBillingProbeSaving.value = false;
+  }
+}
+
+async function loadOllamaCloudUsageSettings() {
+  ollamaCloudUsageLoading.value = true;
+  try {
+    Object.assign(
+      ollamaCloudUsageForm,
+      await adminAPI.accounts.getOllamaCloudUsageSettings(),
+    );
+  } catch (_error: unknown) {
+    // Keep the fail-safe disabled defaults when this optional setting cannot be loaded.
+  } finally {
+    ollamaCloudUsageLoading.value = false;
+  }
+}
+
+async function saveOllamaCloudUsageSettings() {
+  ollamaCloudUsageSaving.value = true;
+  try {
+    const updated = await adminAPI.accounts.updateOllamaCloudUsageSettings({
+      ...ollamaCloudUsageForm,
+    });
+    Object.assign(ollamaCloudUsageForm, updated);
+    appStore.showSuccess(t("admin.settings.ollamaCloudUsage.saved"));
+  } catch (error: unknown) {
+    appStore.showError(
+      extractApiErrorMessage(error, t("admin.settings.ollamaCloudUsage.saveFailed")),
+    );
+  } finally {
+    ollamaCloudUsageSaving.value = false;
+  }
+}
+
 // Overload Cooldown 方法
 async function loadOverloadCooldownSettings() {
   overloadCooldownLoading.value = true;
@@ -9285,6 +11834,43 @@ async function saveOverloadCooldownSettings() {
     );
   } finally {
     overloadCooldownSaving.value = false;
+  }
+}
+
+// Panel API Rate Limit 方法
+async function loadPanelRateLimitSettings() {
+  panelRateLimitLoading.value = true;
+  try {
+    const settings = await adminAPI.settings.getPanelRateLimitSettings();
+    Object.assign(panelRateLimitForm, settings);
+  } catch (_error: unknown) {
+    // Silent fail - settings will use defaults
+  } finally {
+    panelRateLimitLoading.value = false;
+  }
+}
+
+async function savePanelRateLimitSettings() {
+  panelRateLimitSaving.value = true;
+  try {
+    const updated = await adminAPI.settings.updatePanelRateLimitSettings({
+      enabled: panelRateLimitForm.enabled,
+      user_rpm: panelRateLimitForm.user_rpm,
+      heavy_rpm: panelRateLimitForm.heavy_rpm,
+      exempt_admin: panelRateLimitForm.exempt_admin,
+      public_ip_rpm: panelRateLimitForm.public_ip_rpm,
+    });
+    Object.assign(panelRateLimitForm, updated);
+    appStore.showSuccess(t("admin.settings.panelRateLimit.saved"));
+  } catch (error: unknown) {
+    appStore.showError(
+      extractApiErrorMessage(
+        error,
+        t("admin.settings.panelRateLimit.saveFailed"),
+      ),
+    );
+  } finally {
+    panelRateLimitSaving.value = false;
   }
 }
 
@@ -9498,14 +12084,32 @@ const openaiFastPolicyTierOptions = computed(() => [
     value: "priority",
     label: t("admin.settings.openaiFastPolicy.tierPriority"),
   },
+  {
+    value: "ultrafast",
+    label: t("admin.settings.openaiFastPolicy.tierUltrafast"),
+  },
   { value: "flex", label: t("admin.settings.openaiFastPolicy.tierFlex") },
 ]);
 
 const openaiFastPolicyActionOptions = computed(() => [
   { value: "pass", label: t("admin.settings.openaiFastPolicy.actionPass") },
   { value: "filter", label: t("admin.settings.openaiFastPolicy.actionFilter") },
+  {
+    value: "force_priority",
+    label: t("admin.settings.openaiFastPolicy.actionForcePriority"),
+  },
   { value: "block", label: t("admin.settings.openaiFastPolicy.actionBlock") },
 ]);
+
+function openaiFastPolicyActionSummary(
+  action: OpenAIFastPolicyRule["action"],
+) {
+  return t(`admin.settings.openaiFastPolicy.summaryAction.${action}`);
+}
+
+function hasOpenAIFastPolicyTargetModels(rule: OpenAIFastPolicyRule) {
+  return Boolean(rule.model_whitelist?.some((pattern) => pattern.trim() !== ""));
+}
 
 const openaiFastPolicyScopeOptions = computed(() => [
   { value: "all", label: t("admin.settings.openaiFastPolicy.scopeAll") },
@@ -9522,6 +12126,7 @@ function addOpenAIFastPolicyRule() {
     service_tier: "priority",
     action: "filter",
     scope: "all",
+    user_ids: [],
     error_message: "",
     model_whitelist: [],
     fallback_action: "pass",
@@ -9777,7 +12382,15 @@ async function loadProviders() {
   providersLoading.value = true;
   try {
     const res = await adminAPI.payment.getProviders();
-    providers.value = res.data || [];
+    // Normalize supported_types: backend returns null when the list is empty
+    // (Go nil slice → JSON null). Without this, ProviderCard's isSelected()
+    // throws TypeError on null.includes(), causing the card to vanish.
+    providers.value = (res.data || []).map((p) => ({
+      ...p,
+      supported_types: Array.isArray(p.supported_types)
+        ? p.supported_types
+        : [],
+    }));
   } catch (err: unknown) {
     appStore.showError(extractI18nErrorMessage(err, t, "payment.errors", t("common.error")));
   } finally {
@@ -9871,9 +12484,12 @@ async function handleToggleField(
 }
 
 async function handleToggleType(provider: ProviderInstance, type: string) {
-  const updated = provider.supported_types.includes(type)
-    ? provider.supported_types.filter((t) => t !== type)
-    : [...provider.supported_types, type];
+  const currentTypes = Array.isArray(provider.supported_types)
+    ? provider.supported_types
+    : [];
+  const updated = currentTypes.includes(type)
+    ? currentTypes.filter((t) => t !== type)
+    : [...currentTypes, type];
   const conflict = findProviderEnablementConflict({
     id: provider.id,
     provider_key: provider.provider_key,
@@ -9934,8 +12550,11 @@ onMounted(() => {
   loadSettings();
   loadSubscriptionGroups();
   loadAdminApiKey();
+  loadUpstreamBillingProbeSettings();
+  loadOllamaCloudUsageSettings();
   loadOverloadCooldownSettings();
   loadRateLimit429CooldownSettings();
+  loadPanelRateLimitSettings();
   loadStreamTimeoutSettings();
   loadRectifierSettings();
   loadBetaPolicySettings();

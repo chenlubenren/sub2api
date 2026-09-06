@@ -71,6 +71,18 @@ func (s *OpenAIGatewayService) forwardAsChatCompletions(
 	defaultMappedModel string,
 	compatPromptCacheTenantIsolated bool,
 ) (*OpenAIForwardResult, error) {
+	return s.forwardAsChatCompletions(ctx, c, account, body, promptCacheKey, defaultMappedModel, false)
+}
+
+func (s *OpenAIGatewayService) forwardAsChatCompletions(
+	ctx context.Context,
+	c *gin.Context,
+	account *Account,
+	body []byte,
+	promptCacheKey string,
+	defaultMappedModel string,
+	compatPromptCacheTenantIsolated bool,
+) (*OpenAIForwardResult, error) {
 	beginUpstreamResponseModelObservation(c)
 	ClearActualOpenAIUpstreamEndpoint(c)
 	if shouldForwardOpenAIResponsesViaRawChatCompletions(account) {
@@ -348,7 +360,7 @@ func (s *OpenAIGatewayService) forwardAsChatCompletions(
 
 	// 7. Send request
 	proxyURL := ""
-	if account.Proxy != nil {
+	if account.ProxyID != nil && account.Proxy != nil {
 		proxyURL = account.Proxy.URL()
 	}
 	resp, err := s.doOpenAIUpstream(upstreamReq, proxyURL, account)
@@ -577,6 +589,7 @@ func (s *OpenAIGatewayService) handleChatBufferedStreamingResponse(
 
 	result := &OpenAIForwardResult{
 		RequestID:                     requestID,
+		UpstreamHeaders:               resp.Header,
 		Usage:                         usage,
 		Model:                         originalModel,
 		BillingModel:                  billingModel,
@@ -698,6 +711,7 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 	resultWithUsage := func() *OpenAIForwardResult {
 		out := &OpenAIForwardResult{
 			RequestID:                     requestID,
+			UpstreamHeaders:               resp.Header,
 			Usage:                         usage,
 			Model:                         originalModel,
 			BillingModel:                  billingModel,
