@@ -27,7 +27,7 @@ const (
 	StorageBackendDisabled         = "disabled"
 	StorageBackendS3               = "s3"
 	DefaultStoragePresignExpire    = 900
-	DefaultStorageMaxFileSizeBytes = int64(10 * 1024 * 1024)
+	DefaultStorageMaxFileSizeBytes = int64(100 * 1024 * 1024)
 	// Keep the source-run default aligned with the live deployment profile.
 	DefaultGatewayMaxInlineImageBytes = int64(100 * 1024 * 1024)
 )
@@ -2479,7 +2479,7 @@ func setDefaults() {
 	viper.SetDefault("gateway.antigravity_extra_retries", 10)
 	viper.SetDefault("gateway.max_body_size", int64(1024*1024*1024))
 	viper.SetDefault("gateway.max_inline_image_bytes", DefaultGatewayMaxInlineImageBytes)
-	viper.SetDefault("gateway.text_max_body_size", int64(32*1024*1024))
+	viper.SetDefault("gateway.text_max_body_size", int64(1024*1024*1024))
 	viper.SetDefault("gateway.upstream_response_read_max_bytes", DefaultUpstreamResponseReadMaxBytes)
 	viper.SetDefault("gateway.models_list_read_max_bytes", DefaultModelsListReadMaxBytes)
 	viper.SetDefault("gateway.proxy_probe_response_read_max_bytes", int64(1024*1024))

@@ -14,8 +14,8 @@ terminate healthy long generations and streams.
   the live deployment.
 - `gateway.max_body_size: 1073741824` remains available to multimodal, Gemini,
   image, video, and batch-image endpoints.
-- `gateway.text_max_body_size: 33554432` limits the known pure-text
-  `/embeddings` and `/alpha/search` endpoints to 32 MiB.
+- `gateway.text_max_body_size: 1073741824` limits the known pure-text
+  `/embeddings` and `/alpha/search` endpoints to 1 GiB.
 - H2C defaults to 50 concurrent streams per connection, a 2 MiB connection
   upload window, and a 512 KiB stream upload window.
 - Invalid credential abuse is limited in process by trusted client IP (IPv6

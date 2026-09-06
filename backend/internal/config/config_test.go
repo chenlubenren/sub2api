@@ -97,7 +97,7 @@ func TestLoadHTTPIngressSafetyDefaults(t *testing.T) {
 	require.Empty(t, cfg.Server.TrustedProxies)
 	require.False(t, cfg.Server.TrustedProxiesConfigured)
 	require.True(t, cfg.TrustForwardedIPForAPIKeyACL())
-	require.Equal(t, int64(32*1024*1024), cfg.Gateway.TextMaxBodySize)
+	require.Equal(t, int64(1024*1024*1024), cfg.Gateway.TextMaxBodySize)
 	require.True(t, cfg.APIKeyAuth.InvalidAbuse.Enabled)
 	require.Equal(t, 120, cfg.APIKeyAuth.InvalidAbuse.Threshold)
 	require.Equal(t, 16384, cfg.APIKeyAuth.InvalidAbuse.Capacity)
@@ -375,7 +375,7 @@ func TestLoadStorageConfigFromEnv(t *testing.T) {
 	require.Equal(t, "minioadmin", cfg.Storage.SecretKey)
 	require.True(t, cfg.Storage.UsePathStyle)
 	require.Equal(t, 900, cfg.Storage.PresignExpireSeconds)
-	require.Equal(t, int64(10*1024*1024), cfg.Storage.MaxFileSizeBytes)
+	require.Equal(t, int64(100*1024*1024), cfg.Storage.MaxFileSizeBytes)
 	require.Equal(t, []string{"image/png", "image/jpeg", "image/webp"}, cfg.Storage.AllowedMimeTypes)
 }
 

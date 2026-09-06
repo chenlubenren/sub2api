@@ -232,9 +232,9 @@ gateway:
   # Legacy inline base64 image payload limit (live deployment: 100MB)
   # 内联 Base64 图片大小（线上配置为 100MB）
   max_inline_image_bytes: 104857600
-  # Pure-text endpoint body limit (embeddings and alpha/search), default 32 MiB.
-  # 纯文本端点请求体上限（embeddings、alpha/search），默认 32 MiB。
-  text_max_body_size: 33554432
+  # Pure-text endpoint body limit (embeddings and alpha/search, live profile: 1GB).
+  # 纯文本端点请求体上限（embeddings、alpha/search，线上配置档位：1GB）。
+  text_max_body_size: 1073741824
   # Max bytes to read for non-stream upstream responses (default: 8MB)
   # 非流式上游响应体读取上限（默认 8MB）
   upstream_response_read_max_bytes: 8388608
