@@ -161,4 +161,92 @@ func TestIsMigrationChecksumCompatible(t *testing.T) {
 		)
 		require.False(t, ok)
 	})
+
+	t.Run("231历史CRLF checksum可兼容当前LF版本", func(t *testing.T) {
+		ok := isMigrationChecksumCompatible(
+			"231_add_usage_log_native_compaction_v2.sql",
+			"bef0b989f525ea303a1ddc95ba426d1e64d838d5f83bd1f99b9e4cbb9f818b47",
+			"7ab597b658dafa31f2b1d64b6057ff9e4c2da5a3b0e6581962d15d66f91ebfe4",
+		)
+		require.True(t, ok)
+	})
+
+	t.Run("231未知checksum不兼容", func(t *testing.T) {
+		ok := isMigrationChecksumCompatible(
+			"231_add_usage_log_native_compaction_v2.sql",
+			"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			"7ab597b658dafa31f2b1d64b6057ff9e4c2da5a3b0e6581962d15d66f91ebfe4",
+		)
+		require.False(t, ok)
+	})
+
+	t.Run("231其他历史CRLF checksum可兼容当前LF版本", func(t *testing.T) {
+		cases := []struct {
+			name       string
+			dbChecksum string
+			file       string
+		}{
+			{
+				name:       "requested reasoning effort",
+				dbChecksum: "68eba24cba8ac37955742892f53e97e90d8bd49b1c73a522f0e9fa807969ea18",
+				file:       "a67f2a9dfeaa2bf935801727d97dc2def72e03d6c4e0bf9d503a4f88a03b3851",
+			},
+			{
+				name:       "restrict public groups",
+				dbChecksum: "015ba4efac326bbf4d7adce1535f4de0f495f4a24f092637c5c3efe7c7b4d24e",
+				file:       "9867df4258aa7c4e55db96998ed07f4369032c6469dcf146a13c9906bb243514",
+			},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				require.True(t, isMigrationChecksumCompatible(
+					map[string]string{
+						"requested reasoning effort": "231_add_usage_log_requested_reasoning_effort.sql",
+						"restrict public groups":      "231_user_restrict_public_groups.sql",
+					}[tc.name],
+					tc.dbChecksum,
+					tc.file,
+				))
+			})
+		}
+	})
+
+	t.Run("232和233历史CRLF checksum可兼容当前LF版本", func(t *testing.T) {
+		cases := []struct {
+			name       string
+			dbChecksum string
+			file       string
+			migration  string
+		}{
+			{
+				name:       "channel cache pricing",
+				dbChecksum: "a10f1776b841edb162af9a9168a0369affd2a848f2c9359bdab8870f1be932f5",
+				file:       "62279a094bfd2090c4bc8e54e9fb45fd14ca3c361d6dccd2e068361d053dda80",
+				migration:  "232_channel_cache_write_1h_pricing.sql",
+			},
+			{
+				name:       "group force openai fast",
+				dbChecksum: "59e071d852a9299ffe1ebbfc1c61fadc66160e1c79363b47912b1f88d6bea139",
+				file:       "47ac2b5f0c50685538b642a9ecdd1aaa4fcd820390a4b8b87983a2805dbe1c78",
+				migration:  "232_group_force_openai_fast.sql",
+			},
+			{
+				name:       "group reasoning effort limit",
+				dbChecksum: "4a22a7ad55c9884cab7f8d2c38366c7a65f8a4c9d70c4b34764d869bcd1976c1",
+				file:       "b503ea8571f4f16c3f7de0d45b9035693ee15d708e0c19feb30e247646f00bd6",
+				migration:  "232_group_reasoning_effort_over_limit.sql",
+			},
+			{
+				name:       "group free openai fast",
+				dbChecksum: "16bbe1d7bb2c914a82cf891dcc5067d76fb243633b215a65d2375c223e7b328f",
+				file:       "80925a7deb54ef23ed5fae1eb1e519764d3952686be7101e2cf739028269f9c3",
+				migration:  "233_group_free_openai_fast.sql",
+			},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				require.True(t, isMigrationChecksumCompatible(tc.migration, tc.dbChecksum, tc.file))
+			})
+		}
+	})
 }

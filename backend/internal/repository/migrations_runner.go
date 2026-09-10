@@ -96,6 +96,16 @@ var migrationChecksumCompatibilityRules = map[string]migrationChecksumCompatibil
 	"220_clear_non_grok_video_generation_config.sql": newMigrationChecksumCompatibilityRule("85e320b9ec64f2d3fcd8cf705b2b4e76a7b49f7a57140c14bff97f32691c818b", "3da48c8fdffe6390325f43d08b8e353e0a365df43d44a78dbbe655d0deb18402"),
 	"219_group_search_price_per_1k.sql":              newMigrationChecksumCompatibilityRule("e86786ebcc3b14206fd2d321380a4e50e80cdadbfcf4962c639255e6a14008db", "df6ffd71b97e30ec2c8fe7b95e15783042dea58c553e32701ee7c42a5619af80"),
 	"218_group_audio_voice_pricing.sql":              newMigrationChecksumCompatibilityRule("40ee9f3a2af0e0a5e99dabc878fd0fe98be1011f26bcfcefcac7197f7081f0e7", "c2a5e5b4ffd6968ad1c10593289fbc11192cdea19fec3ed9bce3a84eff9a8351"),
+	// Migration 231 was applied on an older deployment with CRLF line endings.
+	// The repository now enforces LF for SQL migrations, while the SQL
+	// semantics remain unchanged.
+	"231_add_usage_log_native_compaction_v2.sql": newMigrationChecksumCompatibilityRule("7ab597b658dafa31f2b1d64b6057ff9e4c2da5a3b0e6581962d15d66f91ebfe4", "bef0b989f525ea303a1ddc95ba426d1e64d838d5f83bd1f99b9e4cbb9f818b47"),
+	"231_add_usage_log_requested_reasoning_effort.sql": newMigrationChecksumCompatibilityRule("a67f2a9dfeaa2bf935801727d97dc2def72e03d6c4e0bf9d503a4f88a03b3851", "68eba24cba8ac37955742892f53e97e90d8bd49b1c73a522f0e9fa807969ea18"),
+	"231_user_restrict_public_groups.sql":              newMigrationChecksumCompatibilityRule("9867df4258aa7c4e55db96998ed07f4369032c6469dcf146a13c9906bb243514", "015ba4efac326bbf4d7adce1535f4de0f495f4a24f092637c5c3efe7c7b4d24e"),
+	"232_channel_cache_write_1h_pricing.sql":          newMigrationChecksumCompatibilityRule("62279a094bfd2090c4bc8e54e9fb45fd14ca3c361d6dccd2e068361d053dda80", "a10f1776b841edb162af9a9168a0369affd2a848f2c9359bdab8870f1be932f5"),
+	"232_group_force_openai_fast.sql":                 newMigrationChecksumCompatibilityRule("47ac2b5f0c50685538b642a9ecdd1aaa4fcd820390a4b8b87983a2805dbe1c78", "59e071d852a9299ffe1ebbfc1c61fadc66160e1c79363b47912b1f88d6bea139"),
+	"232_group_reasoning_effort_over_limit.sql":       newMigrationChecksumCompatibilityRule("b503ea8571f4f16c3f7de0d45b9035693ee15d708e0c19feb30e247646f00bd6", "4a22a7ad55c9884cab7f8d2c38366c7a65f8a4c9d70c4b34764d869bcd1976c1"),
+	"233_group_free_openai_fast.sql":                  newMigrationChecksumCompatibilityRule("80925a7deb54ef23ed5fae1eb1e519764d3952686be7101e2cf739028269f9c3", "16bbe1d7bb2c914a82cf891dcc5067d76fb243633b215a65d2375c223e7b328f"),
 }
 
 // ApplyMigrations 将嵌入的 SQL 迁移文件应用到指定的数据库。

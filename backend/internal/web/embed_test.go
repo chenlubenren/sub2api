@@ -676,6 +676,31 @@ func TestFrontendServer_Middleware(t *testing.T) {
 		assert.Equal(t, http.StatusOK, assetWriter.Code)
 		assert.Equal(t, staticAssetsCacheControl, assetWriter.Header().Get("Cache-Control"))
 	})
+
+	t.Run("serves_new_override_assets_missing_from_embedded_bundle", func(t *testing.T) {
+		overrideDir := t.TempDir()
+		assetPath := "assets/new-settings-chunk.js"
+		fullPath := filepath.Join(overrideDir, filepath.FromSlash(assetPath))
+		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
+		require.NoError(t, os.WriteFile(fullPath, []byte("export default {}"), 0o644))
+
+		server, err := NewFrontendServer(&mockSettingsProvider{
+			settings: map[string]string{"test": "value"},
+		})
+		require.NoError(t, err)
+		server.overrideDir = overrideDir
+
+		router := gin.New()
+		router.Use(server.Middleware())
+
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/"+assetPath, nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Header().Get("Content-Type"), "text/javascript")
+		assert.Equal(t, "export default {}", w.Body.String())
+	})
 }
 
 func TestEmbeddedFrontendBypassesBareVideoAPIRoutes(t *testing.T) {

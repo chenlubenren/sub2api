@@ -3,7 +3,12 @@
     <button
       @click="toggleDropdown"
       :disabled="switching"
-      class="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700"
+      class="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors"
+      :class="
+        dark
+          ? 'text-white hover:bg-white/10'
+          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700'
+      "
       :title="currentLocale?.name"
     >
       <span class="text-base">{{ currentLocale?.flag }}</span>
@@ -11,8 +16,8 @@
       <Icon
         name="chevronDown"
         size="xs"
-        class="text-gray-400 transition-transform duration-200"
-        :class="{ 'rotate-180': isOpen }"
+        class="transition-transform duration-200"
+        :class="[dark ? 'text-white/70' : 'text-gray-400', { 'rotate-180': isOpen }]"
       />
     </button>
 
@@ -48,6 +53,7 @@ import Icon from '@/components/icons/Icon.vue'
 import { setLocale, availableLocales } from '@/i18n'
 
 const { locale } = useI18n()
+const { dark = false } = defineProps<{ dark?: boolean }>()
 
 const isOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)

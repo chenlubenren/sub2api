@@ -966,9 +966,14 @@ export default {
       allowOverages: 'Allow Overages (AI Credits)',
       allowOveragesTooltip:
         'Only use AI Credits after free quota is explicitly exhausted. Ordinary concurrent 429 rate limits will not switch to overages.',
+      fromModel: 'Request model',
+      toModel: 'Forwarded model',
       creating: 'Creating...',
       updating: 'Updating...',
       accountCreated: 'Account created successfully',
+      messages: {
+        accountCreated: 'Account created successfully',
+      },
       accountUpdated: 'Account updated successfully',
       failedToCreate: 'Failed to create account',
       failedToUpdate: 'Failed to update account',

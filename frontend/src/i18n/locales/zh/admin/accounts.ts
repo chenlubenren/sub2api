@@ -1036,9 +1036,14 @@ export default {
       allowOverages: '允许超量请求 (AI Credits)',
       allowOveragesTooltip:
         '仅在免费配额被明确判定为耗尽后才会使用 AI Credits。普通并发 429 限流不会切换到超量请求。',
+      fromModel: '请求模型',
+      toModel: '转发模型',
       creating: '创建中...',
       updating: '更新中...',
       accountCreated: '账号创建成功',
+      messages: {
+        accountCreated: '账号创建成功',
+      },
       accountUpdated: '账号更新成功',
       failedToCreate: '创建账号失败',
       failedToUpdate: '更新账号失败',
