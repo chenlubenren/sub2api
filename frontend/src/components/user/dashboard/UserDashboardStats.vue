@@ -123,17 +123,6 @@
       </div>
     </div>
 
-    <div class="w-full">
-      <div class="card px-6 py-5">
-        <p class="flex flex-wrap items-center gap-x-3 gap-y-2 text-base font-semibold text-gray-900 dark:text-white">
-          <span>算力站本日已为您节省</span>
-          <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400">￥{{ formatRmb(todaySavedRmb) }}</span>
-          <span>，已累计为您节省</span>
-          <span class="text-3xl font-black text-violet-600 dark:text-violet-400">￥{{ formatRmb(totalSavedRmb) }}</span>
-          <span>。</span>
-        </p>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -158,8 +147,6 @@ function getNumericStat(key: string): number {
 
 const todayAccountCost = computed(() => getNumericStat('today_account_cost'))
 const totalAccountCost = computed(() => getNumericStat('total_account_cost'))
-const todaySavedRmb = computed(() => Math.max(0, todayAccountCost.value * 6.7 - (props.stats?.today_actual_cost || 0)))
-const totalSavedRmb = computed(() => Math.max(0, totalAccountCost.value * 6.7 - (props.stats?.total_actual_cost || 0)))
 
 const formatBalance = (b: number) =>
   new Intl.NumberFormat('en-US', {
@@ -169,7 +156,6 @@ const formatBalance = (b: number) =>
 
 const formatNumber = (n: number) => n.toLocaleString()
 const formatCost = (c: number) => c.toFixed(4)
-const formatRmb = (c: number) => c.toFixed(2)
 const formatTokens = (t: number) => {
   if (t >= 1_000_000) return `${(t / 1_000_000).toFixed(1)}M`
   if (t >= 1000) return `${(t / 1000).toFixed(1)}K`
