@@ -2062,6 +2062,19 @@ func TestCollectOpenAIImagesFromResponsesBody_MultilineSSE(t *testing.T) {
 	require.JSONEq(t, `{"images":1}`, string(usageRaw))
 }
 
+func TestCollectOpenAIImagesFromResponsesBody_AcceptsPlainJSONResponse(t *testing.T) {
+	body := []byte(`{"type":"response.completed","response":{"created_at":1710000011,"tool_usage":{"image_gen":{"images":1}},"output":[{"type":"image_generation_call","result":"cGxhaW4=","output_format":"png"}]}}`)
+
+	results, createdAt, usageRaw, firstMeta, foundFinal, err := collectOpenAIImagesFromResponsesBody(body)
+	require.NoError(t, err)
+	require.True(t, foundFinal)
+	require.Equal(t, int64(1710000011), createdAt)
+	require.Len(t, results, 1)
+	require.Equal(t, "cGxhaW4=", results[0].Result)
+	require.Equal(t, "png", firstMeta.OutputFormat)
+	require.JSONEq(t, `{"images":1}`, string(usageRaw))
+}
+
 func TestOpenAIGatewayServiceForwardImages_OAuthStreamingHandlesOutputItemDoneFallback(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","stream":true,"response_format":"url"}`)

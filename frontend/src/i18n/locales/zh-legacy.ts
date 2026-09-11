@@ -3011,7 +3011,7 @@ export default {
       quotaEndsInMinutes: '额度将在 {minutes} 分钟后结束',
       quotaEndsInHoursMinutes: '额度将在 {hours} 小时 {minutes} 分钟后结束',
       quotaEndsInDaysHours: '额度将在 {days} 天 {hours} 小时后结束',
-      daysRemaining: '天剩余',
+      daysRemaining: '剩余 {days} 天',
       remainingDays: '剩余天数',
       noExpiration: '无过期时间',
       status: {

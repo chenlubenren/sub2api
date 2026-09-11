@@ -38,4 +38,9 @@ describe('locale messages compile', () => {
     collectCompileErrors(messages, locale, errors)
     expect(errors).toEqual([])
   })
+
+  it('keeps the subscription expiry day placeholder in merged locales', () => {
+    expect(zh.admin.subscriptions.daysRemaining).toContain('{days}')
+    expect(en.admin.subscriptions.daysRemaining).toContain('{days}')
+  })
 })

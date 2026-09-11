@@ -36,6 +36,14 @@ func forEachOpenAISSEDataPayload(body string, fn func([]byte)) {
 	if fn == nil || strings.TrimSpace(body) == "" {
 		return
 	}
+	// Some Responses-compatible upstreams honor the request but still return
+	// one ordinary JSON document instead of an SSE envelope. Treat that as a
+	// single payload so image output and error parsing do not turn a valid
+	// response into a false "no image output" failover.
+	if trimmed := strings.TrimSpace(body); gjson.Valid(trimmed) {
+		fn([]byte(trimmed))
+		return
+	}
 	var acc openAISSEDataAccumulator
 	for _, line := range strings.Split(body, "\n") {
 		acc.AddLine(line, fn)

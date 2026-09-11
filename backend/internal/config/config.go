@@ -2497,7 +2497,10 @@ func setDefaults() {
 	viper.SetDefault("gateway.stream_keepalive_interval", 10)
 	viper.SetDefault("gateway.image_stream_data_interval_timeout", 900)
 	viper.SetDefault("gateway.image_stream_keepalive_interval", 10)
-	viper.SetDefault("gateway.image_nonstream_keepalive_interval", 0)
+	// Keep non-streaming image requests alive through reverse proxies (notably
+	// Cloudflare's ~100s origin response window) while the upstream image is
+	// rendered. The value remains configurable and can be set to 0 to disable.
+	viper.SetDefault("gateway.image_nonstream_keepalive_interval", 15)
 	viper.SetDefault("gateway.max_line_size", 500*1024*1024)
 	viper.SetDefault("gateway.scheduling.sticky_session_max_waiting", 3)
 	viper.SetDefault("gateway.scheduling.sticky_session_wait_timeout", 120*time.Second)

@@ -151,6 +151,29 @@ func TestOpenAIImagesJSONKeepalive_KeepsOAuthNonStreamResponseValid(t *testing.T
 	require.Equal(t, "aW1hZ2U=", gjson.Get(rec.Body.String(), "data.0.b64_json").String())
 }
 
+func TestOpenAIImagesOAuthNonStreamingResponse_AcceptsPlainJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body: io.NopCloser(strings.NewReader(
+			`{"type":"response.completed","response":{"created_at":1710000001,"output":[{"type":"image_generation_call","result":"cGxhaW4=","output_format":"png"}]}}`,
+		)),
+	}
+
+	svc := &OpenAIGatewayService{}
+	_, imageCount, _, err := svc.handleOpenAIImagesOAuthNonStreamingResponse(resp, c, "b64_json", "gpt-image-2")
+
+	require.NoError(t, err)
+	require.Equal(t, 1, imageCount)
+	require.True(t, json.Valid(rec.Body.Bytes()), rec.Body.String())
+	require.Equal(t, "cGxhaW4=", gjson.Get(rec.Body.String(), "data.0.b64_json").String())
+}
+
 func TestOpenAIImagesJSONKeepaliveWriter_NilGuards(t *testing.T) {
 	w := &openAIImagesJSONKeepaliveWriter{}
 	require.NotPanics(t, func() {
