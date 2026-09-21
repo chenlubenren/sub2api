@@ -148,6 +148,11 @@ func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
 	}
 	out := &AdminGroup{
 		Group:                       groupFromServiceBase(g),
+		NightRateEnabled:            g.NightRateEnabled,
+		NightStart:                  g.NightStart,
+		NightEnd:                    g.NightEnd,
+		NightRateMultiplier:         g.NightRateMultiplier,
+		CacheReadMultiplier:         g.CacheReadMultiplier,
 		ForceOpenAIFast:             g.ForceOpenAIFast,
 		FreeOpenAIFast:              g.FreeOpenAIFast,
 		ProfitControlEnabled:        g.ProfitControlEnabled,

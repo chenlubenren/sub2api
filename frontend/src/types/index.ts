@@ -618,6 +618,11 @@ export interface Group {
 }
 
 export interface AdminGroup extends Group {
+  night_rate_enabled: boolean
+  night_start: string
+  night_end: string
+  night_rate_multiplier: number
+  cache_read_multiplier: number
   force_openai_fast: boolean
   free_openai_fast: boolean
   model_pricing: import('@/api/admin/channels').ChannelModelPricing[]

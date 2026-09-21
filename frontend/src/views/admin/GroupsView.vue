@@ -614,6 +614,10 @@
           <p class="input-hint">{{ t("admin.groups.rateMultiplierHint") }}</p>
         </div>
         <div>
+          <label class="input-label">缓存命中倍率（仅管理员）</label>
+          <input v-model.number="createForm.cache_read_multiplier" type="number" step="0.001" min="0.001" required class="input" />
+        </div>
+        <div>
           <label class="input-label">{{ t("admin.groups.form.rpmLimit") }}</label>
           <input
             v-model.number="createForm.rpm_limit"
@@ -1205,6 +1209,18 @@
                 :title="t('admin.groups.peakRate.multiplierHint')"
               />
             </div>
+          </div>
+        </div>
+
+        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input v-model="createForm.night_rate_enabled" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+            <span>夜间计费规则（仅管理员）</span>
+          </label>
+          <div v-if="createForm.night_rate_enabled" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <label><span class="input-label">开始时间</span><input v-model="createForm.night_start" type="time" class="input" /></label>
+            <label><span class="input-label">结束时间</span><input v-model="createForm.night_end" type="time" class="input" /></label>
+            <label><span class="input-label">夜间倍率</span><input v-model.number="createForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -2413,6 +2429,10 @@
           />
         </div>
         <div>
+          <label class="input-label">缓存命中倍率（仅管理员）</label>
+          <input v-model.number="editForm.cache_read_multiplier" type="number" step="0.001" min="0.001" required class="input" />
+        </div>
+        <div>
           <label class="input-label">{{ t("admin.groups.form.rpmLimit") }}</label>
           <input
             v-model.number="editForm.rpm_limit"
@@ -3006,6 +3026,18 @@
                 :title="t('admin.groups.peakRate.multiplierHint')"
               />
             </div>
+          </div>
+        </div>
+
+        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input v-model="editForm.night_rate_enabled" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+            <span>夜间计费规则（仅管理员）</span>
+          </label>
+          <div v-if="editForm.night_rate_enabled" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <label><span class="input-label">开始时间</span><input v-model="editForm.night_start" type="time" class="input" /></label>
+            <label><span class="input-label">结束时间</span><input v-model="editForm.night_end" type="time" class="input" /></label>
+            <label><span class="input-label">夜间倍率</span><input v-model.number="editForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -5215,6 +5247,7 @@ const createForm = reactive({
   description: "",
   platform: "anthropic" as GroupPlatform,
   rate_multiplier: 1.0,
+  cache_read_multiplier: 2.0,
   is_exclusive: false,
   subscription_type: "standard" as SubscriptionType,
   daily_limit_usd: null as number | null,
@@ -5252,6 +5285,10 @@ const createForm = reactive({
   peak_start: "",
   peak_end: "",
   peak_rate_multiplier: 1.0,
+  night_rate_enabled: true,
+  night_start: "01:30",
+  night_end: "06:30",
+  night_rate_multiplier: 1.5,
   // 分组利润控制（五个 token 平台）；界面按百分比输入，提交时转小数
   profit_control_enabled: false,
   profit_min_margin_percent: 0,
@@ -5578,6 +5615,7 @@ const editForm = reactive({
   description: "",
   platform: "anthropic" as GroupPlatform,
   rate_multiplier: 1.0,
+  cache_read_multiplier: 2.0,
   is_exclusive: false,
   status: "active" as "active" | "inactive",
   subscription_type: "standard" as SubscriptionType,
@@ -5616,6 +5654,10 @@ const editForm = reactive({
   peak_start: "",
   peak_end: "",
   peak_rate_multiplier: 1.0,
+  night_rate_enabled: true,
+  night_start: "01:30",
+  night_end: "06:30",
+  night_rate_multiplier: 1.5,
   // 分组利润控制（五个 token 平台）；界面按百分比输入，提交时转小数
   profit_control_enabled: false,
   profit_min_margin_percent: 0,
@@ -6041,6 +6083,7 @@ const closeCreateModal = () => {
   createForm.description = "";
   createForm.platform = "anthropic";
   createForm.rate_multiplier = 1.0;
+  createForm.cache_read_multiplier = 2.0;
   createForm.is_exclusive = false;
   createForm.subscription_type = "standard";
   createForm.daily_limit_usd = null;
@@ -6074,6 +6117,10 @@ const closeCreateModal = () => {
   createForm.peak_start = "";
   createForm.peak_end = "";
   createForm.peak_rate_multiplier = 1.0;
+  createForm.night_rate_enabled = true;
+  createForm.night_start = "01:30";
+  createForm.night_end = "06:30";
+  createForm.night_rate_multiplier = 1.5;
   createForm.profit_control_enabled = false;
   createForm.profit_min_margin_percent = 0;
   createForm.profit_safety_buffer_percent = 0;
@@ -6270,6 +6317,11 @@ const handleCreateGroup = async () => {
     requestData.peak_rate_multiplier = normalizeRateMultiplier(
       createForm.peak_rate_multiplier,
     );
+    requestData.night_rate_enabled = createForm.night_rate_enabled;
+    requestData.night_start = createForm.night_start;
+    requestData.night_end = createForm.night_end;
+    requestData.night_rate_multiplier = normalizeRateMultiplier(createForm.night_rate_multiplier);
+    requestData.cache_read_multiplier = normalizeRateMultiplier(createForm.cache_read_multiplier);
     await adminAPI.groups.create(requestData);
     appStore.showSuccess(t("admin.groups.groupCreated"));
     closeCreateModal();
@@ -6334,6 +6386,11 @@ const handleEdit = async (group: AdminGroup) => {
   editForm.peak_start = group.peak_start ?? "";
   editForm.peak_end = group.peak_end ?? "";
   editForm.peak_rate_multiplier = group.peak_rate_multiplier ?? 1.0;
+  editForm.night_rate_enabled = group.night_rate_enabled ?? true;
+  editForm.night_start = group.night_start ?? "01:30";
+  editForm.night_end = group.night_end ?? "06:30";
+  editForm.night_rate_multiplier = group.night_rate_multiplier ?? 1.5;
+  editForm.cache_read_multiplier = group.cache_read_multiplier ?? 2.0;
   editForm.profit_control_enabled = group.profit_control_enabled ?? false;
   editForm.profit_min_margin_percent = decimalToPercent(
     group.profit_min_margin ?? 0,
@@ -6427,6 +6484,11 @@ const closeEditModal = () => {
   editForm.peak_start = "";
   editForm.peak_end = "";
   editForm.peak_rate_multiplier = 1.0;
+  editForm.night_rate_enabled = true;
+  editForm.night_start = "01:30";
+  editForm.night_end = "06:30";
+  editForm.night_rate_multiplier = 1.5;
+  editForm.cache_read_multiplier = 2.0;
   editForm.profit_control_enabled = false;
   editForm.profit_min_margin_percent = 0;
   editForm.profit_safety_buffer_percent = 0;
@@ -6605,6 +6667,11 @@ const handleUpdateGroup = async () => {
     payload.peak_rate_multiplier = normalizeRateMultiplier(
       editForm.peak_rate_multiplier,
     );
+    payload.night_rate_enabled = editForm.night_rate_enabled;
+    payload.night_start = editForm.night_start;
+    payload.night_end = editForm.night_end;
+    payload.night_rate_multiplier = normalizeRateMultiplier(editForm.night_rate_multiplier);
+    payload.cache_read_multiplier = normalizeRateMultiplier(editForm.cache_read_multiplier);
     await adminAPI.groups.update(editingGroup.value.id, payload);
     appStore.showSuccess(t("admin.groups.groupUpdated"));
     closeEditModal();

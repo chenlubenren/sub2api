@@ -401,6 +401,12 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 	if err := ValidatePeakRateConfig(subscriptionType, peakRateEnabled, peakStart, peakEnd, peakRateMultiplier); err != nil {
 		return nil, err
 	}
+	if input.NightRateMultiplier != nil && *input.NightRateMultiplier <= 0 {
+		return nil, errors.New("night_rate_multiplier must be > 0")
+	}
+	if input.CacheReadMultiplier != nil && *input.CacheReadMultiplier <= 0 {
+		return nil, errors.New("cache_read_multiplier must be > 0")
+	}
 
 	profitMinMargin := 0.0
 	if input.ProfitMinMargin != nil {
@@ -475,31 +481,35 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 	}
 
 	group := &Group{
-		Name:                         input.Name,
-		Description:                  input.Description,
-		Platform:                     platform,
-		RateMultiplier:               input.RateMultiplier,
-		IsExclusive:                  input.IsExclusive,
-		Status:                       StatusActive,
-		SubscriptionType:             subscriptionType,
-		DailyLimitUSD:                dailyLimit,
-		WeeklyLimitUSD:               weeklyLimit,
-		MonthlyLimitUSD:              monthlyLimit,
-		LongContextPricingEnabled:    input.LongContextPricingEnabled,
-		ModelPricing:                 modelPricing,
-		AllowImageGeneration:         allowImageGeneration,
-		AllowBatchImageGeneration:    allowBatchImageGeneration,
-		ImageRateIndependent:         input.ImageRateIndependent,
-		ImageRateMultiplier:          imageRateMultiplier,
-		BatchImageDiscountMultiplier: batchImageDiscountMultiplier,
-		BatchImageHoldMultiplier:     batchImageHoldMultiplier,
-		VideoRateIndependent:         input.VideoRateIndependent,
-		VideoRateMultiplier:          videoRateMultiplier,
-		PeakRateEnabled:              peakRateEnabled,
-		PeakStart:                    peakStart,
-		PeakEnd:                      peakEnd,
-		PeakRateMultiplier:           peakRateMultiplier,
-		NightRateEnabled:             input.NightRateEnabled, NightStart: input.NightStart, NightEnd: input.NightEnd,
+		Name:                            input.Name,
+		Description:                     input.Description,
+		Platform:                        platform,
+		RateMultiplier:                  input.RateMultiplier,
+		IsExclusive:                     input.IsExclusive,
+		Status:                          StatusActive,
+		SubscriptionType:                subscriptionType,
+		DailyLimitUSD:                   dailyLimit,
+		WeeklyLimitUSD:                  weeklyLimit,
+		MonthlyLimitUSD:                 monthlyLimit,
+		LongContextPricingEnabled:       input.LongContextPricingEnabled,
+		ModelPricing:                    modelPricing,
+		AllowImageGeneration:            allowImageGeneration,
+		AllowBatchImageGeneration:       allowBatchImageGeneration,
+		ImageRateIndependent:            input.ImageRateIndependent,
+		ImageRateMultiplier:             imageRateMultiplier,
+		BatchImageDiscountMultiplier:    batchImageDiscountMultiplier,
+		BatchImageHoldMultiplier:        batchImageHoldMultiplier,
+		VideoRateIndependent:            input.VideoRateIndependent,
+		VideoRateMultiplier:             videoRateMultiplier,
+		PeakRateEnabled:                 peakRateEnabled,
+		PeakStart:                       peakStart,
+		PeakEnd:                         peakEnd,
+		PeakRateMultiplier:              peakRateMultiplier,
+		NightRateEnabled:                input.NightRateEnabled,
+		NightStart:                      input.NightStart,
+		NightEnd:                        input.NightEnd,
+		NightRateMultiplier:             groupFloat64ValueOrDefault(input.NightRateMultiplier, 1.5),
+		CacheReadMultiplier:             groupFloat64ValueOrDefault(input.CacheReadMultiplier, 2.0),
 		ProfitControlEnabled:            profitControlEnabled,
 		ProfitMinMargin:                 profitMinMargin,
 		ProfitSafetyBuffer:              profitSafetyBuffer,
@@ -586,6 +596,13 @@ func normalizeLimit(limit *float64) *float64 {
 		return nil
 	}
 	return limit
+}
+
+func groupFloat64ValueOrDefault(value *float64, fallback float64) float64 {
+	if value == nil {
+		return fallback
+	}
+	return *value
 }
 
 // normalizePrice 将负数转换为 nil（表示使用默认价格），0 保留（表示免费）
@@ -777,6 +794,27 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 	}
 	if input.PeakRateMultiplier != nil {
 		group.PeakRateMultiplier = *input.PeakRateMultiplier
+	}
+	if input.NightRateEnabled != nil {
+		group.NightRateEnabled = *input.NightRateEnabled
+	}
+	if input.NightStart != nil {
+		group.NightStart = *input.NightStart
+	}
+	if input.NightEnd != nil {
+		group.NightEnd = *input.NightEnd
+	}
+	if input.NightRateMultiplier != nil {
+		if *input.NightRateMultiplier <= 0 {
+			return nil, errors.New("night_rate_multiplier must be > 0")
+		}
+		group.NightRateMultiplier = *input.NightRateMultiplier
+	}
+	if input.CacheReadMultiplier != nil {
+		if *input.CacheReadMultiplier <= 0 {
+			return nil, errors.New("cache_read_multiplier must be > 0")
+		}
+		group.CacheReadMultiplier = *input.CacheReadMultiplier
 	}
 	// 先归一化（非订阅分组——含本次更新转为非订阅——静默清空高峰配置，清洗停用状态下的脏字段），
 	// 再收敛校验：Update 可能只传部分 peak 字段，需对合并后的最终配置统一校验，
