@@ -614,7 +614,7 @@
           <p class="input-hint">{{ t("admin.groups.rateMultiplierHint") }}</p>
         </div>
         <div>
-          <label class="input-label">缓存命中倍率（仅管理员）</label>
+          <label class="input-label">缓存命中倍率（仅管理员可见）</label>
           <input v-model.number="createForm.cache_read_multiplier" type="number" step="0.001" min="0.001" required class="input" />
         </div>
         <div>
@@ -1215,7 +1215,7 @@
         <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
           <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input v-model="createForm.night_rate_enabled" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-            <span>夜间计费规则（仅管理员）</span>
+            <span>夜间计费规则（仅管理员可见）</span>
           </label>
           <div v-if="createForm.night_rate_enabled" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label><span class="input-label">开始时间</span><input v-model="createForm.night_start" type="time" class="input" /></label>
@@ -2429,7 +2429,7 @@
           />
         </div>
         <div>
-          <label class="input-label">缓存命中倍率（仅管理员）</label>
+          <label class="input-label">缓存命中倍率（仅管理员可见）</label>
           <input v-model.number="editForm.cache_read_multiplier" type="number" step="0.001" min="0.001" required class="input" />
         </div>
         <div>
@@ -3032,7 +3032,7 @@
         <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
           <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input v-model="editForm.night_rate_enabled" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-            <span>夜间计费规则（仅管理员）</span>
+            <span>夜间计费规则（仅管理员可见）</span>
           </label>
           <div v-if="editForm.night_rate_enabled" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label><span class="input-label">开始时间</span><input v-model="editForm.night_start" type="time" class="input" /></label>
