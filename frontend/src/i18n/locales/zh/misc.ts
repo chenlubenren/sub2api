@@ -483,6 +483,7 @@ export default {
     planCard: {
       rate: '倍率',
       peakRate: '高峰倍率',
+      peakRateMultiplier: '高峰期倍率',
       dailyLimit: '日限额',
       weeklyLimit: '周限额',
       monthlyLimit: '月限额',

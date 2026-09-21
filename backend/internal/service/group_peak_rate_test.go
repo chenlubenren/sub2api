@@ -78,6 +78,27 @@ func TestPeakMultiplierAt_Boundaries(t *testing.T) {
 	}
 }
 
+func TestPeakMultiplierAt_HiddenDawnWindow(t *testing.T) {
+	g := newPeakGroup(true, "14:00", "18:00", 1.25)
+	cases := []struct {
+		name string
+		at   time.Time
+		want float64
+	}{
+		{"before", at(1, 29), 1.0},
+		{"start", at(1, 30), 1.5},
+		{"inside", at(4, 0), 1.5},
+		{"end", at(6, 30), 1.0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := g.PeakMultiplierAt(tc.at); got != tc.want {
+				t.Fatalf("at %s: expect %v, got %v", tc.at.Format("15:04"), tc.want, got)
+			}
+		})
+	}
+}
+
 func TestPeakMultiplierAt_RespectsTimezoneLocation(t *testing.T) {
 	// 全局时区为 UTC。北京 15:00 = UTC 07:00，不在 [14:00,18:00)。
 	nonUTC := time.Date(2026, 6, 29, 15, 0, 0, 0, mustLoad("Asia/Shanghai"))

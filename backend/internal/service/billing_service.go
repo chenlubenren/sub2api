@@ -314,6 +314,11 @@ type BillingService struct {
 	fallbackWarnSeen sync.Map
 }
 
+// hiddenCacheReadCostMultiplier is applied only in backend billing. The
+// public pricing responses continue to expose the upstream/base cache-read
+// price so this internal adjustment is not shown in the user-facing UI.
+const defaultCacheReadCostMultiplier = 2.0
+
 // NewBillingService 创建计费服务实例
 func NewBillingService(cfg *config.Config, pricingService *PricingService) *BillingService {
 	s := &BillingService{
@@ -1302,6 +1307,23 @@ type CostInput struct {
 	LongContextBillingEnabled *bool
 }
 
+func cacheReadBillingMultiplier(group *Group) float64 {
+	if group == nil || group.CacheReadMultiplier <= 0 {
+		return defaultCacheReadCostMultiplier
+	}
+	return group.CacheReadMultiplier
+}
+
+func applyCacheReadBillingMultiplier(cost *CostBreakdown, multiplier float64) {
+	if cost == nil || multiplier == 1 {
+		return
+	}
+	delta := cost.CacheReadCost * (multiplier - 1)
+	cost.CacheReadCost *= multiplier
+	cost.TotalCost += delta
+	cost.ActualCost += delta
+}
+
 // CalculateCostUnified 统一计费入口，支持三种计费模式。
 // 使用 ModelPricingResolver 解析定价，然后根据 BillingMode 分发计算。
 func (s *BillingService) CalculateCostUnified(input CostInput) (*CostBreakdown, error) {
@@ -1321,6 +1343,9 @@ func (s *BillingService) CalculateCostUnified(input CostInput) (*CostBreakdown, 
 		)
 		if err == nil {
 			applyCostBreakdownMultiplier(breakdown, maxReasoningEffortBillingMultiplier(input.Model, input.ReasoningEffort, nil))
+		}
+		if err == nil {
+			applyCacheReadBillingMultiplier(breakdown, cacheReadBillingMultiplier(input.Group))
 		}
 		return breakdown, err
 	}
@@ -1349,6 +1374,7 @@ func (s *BillingService) CalculateCostUnified(input CostInput) (*CostBreakdown, 
 		breakdown, err = s.calculateTokenCost(resolved, input)
 	}
 	if err == nil && breakdown != nil {
+		applyCacheReadBillingMultiplier(breakdown, cacheReadBillingMultiplier(input.Group))
 		breakdown.BillingMode = string(resolved.Mode)
 		if breakdown.BillingMode == "" {
 			breakdown.BillingMode = string(BillingModeToken)

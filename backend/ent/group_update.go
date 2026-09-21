@@ -181,6 +181,90 @@ func (_u *GroupUpdate) AddPeakRateMultiplier(v float64) *GroupUpdate {
 	return _u
 }
 
+// SetNightRateEnabled sets the "night_rate_enabled" field.
+func (_u *GroupUpdate) SetNightRateEnabled(v bool) *GroupUpdate {
+	_u.mutation.SetNightRateEnabled(v)
+	return _u
+}
+
+// SetNillableNightRateEnabled sets the "night_rate_enabled" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableNightRateEnabled(v *bool) *GroupUpdate {
+	if v != nil {
+		_u.SetNightRateEnabled(*v)
+	}
+	return _u
+}
+
+// SetNightStart sets the "night_start" field.
+func (_u *GroupUpdate) SetNightStart(v string) *GroupUpdate {
+	_u.mutation.SetNightStart(v)
+	return _u
+}
+
+// SetNillableNightStart sets the "night_start" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableNightStart(v *string) *GroupUpdate {
+	if v != nil {
+		_u.SetNightStart(*v)
+	}
+	return _u
+}
+
+// SetNightEnd sets the "night_end" field.
+func (_u *GroupUpdate) SetNightEnd(v string) *GroupUpdate {
+	_u.mutation.SetNightEnd(v)
+	return _u
+}
+
+// SetNillableNightEnd sets the "night_end" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableNightEnd(v *string) *GroupUpdate {
+	if v != nil {
+		_u.SetNightEnd(*v)
+	}
+	return _u
+}
+
+// SetNightRateMultiplier sets the "night_rate_multiplier" field.
+func (_u *GroupUpdate) SetNightRateMultiplier(v float64) *GroupUpdate {
+	_u.mutation.ResetNightRateMultiplier()
+	_u.mutation.SetNightRateMultiplier(v)
+	return _u
+}
+
+// SetNillableNightRateMultiplier sets the "night_rate_multiplier" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableNightRateMultiplier(v *float64) *GroupUpdate {
+	if v != nil {
+		_u.SetNightRateMultiplier(*v)
+	}
+	return _u
+}
+
+// AddNightRateMultiplier adds value to the "night_rate_multiplier" field.
+func (_u *GroupUpdate) AddNightRateMultiplier(v float64) *GroupUpdate {
+	_u.mutation.AddNightRateMultiplier(v)
+	return _u
+}
+
+// SetCacheReadMultiplier sets the "cache_read_multiplier" field.
+func (_u *GroupUpdate) SetCacheReadMultiplier(v float64) *GroupUpdate {
+	_u.mutation.ResetCacheReadMultiplier()
+	_u.mutation.SetCacheReadMultiplier(v)
+	return _u
+}
+
+// SetNillableCacheReadMultiplier sets the "cache_read_multiplier" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableCacheReadMultiplier(v *float64) *GroupUpdate {
+	if v != nil {
+		_u.SetCacheReadMultiplier(*v)
+	}
+	return _u
+}
+
+// AddCacheReadMultiplier adds value to the "cache_read_multiplier" field.
+func (_u *GroupUpdate) AddCacheReadMultiplier(v float64) *GroupUpdate {
+	_u.mutation.AddCacheReadMultiplier(v)
+	return _u
+}
+
 // SetIsExclusive sets the "is_exclusive" field.
 func (_u *GroupUpdate) SetIsExclusive(v bool) *GroupUpdate {
 	_u.mutation.SetIsExclusive(v)
@@ -1498,6 +1582,16 @@ func (_u *GroupUpdate) check() error {
 			return &ValidationError{Name: "peak_end", err: fmt.Errorf(`ent: validator failed for field "Group.peak_end": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.NightStart(); ok {
+		if err := group.NightStartValidator(v); err != nil {
+			return &ValidationError{Name: "night_start", err: fmt.Errorf(`ent: validator failed for field "Group.night_start": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.NightEnd(); ok {
+		if err := group.NightEndValidator(v); err != nil {
+			return &ValidationError{Name: "night_end", err: fmt.Errorf(`ent: validator failed for field "Group.night_end": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := group.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Group.status": %w`, err)}
@@ -1601,6 +1695,27 @@ func (_u *GroupUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedPeakRateMultiplier(); ok {
 		_spec.AddField(group.FieldPeakRateMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.NightRateEnabled(); ok {
+		_spec.SetField(group.FieldNightRateEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.NightStart(); ok {
+		_spec.SetField(group.FieldNightStart, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.NightEnd(); ok {
+		_spec.SetField(group.FieldNightEnd, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.NightRateMultiplier(); ok {
+		_spec.SetField(group.FieldNightRateMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedNightRateMultiplier(); ok {
+		_spec.AddField(group.FieldNightRateMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.CacheReadMultiplier(); ok {
+		_spec.SetField(group.FieldCacheReadMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCacheReadMultiplier(); ok {
+		_spec.AddField(group.FieldCacheReadMultiplier, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.IsExclusive(); ok {
 		_spec.SetField(group.FieldIsExclusive, field.TypeBool, value)
@@ -2372,6 +2487,90 @@ func (_u *GroupUpdateOne) SetNillablePeakRateMultiplier(v *float64) *GroupUpdate
 // AddPeakRateMultiplier adds value to the "peak_rate_multiplier" field.
 func (_u *GroupUpdateOne) AddPeakRateMultiplier(v float64) *GroupUpdateOne {
 	_u.mutation.AddPeakRateMultiplier(v)
+	return _u
+}
+
+// SetNightRateEnabled sets the "night_rate_enabled" field.
+func (_u *GroupUpdateOne) SetNightRateEnabled(v bool) *GroupUpdateOne {
+	_u.mutation.SetNightRateEnabled(v)
+	return _u
+}
+
+// SetNillableNightRateEnabled sets the "night_rate_enabled" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableNightRateEnabled(v *bool) *GroupUpdateOne {
+	if v != nil {
+		_u.SetNightRateEnabled(*v)
+	}
+	return _u
+}
+
+// SetNightStart sets the "night_start" field.
+func (_u *GroupUpdateOne) SetNightStart(v string) *GroupUpdateOne {
+	_u.mutation.SetNightStart(v)
+	return _u
+}
+
+// SetNillableNightStart sets the "night_start" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableNightStart(v *string) *GroupUpdateOne {
+	if v != nil {
+		_u.SetNightStart(*v)
+	}
+	return _u
+}
+
+// SetNightEnd sets the "night_end" field.
+func (_u *GroupUpdateOne) SetNightEnd(v string) *GroupUpdateOne {
+	_u.mutation.SetNightEnd(v)
+	return _u
+}
+
+// SetNillableNightEnd sets the "night_end" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableNightEnd(v *string) *GroupUpdateOne {
+	if v != nil {
+		_u.SetNightEnd(*v)
+	}
+	return _u
+}
+
+// SetNightRateMultiplier sets the "night_rate_multiplier" field.
+func (_u *GroupUpdateOne) SetNightRateMultiplier(v float64) *GroupUpdateOne {
+	_u.mutation.ResetNightRateMultiplier()
+	_u.mutation.SetNightRateMultiplier(v)
+	return _u
+}
+
+// SetNillableNightRateMultiplier sets the "night_rate_multiplier" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableNightRateMultiplier(v *float64) *GroupUpdateOne {
+	if v != nil {
+		_u.SetNightRateMultiplier(*v)
+	}
+	return _u
+}
+
+// AddNightRateMultiplier adds value to the "night_rate_multiplier" field.
+func (_u *GroupUpdateOne) AddNightRateMultiplier(v float64) *GroupUpdateOne {
+	_u.mutation.AddNightRateMultiplier(v)
+	return _u
+}
+
+// SetCacheReadMultiplier sets the "cache_read_multiplier" field.
+func (_u *GroupUpdateOne) SetCacheReadMultiplier(v float64) *GroupUpdateOne {
+	_u.mutation.ResetCacheReadMultiplier()
+	_u.mutation.SetCacheReadMultiplier(v)
+	return _u
+}
+
+// SetNillableCacheReadMultiplier sets the "cache_read_multiplier" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableCacheReadMultiplier(v *float64) *GroupUpdateOne {
+	if v != nil {
+		_u.SetCacheReadMultiplier(*v)
+	}
+	return _u
+}
+
+// AddCacheReadMultiplier adds value to the "cache_read_multiplier" field.
+func (_u *GroupUpdateOne) AddCacheReadMultiplier(v float64) *GroupUpdateOne {
+	_u.mutation.AddCacheReadMultiplier(v)
 	return _u
 }
 
@@ -3705,6 +3904,16 @@ func (_u *GroupUpdateOne) check() error {
 			return &ValidationError{Name: "peak_end", err: fmt.Errorf(`ent: validator failed for field "Group.peak_end": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.NightStart(); ok {
+		if err := group.NightStartValidator(v); err != nil {
+			return &ValidationError{Name: "night_start", err: fmt.Errorf(`ent: validator failed for field "Group.night_start": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.NightEnd(); ok {
+		if err := group.NightEndValidator(v); err != nil {
+			return &ValidationError{Name: "night_end", err: fmt.Errorf(`ent: validator failed for field "Group.night_end": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := group.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Group.status": %w`, err)}
@@ -3825,6 +4034,27 @@ func (_u *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error)
 	}
 	if value, ok := _u.mutation.AddedPeakRateMultiplier(); ok {
 		_spec.AddField(group.FieldPeakRateMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.NightRateEnabled(); ok {
+		_spec.SetField(group.FieldNightRateEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.NightStart(); ok {
+		_spec.SetField(group.FieldNightStart, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.NightEnd(); ok {
+		_spec.SetField(group.FieldNightEnd, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.NightRateMultiplier(); ok {
+		_spec.SetField(group.FieldNightRateMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedNightRateMultiplier(); ok {
+		_spec.AddField(group.FieldNightRateMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.CacheReadMultiplier(); ok {
+		_spec.SetField(group.FieldCacheReadMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCacheReadMultiplier(); ok {
+		_spec.AddField(group.FieldCacheReadMultiplier, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.IsExclusive(); ok {
 		_spec.SetField(group.FieldIsExclusive, field.TypeBool, value)

@@ -20,7 +20,11 @@
           >
             {{ plan.name }}
           </h3>
-          <p v-if="plan.description" class="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-dark-400 line-clamp-2">
+          <p
+            v-if="plan.description"
+            :title="plan.description"
+            class="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-dark-400 line-clamp-3 break-words [overflow-wrap:anywhere]"
+          >
             {{ plan.description }}
           </p>
         </div>
@@ -44,30 +48,26 @@
       </div>
 
       <!-- Group quota info (compact) -->
-      <div class="mb-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg bg-gray-50 px-3 py-2 text-xs dark:bg-dark-700/50">
-        <div class="flex items-center justify-between">
+      <div class="mb-3 grid grid-cols-2 gap-x-4 gap-y-0.5 rounded-lg bg-gray-50 px-3 py-2 text-xs dark:bg-dark-700/50">
+        <div class="col-span-2 grid grid-cols-[4rem_minmax(0,1fr)] items-start gap-2">
           <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.rate') }}</span>
-          <span class="font-medium text-gray-700 dark:text-gray-300">{{ rateDisplay }}</span>
+          <span data-testid="subscription-plan-rate" class="min-w-0 text-left font-medium text-gray-700 dark:text-gray-300">{{ rateDisplay }}</span>
         </div>
-        <div v-if="hasPeakRate" class="col-span-2 flex items-center justify-between gap-2">
-          <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.peakRate') }}</span>
-          <span class="text-right font-medium text-amber-700 dark:text-amber-300">{{ peakRateDisplay }}</span>
-        </div>
-        <div v-if="plan.daily_limit_usd != null" class="flex items-center justify-between">
+        <div v-if="plan.daily_limit_usd != null" class="grid min-w-0 grid-cols-[4rem_minmax(0,1fr)] items-center gap-2">
           <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.dailyLimit') }}</span>
-          <span class="font-medium text-gray-700 dark:text-gray-300">${{ plan.daily_limit_usd }}</span>
+          <span class="font-medium text-left text-gray-700 dark:text-gray-300">${{ plan.daily_limit_usd }}</span>
         </div>
-        <div v-if="plan.weekly_limit_usd != null" class="flex items-center justify-between">
+        <div v-if="plan.weekly_limit_usd != null" class="grid min-w-0 grid-cols-[4rem_minmax(0,1fr)] items-center gap-2">
           <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.weeklyLimit') }}</span>
-          <span class="font-medium text-gray-700 dark:text-gray-300">${{ plan.weekly_limit_usd }}</span>
+          <span class="font-medium text-left text-gray-700 dark:text-gray-300">${{ plan.weekly_limit_usd }}</span>
         </div>
-        <div v-if="plan.monthly_limit_usd != null" class="flex items-center justify-between">
+        <div v-if="plan.monthly_limit_usd != null" class="col-span-2 grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-2">
           <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.monthlyLimit') }}</span>
-          <span class="font-medium text-gray-700 dark:text-gray-300">${{ plan.monthly_limit_usd }}</span>
+          <span class="font-medium text-left text-gray-700 dark:text-gray-300">${{ plan.monthly_limit_usd }}</span>
         </div>
-        <div v-if="plan.daily_limit_usd == null && plan.weekly_limit_usd == null && plan.monthly_limit_usd == null" class="flex items-center justify-between">
+        <div v-if="plan.daily_limit_usd == null && plan.weekly_limit_usd == null && plan.monthly_limit_usd == null" class="col-span-2 grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-2">
           <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.quota') }}</span>
-          <span class="font-medium text-gray-700 dark:text-gray-300">{{ t('payment.planCard.unlimited') }}</span>
+          <span class="font-medium text-left text-gray-700 dark:text-gray-300">{{ t('payment.planCard.unlimited') }}</span>
         </div>
         <div v-if="modelScopeLabels.length > 0" class="col-span-2 flex items-center justify-between">
           <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.models') }}</span>
@@ -109,8 +109,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { SubscriptionPlan } from '@/types/payment'
 import type { UserSubscription } from '@/types'
-import { useAppStore } from '@/stores/app'
-import { hasPeakRate as groupHasPeakRate, formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
+import { hasPeakRate as groupHasPeakRate } from '@/utils/peak-rate'
 import { planValiditySuffix } from './validity'
 import { currencySymbol } from '@/components/payment/currency'
 import {
@@ -149,19 +148,18 @@ const discountText = computed(() => {
   return pct > 0 ? `-${pct}%` : ''
 })
 
-const rateDisplay = computed(() => {
-  const rate = props.plan.rate_multiplier ?? 1
-  return `×${Number(rate.toPrecision(10))}`
-})
-
-const appStore = useAppStore()
-const planCurrencySymbol = computed(() => currencySymbol(props.plan.currency || 'USD'))
-
 const hasPeakRate = computed(() => groupHasPeakRate(props.plan))
 
-const peakRateDisplay = computed(() => {
-  return formatPeakRateWindow(props.plan, serverTimezoneLabel(appStore.cachedPublicSettings?.server_utc_offset))
+const rateDisplay = computed(() => {
+  const rate = props.plan.rate_multiplier ?? 1
+  const baseRate = `×${Number(rate.toPrecision(10))}`
+  if (!hasPeakRate.value) return baseRate
+
+  const peakRate = Number((props.plan.peak_rate_multiplier ?? 1).toPrecision(10))
+  return `${baseRate} (${t('payment.planCard.peakRateMultiplier')} x${peakRate})`
 })
+
+const planCurrencySymbol = computed(() => currencySymbol(props.plan.currency || 'USD'))
 
 const MODEL_SCOPE_LABELS: Record<string, string> = {
   claude: 'Claude',

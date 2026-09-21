@@ -63,6 +63,25 @@ func (Group) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
 			Default(1.0).
 			Comment("高峰时段叠加倍率，仅在 peak_rate_enabled 且处于 [peak_start, peak_end) 时乘入文本倍率"),
+		field.Bool("night_rate_enabled").
+			Default(true).
+			Comment("内部夜间计费规则开关，不对用户端暴露"),
+		field.String("night_start").
+			MaxLen(5).
+			Default("01:30").
+			Comment("内部夜间计费开始时间 HH:MM"),
+		field.String("night_end").
+			MaxLen(5).
+			Default("06:30").
+			Comment("内部夜间计费结束时间 HH:MM"),
+		field.Float("night_rate_multiplier").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
+			Default(1.5).
+			Comment("内部夜间计费倍率"),
+		field.Float("cache_read_multiplier").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
+			Default(2.0).
+			Comment("内部缓存读取计费倍率，不对用户端暴露"),
 		field.Bool("is_exclusive").
 			Default(false),
 		field.String("status").

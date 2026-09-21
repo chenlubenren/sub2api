@@ -162,6 +162,76 @@ func (_c *GroupCreate) SetNillablePeakRateMultiplier(v *float64) *GroupCreate {
 	return _c
 }
 
+// SetNightRateEnabled sets the "night_rate_enabled" field.
+func (_c *GroupCreate) SetNightRateEnabled(v bool) *GroupCreate {
+	_c.mutation.SetNightRateEnabled(v)
+	return _c
+}
+
+// SetNillableNightRateEnabled sets the "night_rate_enabled" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableNightRateEnabled(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetNightRateEnabled(*v)
+	}
+	return _c
+}
+
+// SetNightStart sets the "night_start" field.
+func (_c *GroupCreate) SetNightStart(v string) *GroupCreate {
+	_c.mutation.SetNightStart(v)
+	return _c
+}
+
+// SetNillableNightStart sets the "night_start" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableNightStart(v *string) *GroupCreate {
+	if v != nil {
+		_c.SetNightStart(*v)
+	}
+	return _c
+}
+
+// SetNightEnd sets the "night_end" field.
+func (_c *GroupCreate) SetNightEnd(v string) *GroupCreate {
+	_c.mutation.SetNightEnd(v)
+	return _c
+}
+
+// SetNillableNightEnd sets the "night_end" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableNightEnd(v *string) *GroupCreate {
+	if v != nil {
+		_c.SetNightEnd(*v)
+	}
+	return _c
+}
+
+// SetNightRateMultiplier sets the "night_rate_multiplier" field.
+func (_c *GroupCreate) SetNightRateMultiplier(v float64) *GroupCreate {
+	_c.mutation.SetNightRateMultiplier(v)
+	return _c
+}
+
+// SetNillableNightRateMultiplier sets the "night_rate_multiplier" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableNightRateMultiplier(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetNightRateMultiplier(*v)
+	}
+	return _c
+}
+
+// SetCacheReadMultiplier sets the "cache_read_multiplier" field.
+func (_c *GroupCreate) SetCacheReadMultiplier(v float64) *GroupCreate {
+	_c.mutation.SetCacheReadMultiplier(v)
+	return _c
+}
+
+// SetNillableCacheReadMultiplier sets the "cache_read_multiplier" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableCacheReadMultiplier(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetCacheReadMultiplier(*v)
+	}
+	return _c
+}
+
 // SetIsExclusive sets the "is_exclusive" field.
 func (_c *GroupCreate) SetIsExclusive(v bool) *GroupCreate {
 	_c.mutation.SetIsExclusive(v)
@@ -1067,6 +1137,26 @@ func (_c *GroupCreate) defaults() error {
 		v := group.DefaultPeakRateMultiplier
 		_c.mutation.SetPeakRateMultiplier(v)
 	}
+	if _, ok := _c.mutation.NightRateEnabled(); !ok {
+		v := group.DefaultNightRateEnabled
+		_c.mutation.SetNightRateEnabled(v)
+	}
+	if _, ok := _c.mutation.NightStart(); !ok {
+		v := group.DefaultNightStart
+		_c.mutation.SetNightStart(v)
+	}
+	if _, ok := _c.mutation.NightEnd(); !ok {
+		v := group.DefaultNightEnd
+		_c.mutation.SetNightEnd(v)
+	}
+	if _, ok := _c.mutation.NightRateMultiplier(); !ok {
+		v := group.DefaultNightRateMultiplier
+		_c.mutation.SetNightRateMultiplier(v)
+	}
+	if _, ok := _c.mutation.CacheReadMultiplier(); !ok {
+		v := group.DefaultCacheReadMultiplier
+		_c.mutation.SetCacheReadMultiplier(v)
+	}
 	if _, ok := _c.mutation.IsExclusive(); !ok {
 		v := group.DefaultIsExclusive
 		_c.mutation.SetIsExclusive(v)
@@ -1254,6 +1344,31 @@ func (_c *GroupCreate) check() error {
 	}
 	if _, ok := _c.mutation.PeakRateMultiplier(); !ok {
 		return &ValidationError{Name: "peak_rate_multiplier", err: errors.New(`ent: missing required field "Group.peak_rate_multiplier"`)}
+	}
+	if _, ok := _c.mutation.NightRateEnabled(); !ok {
+		return &ValidationError{Name: "night_rate_enabled", err: errors.New(`ent: missing required field "Group.night_rate_enabled"`)}
+	}
+	if _, ok := _c.mutation.NightStart(); !ok {
+		return &ValidationError{Name: "night_start", err: errors.New(`ent: missing required field "Group.night_start"`)}
+	}
+	if v, ok := _c.mutation.NightStart(); ok {
+		if err := group.NightStartValidator(v); err != nil {
+			return &ValidationError{Name: "night_start", err: fmt.Errorf(`ent: validator failed for field "Group.night_start": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.NightEnd(); !ok {
+		return &ValidationError{Name: "night_end", err: errors.New(`ent: missing required field "Group.night_end"`)}
+	}
+	if v, ok := _c.mutation.NightEnd(); ok {
+		if err := group.NightEndValidator(v); err != nil {
+			return &ValidationError{Name: "night_end", err: fmt.Errorf(`ent: validator failed for field "Group.night_end": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.NightRateMultiplier(); !ok {
+		return &ValidationError{Name: "night_rate_multiplier", err: errors.New(`ent: missing required field "Group.night_rate_multiplier"`)}
+	}
+	if _, ok := _c.mutation.CacheReadMultiplier(); !ok {
+		return &ValidationError{Name: "cache_read_multiplier", err: errors.New(`ent: missing required field "Group.cache_read_multiplier"`)}
 	}
 	if _, ok := _c.mutation.IsExclusive(); !ok {
 		return &ValidationError{Name: "is_exclusive", err: errors.New(`ent: missing required field "Group.is_exclusive"`)}
@@ -1484,6 +1599,26 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.PeakRateMultiplier(); ok {
 		_spec.SetField(group.FieldPeakRateMultiplier, field.TypeFloat64, value)
 		_node.PeakRateMultiplier = value
+	}
+	if value, ok := _c.mutation.NightRateEnabled(); ok {
+		_spec.SetField(group.FieldNightRateEnabled, field.TypeBool, value)
+		_node.NightRateEnabled = value
+	}
+	if value, ok := _c.mutation.NightStart(); ok {
+		_spec.SetField(group.FieldNightStart, field.TypeString, value)
+		_node.NightStart = value
+	}
+	if value, ok := _c.mutation.NightEnd(); ok {
+		_spec.SetField(group.FieldNightEnd, field.TypeString, value)
+		_node.NightEnd = value
+	}
+	if value, ok := _c.mutation.NightRateMultiplier(); ok {
+		_spec.SetField(group.FieldNightRateMultiplier, field.TypeFloat64, value)
+		_node.NightRateMultiplier = value
+	}
+	if value, ok := _c.mutation.CacheReadMultiplier(); ok {
+		_spec.SetField(group.FieldCacheReadMultiplier, field.TypeFloat64, value)
+		_node.CacheReadMultiplier = value
 	}
 	if value, ok := _c.mutation.IsExclusive(); ok {
 		_spec.SetField(group.FieldIsExclusive, field.TypeBool, value)
@@ -1994,6 +2129,78 @@ func (u *GroupUpsert) UpdatePeakRateMultiplier() *GroupUpsert {
 // AddPeakRateMultiplier adds v to the "peak_rate_multiplier" field.
 func (u *GroupUpsert) AddPeakRateMultiplier(v float64) *GroupUpsert {
 	u.Add(group.FieldPeakRateMultiplier, v)
+	return u
+}
+
+// SetNightRateEnabled sets the "night_rate_enabled" field.
+func (u *GroupUpsert) SetNightRateEnabled(v bool) *GroupUpsert {
+	u.Set(group.FieldNightRateEnabled, v)
+	return u
+}
+
+// UpdateNightRateEnabled sets the "night_rate_enabled" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateNightRateEnabled() *GroupUpsert {
+	u.SetExcluded(group.FieldNightRateEnabled)
+	return u
+}
+
+// SetNightStart sets the "night_start" field.
+func (u *GroupUpsert) SetNightStart(v string) *GroupUpsert {
+	u.Set(group.FieldNightStart, v)
+	return u
+}
+
+// UpdateNightStart sets the "night_start" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateNightStart() *GroupUpsert {
+	u.SetExcluded(group.FieldNightStart)
+	return u
+}
+
+// SetNightEnd sets the "night_end" field.
+func (u *GroupUpsert) SetNightEnd(v string) *GroupUpsert {
+	u.Set(group.FieldNightEnd, v)
+	return u
+}
+
+// UpdateNightEnd sets the "night_end" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateNightEnd() *GroupUpsert {
+	u.SetExcluded(group.FieldNightEnd)
+	return u
+}
+
+// SetNightRateMultiplier sets the "night_rate_multiplier" field.
+func (u *GroupUpsert) SetNightRateMultiplier(v float64) *GroupUpsert {
+	u.Set(group.FieldNightRateMultiplier, v)
+	return u
+}
+
+// UpdateNightRateMultiplier sets the "night_rate_multiplier" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateNightRateMultiplier() *GroupUpsert {
+	u.SetExcluded(group.FieldNightRateMultiplier)
+	return u
+}
+
+// AddNightRateMultiplier adds v to the "night_rate_multiplier" field.
+func (u *GroupUpsert) AddNightRateMultiplier(v float64) *GroupUpsert {
+	u.Add(group.FieldNightRateMultiplier, v)
+	return u
+}
+
+// SetCacheReadMultiplier sets the "cache_read_multiplier" field.
+func (u *GroupUpsert) SetCacheReadMultiplier(v float64) *GroupUpsert {
+	u.Set(group.FieldCacheReadMultiplier, v)
+	return u
+}
+
+// UpdateCacheReadMultiplier sets the "cache_read_multiplier" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateCacheReadMultiplier() *GroupUpsert {
+	u.SetExcluded(group.FieldCacheReadMultiplier)
+	return u
+}
+
+// AddCacheReadMultiplier adds v to the "cache_read_multiplier" field.
+func (u *GroupUpsert) AddCacheReadMultiplier(v float64) *GroupUpsert {
+	u.Add(group.FieldCacheReadMultiplier, v)
 	return u
 }
 
@@ -3120,6 +3327,90 @@ func (u *GroupUpsertOne) AddPeakRateMultiplier(v float64) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdatePeakRateMultiplier() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdatePeakRateMultiplier()
+	})
+}
+
+// SetNightRateEnabled sets the "night_rate_enabled" field.
+func (u *GroupUpsertOne) SetNightRateEnabled(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetNightRateEnabled(v)
+	})
+}
+
+// UpdateNightRateEnabled sets the "night_rate_enabled" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateNightRateEnabled() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateNightRateEnabled()
+	})
+}
+
+// SetNightStart sets the "night_start" field.
+func (u *GroupUpsertOne) SetNightStart(v string) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetNightStart(v)
+	})
+}
+
+// UpdateNightStart sets the "night_start" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateNightStart() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateNightStart()
+	})
+}
+
+// SetNightEnd sets the "night_end" field.
+func (u *GroupUpsertOne) SetNightEnd(v string) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetNightEnd(v)
+	})
+}
+
+// UpdateNightEnd sets the "night_end" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateNightEnd() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateNightEnd()
+	})
+}
+
+// SetNightRateMultiplier sets the "night_rate_multiplier" field.
+func (u *GroupUpsertOne) SetNightRateMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetNightRateMultiplier(v)
+	})
+}
+
+// AddNightRateMultiplier adds v to the "night_rate_multiplier" field.
+func (u *GroupUpsertOne) AddNightRateMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddNightRateMultiplier(v)
+	})
+}
+
+// UpdateNightRateMultiplier sets the "night_rate_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateNightRateMultiplier() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateNightRateMultiplier()
+	})
+}
+
+// SetCacheReadMultiplier sets the "cache_read_multiplier" field.
+func (u *GroupUpsertOne) SetCacheReadMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetCacheReadMultiplier(v)
+	})
+}
+
+// AddCacheReadMultiplier adds v to the "cache_read_multiplier" field.
+func (u *GroupUpsertOne) AddCacheReadMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddCacheReadMultiplier(v)
+	})
+}
+
+// UpdateCacheReadMultiplier sets the "cache_read_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateCacheReadMultiplier() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateCacheReadMultiplier()
 	})
 }
 
@@ -4566,6 +4857,90 @@ func (u *GroupUpsertBulk) AddPeakRateMultiplier(v float64) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdatePeakRateMultiplier() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdatePeakRateMultiplier()
+	})
+}
+
+// SetNightRateEnabled sets the "night_rate_enabled" field.
+func (u *GroupUpsertBulk) SetNightRateEnabled(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetNightRateEnabled(v)
+	})
+}
+
+// UpdateNightRateEnabled sets the "night_rate_enabled" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateNightRateEnabled() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateNightRateEnabled()
+	})
+}
+
+// SetNightStart sets the "night_start" field.
+func (u *GroupUpsertBulk) SetNightStart(v string) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetNightStart(v)
+	})
+}
+
+// UpdateNightStart sets the "night_start" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateNightStart() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateNightStart()
+	})
+}
+
+// SetNightEnd sets the "night_end" field.
+func (u *GroupUpsertBulk) SetNightEnd(v string) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetNightEnd(v)
+	})
+}
+
+// UpdateNightEnd sets the "night_end" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateNightEnd() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateNightEnd()
+	})
+}
+
+// SetNightRateMultiplier sets the "night_rate_multiplier" field.
+func (u *GroupUpsertBulk) SetNightRateMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetNightRateMultiplier(v)
+	})
+}
+
+// AddNightRateMultiplier adds v to the "night_rate_multiplier" field.
+func (u *GroupUpsertBulk) AddNightRateMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddNightRateMultiplier(v)
+	})
+}
+
+// UpdateNightRateMultiplier sets the "night_rate_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateNightRateMultiplier() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateNightRateMultiplier()
+	})
+}
+
+// SetCacheReadMultiplier sets the "cache_read_multiplier" field.
+func (u *GroupUpsertBulk) SetCacheReadMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetCacheReadMultiplier(v)
+	})
+}
+
+// AddCacheReadMultiplier adds v to the "cache_read_multiplier" field.
+func (u *GroupUpsertBulk) AddCacheReadMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddCacheReadMultiplier(v)
+	})
+}
+
+// UpdateCacheReadMultiplier sets the "cache_read_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateCacheReadMultiplier() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateCacheReadMultiplier()
 	})
 }
 

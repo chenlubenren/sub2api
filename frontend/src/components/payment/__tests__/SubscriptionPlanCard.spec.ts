@@ -21,6 +21,7 @@ const i18n = createI18n({
         planCard: {
           quota: "Quota",
           rate: "Rate",
+          peakRateMultiplier: "Peak multiplier",
           unlimited: "Unlimited",
         },
         subscribeNow: "Subscribe now",
@@ -37,7 +38,7 @@ const mountPlanCard = (groupPlatform: string, overrides: Partial<SubscriptionPla
         group_id: 10,
         group_platform: groupPlatform,
         name: "Pro",
-        description,
+        description: "Plan description",
         price: 10,
         amount: 1000,
         features: [],
@@ -86,6 +87,58 @@ describe("SubscriptionPlanCard", () => {
     expect(cnyPlan).toContain("¥20CNY");
     expect(mountPlanCard("openai", { currency: "USD" }).text()).toContain("$10USD");
     expect(mountPlanCard("openai", { currency: "" }).text()).toContain("$10");
+  });
+
+  it("shows the peak multiplier inline with the base rate", () => {
+    const wrapper = mountPlanCard("openai", {
+      peak_rate_enabled: true,
+      peak_start: "14:00",
+      peak_end: "18:00",
+      peak_rate_multiplier: 1.25,
+    });
+
+    // The test environment uses vue-i18n's runtime-only build, so t() returns the key.
+    expect(wrapper.get('[data-testid="subscription-plan-rate"]').text()).toBe("×1 (payment.planCard.peakRateMultiplier x1.25)");
+    expect(wrapper.text()).not.toContain("Peak Rate");
+  });
+
+  it("shows all configured quota windows and aligns their values with the rate", () => {
+    const wrapper = mountPlanCard("openai", {
+      daily_limit_usd: 200,
+      weekly_limit_usd: 1400,
+      monthly_limit_usd: 6000,
+    });
+
+    expect(wrapper.text()).toContain("$200");
+    expect(wrapper.text()).toContain("$1400");
+    expect(wrapper.text()).toContain("$6000");
+    expect(wrapper.get('[data-testid="subscription-plan-rate"]').classes()).toContain("text-left");
+    expect(wrapper.findAll("span").filter((node) => node.text() === "$200")[0].classes()).toContain("text-left");
+  });
+
+  it("places daily and weekly limits on the same quota row", () => {
+    const wrapper = mountPlanCard("openai", {
+      daily_limit_usd: 200,
+      weekly_limit_usd: 1400,
+      monthly_limit_usd: 6000,
+    });
+    const quota = wrapper.find(".bg-gray-50");
+    const daily = quota.findAll("div").find((node) => node.text().includes("payment.planCard.dailyLimit"));
+    const weekly = quota.findAll("div").find((node) => node.text().includes("payment.planCard.weeklyLimit"));
+    expect(daily?.classes()).toContain("grid");
+    expect(daily?.classes()).not.toContain("col-span-2");
+    expect(weekly?.classes()).toContain("grid");
+    expect(weekly?.classes()).not.toContain("col-span-2");
+  });
+
+  it("shows three lines of the description and exposes the full text on hover", () => {
+    const description = "A detailed plan description that is longer than the space available on the card.";
+    const wrapper = mountPlanCard("openai", { description });
+    const descriptionElement = wrapper.get("p");
+
+    expect(descriptionElement.text()).toBe(description);
+    expect(descriptionElement.attributes("title")).toBe(description);
+    expect(descriptionElement.classes()).toContain("line-clamp-3");
   });
 
   it.each([

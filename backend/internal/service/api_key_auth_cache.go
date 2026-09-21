@@ -125,10 +125,15 @@ type APIKeyAuthGroupSnapshot struct {
 	// 高峰时段倍率：PeakRateEnabled 为 true 且请求时刻处于 [PeakStart, PeakEnd) 时，
 	// token 计费倍率额外乘以 PeakRateMultiplier（详见 Group.PeakMultiplierAt）。
 	// 必须随快照缓存，否则扣费路径拿到的 apiKey.Group 缺字段、高峰倍率失效。
-	PeakRateEnabled    bool    `json:"peak_rate_enabled"`
-	PeakStart          string  `json:"peak_start"`
-	PeakEnd            string  `json:"peak_end"`
-	PeakRateMultiplier float64 `json:"peak_rate_multiplier"`
+	PeakRateEnabled     bool    `json:"peak_rate_enabled"`
+	PeakStart           string  `json:"peak_start"`
+	PeakEnd             string  `json:"peak_end"`
+	PeakRateMultiplier  float64 `json:"peak_rate_multiplier"`
+	NightRateEnabled    bool    `json:"night_rate_enabled"`
+	NightStart          string  `json:"night_start"`
+	NightEnd            string  `json:"night_end"`
+	NightRateMultiplier float64 `json:"night_rate_multiplier"`
+	CacheReadMultiplier float64 `json:"cache_read_multiplier"`
 
 	// 分组利润控制：调度准入门在直连热路径上读的就是这份快照——门解析
 	// （resolveOpenAIProfitControlGate / resolveProfitControlGroup）优先取

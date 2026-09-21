@@ -23621,6 +23621,13 @@ type GroupMutation struct {
 	peak_end                                *string
 	peak_rate_multiplier                    *float64
 	addpeak_rate_multiplier                 *float64
+	night_rate_enabled                      *bool
+	night_start                             *string
+	night_end                               *string
+	night_rate_multiplier                   *float64
+	addnight_rate_multiplier                *float64
+	cache_read_multiplier                   *float64
+	addcache_read_multiplier                *float64
 	is_exclusive                            *bool
 	status                                  *string
 	duplicate_operation_id                  *string
@@ -24251,6 +24258,226 @@ func (m *GroupMutation) AddedPeakRateMultiplier() (r float64, exists bool) {
 func (m *GroupMutation) ResetPeakRateMultiplier() {
 	m.peak_rate_multiplier = nil
 	m.addpeak_rate_multiplier = nil
+}
+
+// SetNightRateEnabled sets the "night_rate_enabled" field.
+func (m *GroupMutation) SetNightRateEnabled(b bool) {
+	m.night_rate_enabled = &b
+}
+
+// NightRateEnabled returns the value of the "night_rate_enabled" field in the mutation.
+func (m *GroupMutation) NightRateEnabled() (r bool, exists bool) {
+	v := m.night_rate_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNightRateEnabled returns the old "night_rate_enabled" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldNightRateEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNightRateEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNightRateEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNightRateEnabled: %w", err)
+	}
+	return oldValue.NightRateEnabled, nil
+}
+
+// ResetNightRateEnabled resets all changes to the "night_rate_enabled" field.
+func (m *GroupMutation) ResetNightRateEnabled() {
+	m.night_rate_enabled = nil
+}
+
+// SetNightStart sets the "night_start" field.
+func (m *GroupMutation) SetNightStart(s string) {
+	m.night_start = &s
+}
+
+// NightStart returns the value of the "night_start" field in the mutation.
+func (m *GroupMutation) NightStart() (r string, exists bool) {
+	v := m.night_start
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNightStart returns the old "night_start" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldNightStart(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNightStart is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNightStart requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNightStart: %w", err)
+	}
+	return oldValue.NightStart, nil
+}
+
+// ResetNightStart resets all changes to the "night_start" field.
+func (m *GroupMutation) ResetNightStart() {
+	m.night_start = nil
+}
+
+// SetNightEnd sets the "night_end" field.
+func (m *GroupMutation) SetNightEnd(s string) {
+	m.night_end = &s
+}
+
+// NightEnd returns the value of the "night_end" field in the mutation.
+func (m *GroupMutation) NightEnd() (r string, exists bool) {
+	v := m.night_end
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNightEnd returns the old "night_end" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldNightEnd(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNightEnd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNightEnd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNightEnd: %w", err)
+	}
+	return oldValue.NightEnd, nil
+}
+
+// ResetNightEnd resets all changes to the "night_end" field.
+func (m *GroupMutation) ResetNightEnd() {
+	m.night_end = nil
+}
+
+// SetNightRateMultiplier sets the "night_rate_multiplier" field.
+func (m *GroupMutation) SetNightRateMultiplier(f float64) {
+	m.night_rate_multiplier = &f
+	m.addnight_rate_multiplier = nil
+}
+
+// NightRateMultiplier returns the value of the "night_rate_multiplier" field in the mutation.
+func (m *GroupMutation) NightRateMultiplier() (r float64, exists bool) {
+	v := m.night_rate_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNightRateMultiplier returns the old "night_rate_multiplier" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldNightRateMultiplier(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNightRateMultiplier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNightRateMultiplier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNightRateMultiplier: %w", err)
+	}
+	return oldValue.NightRateMultiplier, nil
+}
+
+// AddNightRateMultiplier adds f to the "night_rate_multiplier" field.
+func (m *GroupMutation) AddNightRateMultiplier(f float64) {
+	if m.addnight_rate_multiplier != nil {
+		*m.addnight_rate_multiplier += f
+	} else {
+		m.addnight_rate_multiplier = &f
+	}
+}
+
+// AddedNightRateMultiplier returns the value that was added to the "night_rate_multiplier" field in this mutation.
+func (m *GroupMutation) AddedNightRateMultiplier() (r float64, exists bool) {
+	v := m.addnight_rate_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetNightRateMultiplier resets all changes to the "night_rate_multiplier" field.
+func (m *GroupMutation) ResetNightRateMultiplier() {
+	m.night_rate_multiplier = nil
+	m.addnight_rate_multiplier = nil
+}
+
+// SetCacheReadMultiplier sets the "cache_read_multiplier" field.
+func (m *GroupMutation) SetCacheReadMultiplier(f float64) {
+	m.cache_read_multiplier = &f
+	m.addcache_read_multiplier = nil
+}
+
+// CacheReadMultiplier returns the value of the "cache_read_multiplier" field in the mutation.
+func (m *GroupMutation) CacheReadMultiplier() (r float64, exists bool) {
+	v := m.cache_read_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCacheReadMultiplier returns the old "cache_read_multiplier" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldCacheReadMultiplier(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCacheReadMultiplier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCacheReadMultiplier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCacheReadMultiplier: %w", err)
+	}
+	return oldValue.CacheReadMultiplier, nil
+}
+
+// AddCacheReadMultiplier adds f to the "cache_read_multiplier" field.
+func (m *GroupMutation) AddCacheReadMultiplier(f float64) {
+	if m.addcache_read_multiplier != nil {
+		*m.addcache_read_multiplier += f
+	} else {
+		m.addcache_read_multiplier = &f
+	}
+}
+
+// AddedCacheReadMultiplier returns the value that was added to the "cache_read_multiplier" field in this mutation.
+func (m *GroupMutation) AddedCacheReadMultiplier() (r float64, exists bool) {
+	v := m.addcache_read_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCacheReadMultiplier resets all changes to the "cache_read_multiplier" field.
+func (m *GroupMutation) ResetCacheReadMultiplier() {
+	m.cache_read_multiplier = nil
+	m.addcache_read_multiplier = nil
 }
 
 // SetIsExclusive sets the "is_exclusive" field.
@@ -27449,7 +27676,7 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 66)
+	fields := make([]string, 0, 71)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -27479,6 +27706,21 @@ func (m *GroupMutation) Fields() []string {
 	}
 	if m.peak_rate_multiplier != nil {
 		fields = append(fields, group.FieldPeakRateMultiplier)
+	}
+	if m.night_rate_enabled != nil {
+		fields = append(fields, group.FieldNightRateEnabled)
+	}
+	if m.night_start != nil {
+		fields = append(fields, group.FieldNightStart)
+	}
+	if m.night_end != nil {
+		fields = append(fields, group.FieldNightEnd)
+	}
+	if m.night_rate_multiplier != nil {
+		fields = append(fields, group.FieldNightRateMultiplier)
+	}
+	if m.cache_read_multiplier != nil {
+		fields = append(fields, group.FieldCacheReadMultiplier)
 	}
 	if m.is_exclusive != nil {
 		fields = append(fields, group.FieldIsExclusive)
@@ -27676,6 +27918,16 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.PeakEnd()
 	case group.FieldPeakRateMultiplier:
 		return m.PeakRateMultiplier()
+	case group.FieldNightRateEnabled:
+		return m.NightRateEnabled()
+	case group.FieldNightStart:
+		return m.NightStart()
+	case group.FieldNightEnd:
+		return m.NightEnd()
+	case group.FieldNightRateMultiplier:
+		return m.NightRateMultiplier()
+	case group.FieldCacheReadMultiplier:
+		return m.CacheReadMultiplier()
 	case group.FieldIsExclusive:
 		return m.IsExclusive()
 	case group.FieldStatus:
@@ -27817,6 +28069,16 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldPeakEnd(ctx)
 	case group.FieldPeakRateMultiplier:
 		return m.OldPeakRateMultiplier(ctx)
+	case group.FieldNightRateEnabled:
+		return m.OldNightRateEnabled(ctx)
+	case group.FieldNightStart:
+		return m.OldNightStart(ctx)
+	case group.FieldNightEnd:
+		return m.OldNightEnd(ctx)
+	case group.FieldNightRateMultiplier:
+		return m.OldNightRateMultiplier(ctx)
+	case group.FieldCacheReadMultiplier:
+		return m.OldCacheReadMultiplier(ctx)
 	case group.FieldIsExclusive:
 		return m.OldIsExclusive(ctx)
 	case group.FieldStatus:
@@ -28007,6 +28269,41 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPeakRateMultiplier(v)
+		return nil
+	case group.FieldNightRateEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNightRateEnabled(v)
+		return nil
+	case group.FieldNightStart:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNightStart(v)
+		return nil
+	case group.FieldNightEnd:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNightEnd(v)
+		return nil
+	case group.FieldNightRateMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNightRateMultiplier(v)
+		return nil
+	case group.FieldCacheReadMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCacheReadMultiplier(v)
 		return nil
 	case group.FieldIsExclusive:
 		v, ok := value.(bool)
@@ -28414,6 +28711,12 @@ func (m *GroupMutation) AddedFields() []string {
 	if m.addpeak_rate_multiplier != nil {
 		fields = append(fields, group.FieldPeakRateMultiplier)
 	}
+	if m.addnight_rate_multiplier != nil {
+		fields = append(fields, group.FieldNightRateMultiplier)
+	}
+	if m.addcache_read_multiplier != nil {
+		fields = append(fields, group.FieldCacheReadMultiplier)
+	}
 	if m.adddaily_limit_usd != nil {
 		fields = append(fields, group.FieldDailyLimitUsd)
 	}
@@ -28501,6 +28804,10 @@ func (m *GroupMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedRateMultiplier()
 	case group.FieldPeakRateMultiplier:
 		return m.AddedPeakRateMultiplier()
+	case group.FieldNightRateMultiplier:
+		return m.AddedNightRateMultiplier()
+	case group.FieldCacheReadMultiplier:
+		return m.AddedCacheReadMultiplier()
 	case group.FieldDailyLimitUsd:
 		return m.AddedDailyLimitUsd()
 	case group.FieldWeeklyLimitUsd:
@@ -28573,6 +28880,20 @@ func (m *GroupMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddPeakRateMultiplier(v)
+		return nil
+	case group.FieldNightRateMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddNightRateMultiplier(v)
+		return nil
+	case group.FieldCacheReadMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCacheReadMultiplier(v)
 		return nil
 	case group.FieldDailyLimitUsd:
 		v, ok := value.(float64)
@@ -28940,6 +29261,21 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldPeakRateMultiplier:
 		m.ResetPeakRateMultiplier()
+		return nil
+	case group.FieldNightRateEnabled:
+		m.ResetNightRateEnabled()
+		return nil
+	case group.FieldNightStart:
+		m.ResetNightStart()
+		return nil
+	case group.FieldNightEnd:
+		m.ResetNightEnd()
+		return nil
+	case group.FieldNightRateMultiplier:
+		m.ResetNightRateMultiplier()
+		return nil
+	case group.FieldCacheReadMultiplier:
+		m.ResetCacheReadMultiplier()
 		return nil
 	case group.FieldIsExclusive:
 		m.ResetIsExclusive()

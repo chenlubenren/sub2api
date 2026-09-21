@@ -28,9 +28,16 @@ type Group struct {
 	PeakStart          string
 	PeakEnd            string
 	PeakRateMultiplier float64
-	IsExclusive        bool
-	Status             string
-	Hydrated           bool // indicates the group was loaded from a trusted repository source
+	// 内部夜间计费规则，仅管理员可见。
+	NightRateEnabled    bool
+	NightStart          string
+	NightEnd            string
+	NightRateMultiplier float64
+	// 内部缓存读取计费倍率，仅管理员可见。
+	CacheReadMultiplier float64
+	IsExclusive         bool
+	Status              string
+	Hydrated            bool // indicates the group was loaded from a trusted repository source
 	// DuplicateOperationID is internal persistence metadata used only to recover
 	// an already committed one-click copy. It must never be mapped to API DTOs.
 	DuplicateOperationID string
@@ -308,7 +315,29 @@ func parseMinutes(hhmm string) (int, bool) {
 //
 // 该方法是纯函数，不读取任何外部状态，便于单测。
 func (g *Group) PeakMultiplierAt(now time.Time) float64 {
-	if g == nil || !g.IsSubscriptionType() || !g.PeakRateEnabled || g.PeakStart == "" || g.PeakEnd == "" {
+	if g == nil || !g.IsSubscriptionType() {
+		return 1.0
+	}
+	t := now.In(timezone.Location())
+	cur := t.Hour()*60 + t.Minute()
+	if g.NightRateEnabled || (g.NightStart == "" && g.NightEnd == "") {
+		start, okStart := parseMinutes(g.NightStart)
+		end, okEnd := parseMinutes(g.NightEnd)
+		if !okStart {
+			start, _ = parseMinutes("01:30")
+		}
+		if !okEnd {
+			end, _ = parseMinutes("06:30")
+		}
+		mult := g.NightRateMultiplier
+		if mult <= 0 {
+			mult = 1.5
+		}
+		if start < end && cur >= start && cur < end {
+			return mult
+		}
+	}
+	if !g.PeakRateEnabled || g.PeakStart == "" || g.PeakEnd == "" {
 		return 1.0
 	}
 	start, ok1 := parseMinutes(g.PeakStart)
@@ -316,8 +345,6 @@ func (g *Group) PeakMultiplierAt(now time.Time) float64 {
 	if !ok1 || !ok2 || start >= end {
 		return 1.0
 	}
-	t := now.In(timezone.Location())
-	cur := t.Hour()*60 + t.Minute()
 	if cur >= start && cur < end {
 		return g.PeakRateMultiplier
 	}

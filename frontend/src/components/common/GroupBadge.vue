@@ -45,6 +45,8 @@ interface Props {
   peakEnd?: string
   peakRateMultiplier?: number
   showRate?: boolean
+  /** Hide the peak-rate window when the badge is used in compact columns. */
+  showPeakRate?: boolean
   daysRemaining?: number | null // 剩余天数（订阅类型时使用）
   /**
    * 订阅分组默认在右侧 label 展示"订阅"或剩余天数；
@@ -60,6 +62,7 @@ const props = withDefaults(defineProps<Props>(), {
   daysRemaining: null,
   userRateMultiplier: null,
   peakRateEnabled: false,
+  showPeakRate: true,
   alwaysShowRate: false
 })
 
@@ -80,7 +83,7 @@ const hasCustomRate = computed(() => {
 const appStore = useAppStore()
 
 const hasPeakRate = computed(() => {
-  return Boolean(props.showRate && props.peakRateEnabled && props.peakStart && props.peakEnd)
+  return Boolean(props.showRate && props.showPeakRate && props.peakRateEnabled && props.peakStart && props.peakEnd)
 })
 
 const peakRateText = computed(() => {

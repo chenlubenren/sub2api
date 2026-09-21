@@ -108,18 +108,24 @@ type CreateGroupRequest struct {
 	LongContextPricingEnabled bool                          `json:"long_context_pricing_enabled"`
 	ModelPricing              []service.ChannelModelPricing `json:"model_pricing"`
 	// 图片生成计费配置（antigravity 和 gemini 平台使用，负数表示清除配置）
-	AllowImageGeneration            bool                          `json:"allow_image_generation"`
-	AllowBatchImageGeneration       bool                          `json:"allow_batch_image_generation"`
-	ImageRateIndependent            bool                          `json:"image_rate_independent"`
-	ImageRateMultiplier             *float64                      `json:"image_rate_multiplier"`
-	BatchImageDiscountMultiplier    *float64                      `json:"batch_image_discount_multiplier"`
-	BatchImageHoldMultiplier        *float64                      `json:"batch_image_hold_multiplier"`
-	VideoRateIndependent            bool                          `json:"video_rate_independent"`
-	VideoRateMultiplier             *float64                      `json:"video_rate_multiplier"`
-	PeakRateEnabled                 bool                          `json:"peak_rate_enabled"`
-	PeakStart                       string                        `json:"peak_start"`
-	PeakEnd                         string                        `json:"peak_end"`
-	PeakRateMultiplier              *float64                      `json:"peak_rate_multiplier"`
+	AllowImageGeneration         bool     `json:"allow_image_generation"`
+	AllowBatchImageGeneration    bool     `json:"allow_batch_image_generation"`
+	ImageRateIndependent         bool     `json:"image_rate_independent"`
+	ImageRateMultiplier          *float64 `json:"image_rate_multiplier"`
+	BatchImageDiscountMultiplier *float64 `json:"batch_image_discount_multiplier"`
+	BatchImageHoldMultiplier     *float64 `json:"batch_image_hold_multiplier"`
+	VideoRateIndependent         bool     `json:"video_rate_independent"`
+	VideoRateMultiplier          *float64 `json:"video_rate_multiplier"`
+	PeakRateEnabled              bool     `json:"peak_rate_enabled"`
+	PeakStart                    string   `json:"peak_start"`
+	PeakEnd                      string   `json:"peak_end"`
+	PeakRateMultiplier           *float64 `json:"peak_rate_multiplier"`
+	NightRateEnabled             bool     `json:"night_rate_enabled"`
+	NightStart                   string   `json:"night_start"`
+	NightEnd                     string   `json:"night_end"`
+	NightRateMultiplier          *float64 `json:"night_rate_multiplier"`
+	CacheReadMultiplier          *float64 `json:"cache_read_multiplier"`
+
 	ProfitControlEnabled            bool                          `json:"profit_control_enabled"`
 	ProfitMinMargin                 *float64                      `json:"profit_min_margin"`
 	ProfitSafetyBuffer              *float64                      `json:"profit_safety_buffer"`
@@ -183,18 +189,24 @@ type UpdateGroupRequest struct {
 	LongContextPricingEnabled *bool                          `json:"long_context_pricing_enabled"`
 	ModelPricing              *[]service.ChannelModelPricing `json:"model_pricing"`
 	// 图片生成计费配置（antigravity 和 gemini 平台使用，负数表示清除配置）
-	AllowImageGeneration            *bool                         `json:"allow_image_generation"`
-	AllowBatchImageGeneration       *bool                         `json:"allow_batch_image_generation"`
-	ImageRateIndependent            *bool                         `json:"image_rate_independent"`
-	ImageRateMultiplier             *float64                      `json:"image_rate_multiplier"`
-	BatchImageDiscountMultiplier    *float64                      `json:"batch_image_discount_multiplier"`
-	BatchImageHoldMultiplier        *float64                      `json:"batch_image_hold_multiplier"`
-	VideoRateIndependent            *bool                         `json:"video_rate_independent"`
-	VideoRateMultiplier             *float64                      `json:"video_rate_multiplier"`
-	PeakRateEnabled                 *bool                         `json:"peak_rate_enabled"`
-	PeakStart                       *string                       `json:"peak_start"`
-	PeakEnd                         *string                       `json:"peak_end"`
-	PeakRateMultiplier              *float64                      `json:"peak_rate_multiplier"`
+	AllowImageGeneration         *bool    `json:"allow_image_generation"`
+	AllowBatchImageGeneration    *bool    `json:"allow_batch_image_generation"`
+	ImageRateIndependent         *bool    `json:"image_rate_independent"`
+	ImageRateMultiplier          *float64 `json:"image_rate_multiplier"`
+	BatchImageDiscountMultiplier *float64 `json:"batch_image_discount_multiplier"`
+	BatchImageHoldMultiplier     *float64 `json:"batch_image_hold_multiplier"`
+	VideoRateIndependent         *bool    `json:"video_rate_independent"`
+	VideoRateMultiplier          *float64 `json:"video_rate_multiplier"`
+	PeakRateEnabled              *bool    `json:"peak_rate_enabled"`
+	PeakStart                    *string  `json:"peak_start"`
+	PeakEnd                      *string  `json:"peak_end"`
+	PeakRateMultiplier           *float64 `json:"peak_rate_multiplier"`
+	NightRateEnabled             *bool    `json:"night_rate_enabled"`
+	NightStart                   *string  `json:"night_start"`
+	NightEnd                     *string  `json:"night_end"`
+	NightRateMultiplier          *float64 `json:"night_rate_multiplier"`
+	CacheReadMultiplier          *float64 `json:"cache_read_multiplier"`
+
 	ProfitControlEnabled            *bool                         `json:"profit_control_enabled"`
 	ProfitMinMargin                 *float64                      `json:"profit_min_margin"`
 	ProfitSafetyBuffer              *float64                      `json:"profit_safety_buffer"`
@@ -515,29 +527,30 @@ func (h *GroupHandler) Create(c *gin.Context) {
 	}
 
 	group, err := h.adminService.CreateGroup(c.Request.Context(), &service.CreateGroupInput{
-		Name:                            req.Name,
-		Description:                     req.Description,
-		Platform:                        req.Platform,
-		RateMultiplier:                  req.RateMultiplier,
-		IsExclusive:                     req.IsExclusive,
-		SubscriptionType:                req.SubscriptionType,
-		DailyLimitUSD:                   req.DailyLimitUSD.ToServiceInput(),
-		WeeklyLimitUSD:                  req.WeeklyLimitUSD.ToServiceInput(),
-		MonthlyLimitUSD:                 req.MonthlyLimitUSD.ToServiceInput(),
-		LongContextPricingEnabled:       req.LongContextPricingEnabled,
-		ModelPricing:                    req.ModelPricing,
-		AllowImageGeneration:            req.AllowImageGeneration,
-		AllowBatchImageGeneration:       req.AllowBatchImageGeneration,
-		ImageRateIndependent:            req.ImageRateIndependent,
-		ImageRateMultiplier:             req.ImageRateMultiplier,
-		BatchImageDiscountMultiplier:    req.BatchImageDiscountMultiplier,
-		BatchImageHoldMultiplier:        req.BatchImageHoldMultiplier,
-		VideoRateIndependent:            req.VideoRateIndependent,
-		VideoRateMultiplier:             req.VideoRateMultiplier,
-		PeakRateEnabled:                 req.PeakRateEnabled,
-		PeakStart:                       req.PeakStart,
-		PeakEnd:                         req.PeakEnd,
-		PeakRateMultiplier:              req.PeakRateMultiplier,
+		Name:                         req.Name,
+		Description:                  req.Description,
+		Platform:                     req.Platform,
+		RateMultiplier:               req.RateMultiplier,
+		IsExclusive:                  req.IsExclusive,
+		SubscriptionType:             req.SubscriptionType,
+		DailyLimitUSD:                req.DailyLimitUSD.ToServiceInput(),
+		WeeklyLimitUSD:               req.WeeklyLimitUSD.ToServiceInput(),
+		MonthlyLimitUSD:              req.MonthlyLimitUSD.ToServiceInput(),
+		LongContextPricingEnabled:    req.LongContextPricingEnabled,
+		ModelPricing:                 req.ModelPricing,
+		AllowImageGeneration:         req.AllowImageGeneration,
+		AllowBatchImageGeneration:    req.AllowBatchImageGeneration,
+		ImageRateIndependent:         req.ImageRateIndependent,
+		ImageRateMultiplier:          req.ImageRateMultiplier,
+		BatchImageDiscountMultiplier: req.BatchImageDiscountMultiplier,
+		BatchImageHoldMultiplier:     req.BatchImageHoldMultiplier,
+		VideoRateIndependent:         req.VideoRateIndependent,
+		VideoRateMultiplier:          req.VideoRateMultiplier,
+		PeakRateEnabled:              req.PeakRateEnabled,
+		PeakStart:                    req.PeakStart,
+		PeakEnd:                      req.PeakEnd,
+		PeakRateMultiplier:           req.PeakRateMultiplier,
+		NightRateEnabled:             req.NightRateEnabled, NightStart: req.NightStart, NightEnd: req.NightEnd, NightRateMultiplier: req.NightRateMultiplier, CacheReadMultiplier: req.CacheReadMultiplier,
 		ProfitControlEnabled:            req.ProfitControlEnabled,
 		ProfitMinMargin:                 req.ProfitMinMargin,
 		ProfitSafetyBuffer:              req.ProfitSafetyBuffer,
@@ -647,30 +660,31 @@ func (h *GroupHandler) Update(c *gin.Context) {
 	}
 
 	group, err := h.adminService.UpdateGroup(c.Request.Context(), groupID, &service.UpdateGroupInput{
-		Name:                            req.Name,
-		Description:                     req.Description,
-		Platform:                        req.Platform,
-		RateMultiplier:                  req.RateMultiplier,
-		IsExclusive:                     req.IsExclusive,
-		Status:                          req.Status,
-		SubscriptionType:                req.SubscriptionType,
-		DailyLimitUSD:                   req.DailyLimitUSD.ToServiceInput(),
-		WeeklyLimitUSD:                  req.WeeklyLimitUSD.ToServiceInput(),
-		MonthlyLimitUSD:                 req.MonthlyLimitUSD.ToServiceInput(),
-		LongContextPricingEnabled:       req.LongContextPricingEnabled,
-		ModelPricing:                    req.ModelPricing,
-		AllowImageGeneration:            req.AllowImageGeneration,
-		AllowBatchImageGeneration:       req.AllowBatchImageGeneration,
-		ImageRateIndependent:            req.ImageRateIndependent,
-		ImageRateMultiplier:             req.ImageRateMultiplier,
-		BatchImageDiscountMultiplier:    req.BatchImageDiscountMultiplier,
-		BatchImageHoldMultiplier:        req.BatchImageHoldMultiplier,
-		VideoRateIndependent:            req.VideoRateIndependent,
-		VideoRateMultiplier:             req.VideoRateMultiplier,
-		PeakRateEnabled:                 req.PeakRateEnabled,
-		PeakStart:                       req.PeakStart,
-		PeakEnd:                         req.PeakEnd,
-		PeakRateMultiplier:              req.PeakRateMultiplier,
+		Name:                         req.Name,
+		Description:                  req.Description,
+		Platform:                     req.Platform,
+		RateMultiplier:               req.RateMultiplier,
+		IsExclusive:                  req.IsExclusive,
+		Status:                       req.Status,
+		SubscriptionType:             req.SubscriptionType,
+		DailyLimitUSD:                req.DailyLimitUSD.ToServiceInput(),
+		WeeklyLimitUSD:               req.WeeklyLimitUSD.ToServiceInput(),
+		MonthlyLimitUSD:              req.MonthlyLimitUSD.ToServiceInput(),
+		LongContextPricingEnabled:    req.LongContextPricingEnabled,
+		ModelPricing:                 req.ModelPricing,
+		AllowImageGeneration:         req.AllowImageGeneration,
+		AllowBatchImageGeneration:    req.AllowBatchImageGeneration,
+		ImageRateIndependent:         req.ImageRateIndependent,
+		ImageRateMultiplier:          req.ImageRateMultiplier,
+		BatchImageDiscountMultiplier: req.BatchImageDiscountMultiplier,
+		BatchImageHoldMultiplier:     req.BatchImageHoldMultiplier,
+		VideoRateIndependent:         req.VideoRateIndependent,
+		VideoRateMultiplier:          req.VideoRateMultiplier,
+		PeakRateEnabled:              req.PeakRateEnabled,
+		PeakStart:                    req.PeakStart,
+		PeakEnd:                      req.PeakEnd,
+		PeakRateMultiplier:           req.PeakRateMultiplier,
+		NightRateEnabled:             req.NightRateEnabled, NightStart: req.NightStart, NightEnd: req.NightEnd, NightRateMultiplier: req.NightRateMultiplier, CacheReadMultiplier: req.CacheReadMultiplier,
 		ProfitControlEnabled:            req.ProfitControlEnabled,
 		ProfitMinMargin:                 req.ProfitMinMargin,
 		ProfitSafetyBuffer:              req.ProfitSafetyBuffer,

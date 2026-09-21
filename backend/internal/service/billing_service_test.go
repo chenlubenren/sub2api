@@ -1856,6 +1856,13 @@ func TestComputeTokenBreakdown_ExplicitZeroImagePrice_NoFallback(t *testing.T) {
 	require.InDelta(t, 150*15e-6, bd.OutputCost, 1e-12)
 }
 
+func TestComputeTokenBreakdown_HiddenCacheReadMultiplier(t *testing.T) {
+	svc := newTestBillingService()
+	pricing := &ModelPricing{CacheReadPricePerToken: 0.25}
+	bd := svc.computeTokenBreakdown(pricing, UsageTokens{CacheReadTokens: 4}, 1.0, "", false)
+	require.InDelta(t, 2.0, bd.CacheReadCost, 1e-12)
+}
+
 func TestComputeTokenBreakdown_NonExplicitZeroImagePrice_FallsBackToOutput(t *testing.T) {
 	svc := newTestBillingService()
 

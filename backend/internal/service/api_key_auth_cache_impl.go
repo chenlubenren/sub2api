@@ -432,9 +432,10 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 			PeakStart:                       apiKey.Group.PeakStart,
 			PeakEnd:                         apiKey.Group.PeakEnd,
 			PeakRateMultiplier:              apiKey.Group.PeakRateMultiplier,
-			ProfitControlEnabled:            apiKey.Group.ProfitControlEnabled,
-			ProfitMinMargin:                 apiKey.Group.ProfitMinMargin,
-			ProfitSafetyBuffer:              apiKey.Group.ProfitSafetyBuffer,
+			NightRateEnabled:                apiKey.Group.NightRateEnabled, NightStart: apiKey.Group.NightStart, NightEnd: apiKey.Group.NightEnd, NightRateMultiplier: apiKey.Group.NightRateMultiplier, CacheReadMultiplier: apiKey.Group.CacheReadMultiplier,
+			ProfitControlEnabled: apiKey.Group.ProfitControlEnabled,
+			ProfitMinMargin:      apiKey.Group.ProfitMinMargin,
+			ProfitSafetyBuffer:   apiKey.Group.ProfitSafetyBuffer,
 		}
 	}
 	return snapshot
@@ -534,9 +535,10 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 			PeakStart:                       snapshot.Group.PeakStart,
 			PeakEnd:                         snapshot.Group.PeakEnd,
 			PeakRateMultiplier:              snapshot.Group.PeakRateMultiplier,
-			ProfitControlEnabled:            snapshot.Group.ProfitControlEnabled,
-			ProfitMinMargin:                 snapshot.Group.ProfitMinMargin,
-			ProfitSafetyBuffer:              snapshot.Group.ProfitSafetyBuffer,
+			NightRateEnabled:                snapshot.Group.NightRateEnabled, NightStart: snapshot.Group.NightStart, NightEnd: snapshot.Group.NightEnd, NightRateMultiplier: snapshot.Group.NightRateMultiplier, CacheReadMultiplier: snapshot.Group.CacheReadMultiplier,
+			ProfitControlEnabled: snapshot.Group.ProfitControlEnabled,
+			ProfitMinMargin:      snapshot.Group.ProfitMinMargin,
+			ProfitSafetyBuffer:   snapshot.Group.ProfitSafetyBuffer,
 		}
 	}
 	s.compileAPIKeyIPRules(apiKey)
