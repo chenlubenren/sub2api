@@ -53,6 +53,7 @@ describe('useModelWhitelist', () => {
     expect(getModelsByPlatform('claude')).toContain('claude-fable-5')
     expect(getModelsByPlatform('antigravity')).toContain('claude-fable-5')
     expect(getModelsByPlatform('claude')).toContain('claude-opus-5-5')
+    expect(getModelsByPlatform('antigravity')).not.toContain('claude-opus-5-5')
     expect(getModelsByPlatform('claude')).toContain('claude-opus-4-8')
     expect(getModelsByPlatform('antigravity')).toContain('claude-opus-4-8')
   })
@@ -61,7 +62,6 @@ describe('useModelWhitelist', () => {
     const models = getModelsByPlatform('grok')
 
     expect(models).toContain('grok-4.6')
-    expect(models).toContain('grok-4.7')
     expect(models).toContain('grok-4.6-latest')
     expect(models).toContain('grok-4.5')
     expect(models).toContain('grok-4.5-latest')

@@ -22,10 +22,11 @@ func TestDefaultModelsContainsClaudeFable51(t *testing.T) {
 func TestDefaultModelsContainsOpus55(t *testing.T) {
 	for _, model := range DefaultModels {
 		if model.ID == "claude-opus-5-5" {
-			require.Equal(t, "Claude Opus 5.5", model.DisplayName)
-			require.Equal(t, "2026-09-22T00:00:00Z", model.CreatedAt)
+			if model.DisplayName != "Claude Opus 5.5" || model.CreatedAt != "2026-09-22T00:00:00Z" {
+				t.Fatalf("unexpected Opus 5.5 descriptor: %+v", model)
+			}
 			return
 		}
 	}
-	t.Fatal("claude-opus-5-5 missing from DefaultModels")
+	t.Fatal("claude-opus-5-5 missing")
 }
