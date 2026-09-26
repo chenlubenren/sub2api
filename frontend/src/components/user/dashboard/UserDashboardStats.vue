@@ -51,12 +51,10 @@
             <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('dashboard.todayCost') }}</p>
             <p class="text-xl font-bold text-gray-900 dark:text-white">
               <span class="text-purple-600 dark:text-purple-400">${{ formatCost(stats?.today_actual_cost || 0) }}</span>
-              <span class="text-sm font-normal text-gray-500 dark:text-gray-400"> / 成本：${{ formatCost(todayAccountCost) }}</span>
             </p>
             <p class="text-xs">
               <span class="text-gray-500 dark:text-gray-400">{{ t('common.total') }}: </span>
               <span class="text-purple-600 dark:text-purple-400">${{ formatCost(stats?.total_actual_cost || 0) }}</span>
-              <span class="text-gray-500 dark:text-gray-400"> / 成本：${{ formatCost(totalAccountCost) }}</span>
             </p>
           </div>
         </div>
@@ -127,26 +125,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 import type { UserDashboardStats as UserStatsType } from '@/api/usage'
 
-const props = defineProps<{
+defineProps<{
   stats: UserStatsType
   balance: number
   isSimple: boolean
 }>()
 
 const { t } = useI18n()
-
-function getNumericStat(key: string): number {
-  const value = (props.stats as unknown as Record<string, unknown> | undefined)?.[key]
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0
-}
-
-const todayAccountCost = computed(() => getNumericStat('today_account_cost'))
-const totalAccountCost = computed(() => getNumericStat('total_account_cost'))
 
 const formatBalance = (b: number) =>
   new Intl.NumberFormat('en-US', {

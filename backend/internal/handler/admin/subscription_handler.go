@@ -59,6 +59,11 @@ type AdjustSubscriptionRequest struct {
 	Days int `json:"days" binding:"required,min=-36500,max=36500"` // negative to shorten, positive to extend
 }
 
+type BulkAdjustSubscriptionRequest struct {
+	SubscriptionIDs []int64 `json:"subscription_ids" binding:"required,min=1,max=5000"`
+	Days            int     `json:"days" binding:"required,min=-36500,max=36500"`
+}
+
 // List handles listing all subscriptions with pagination and filters
 // GET /api/v1/admin/subscriptions
 func (h *SubscriptionHandler) List(c *gin.Context) {
@@ -217,11 +222,33 @@ func (h *SubscriptionHandler) Extend(c *gin.Context) {
 	})
 }
 
+// BulkExtend adjusts the validity period for a filtered set of subscriptions.
+// POST /api/v1/admin/subscriptions/bulk-extend
+func (h *SubscriptionHandler) BulkExtend(c *gin.Context) {
+	var req BulkAdjustSubscriptionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	if req.Days == 0 {
+		response.BadRequest(c, "days must not be zero")
+		return
+	}
+	response.Success(c, h.subscriptionService.BulkExtendSubscriptions(c.Request.Context(), req.SubscriptionIDs, req.Days))
+}
+
 // ResetSubscriptionQuotaRequest represents the reset quota request
 type ResetSubscriptionQuotaRequest struct {
 	Daily   bool `json:"daily"`
 	Weekly  bool `json:"weekly"`
 	Monthly bool `json:"monthly"`
+}
+
+type BulkResetSubscriptionQuotaRequest struct {
+	SubscriptionIDs []int64 `json:"subscription_ids" binding:"required,min=1,max=5000"`
+	Daily           bool    `json:"daily"`
+	Weekly          bool    `json:"weekly"`
+	Monthly         bool    `json:"monthly"`
 }
 
 // ResetQuota resets daily, weekly, and/or monthly usage for a subscription.
@@ -247,6 +274,21 @@ func (h *SubscriptionHandler) ResetQuota(c *gin.Context) {
 		return
 	}
 	response.Success(c, dto.UserSubscriptionFromServiceAdmin(sub))
+}
+
+// BulkResetQuota restarts the selected quota windows from the present moment.
+// POST /api/v1/admin/subscriptions/bulk-reset-quota
+func (h *SubscriptionHandler) BulkResetQuota(c *gin.Context) {
+	var req BulkResetSubscriptionQuotaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	if !req.Daily && !req.Weekly && !req.Monthly {
+		response.BadRequest(c, "At least one of 'daily', 'weekly', or 'monthly' must be true")
+		return
+	}
+	response.Success(c, h.subscriptionService.BulkResetQuota(c.Request.Context(), req.SubscriptionIDs, req.Daily, req.Weekly, req.Monthly))
 }
 
 // Revoke handles revoking a subscription.

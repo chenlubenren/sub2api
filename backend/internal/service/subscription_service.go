@@ -467,6 +467,41 @@ type BulkAssignResult struct {
 	Statuses      map[int64]string
 }
 
+// BulkSubscriptionOperationResult reports the outcome of an administrator
+// operation applied to a set of subscriptions.  Each item still goes through
+// the same validation and cache invalidation path as its single-item action.
+type BulkSubscriptionOperationResult struct {
+	SuccessCount int      `json:"success_count"`
+	FailedCount  int      `json:"failed_count"`
+	Errors       []string `json:"errors"`
+}
+
+func (s *SubscriptionService) BulkExtendSubscriptions(ctx context.Context, subscriptionIDs []int64, days int) *BulkSubscriptionOperationResult {
+	result := &BulkSubscriptionOperationResult{Errors: make([]string, 0)}
+	for _, subscriptionID := range subscriptionIDs {
+		if _, err := s.ExtendSubscription(ctx, subscriptionID, days); err != nil {
+			result.FailedCount++
+			result.Errors = append(result.Errors, fmt.Sprintf("subscription %d: %v", subscriptionID, err))
+			continue
+		}
+		result.SuccessCount++
+	}
+	return result
+}
+
+func (s *SubscriptionService) BulkResetQuota(ctx context.Context, subscriptionIDs []int64, resetDaily, resetWeekly, resetMonthly bool) *BulkSubscriptionOperationResult {
+	result := &BulkSubscriptionOperationResult{Errors: make([]string, 0)}
+	for _, subscriptionID := range subscriptionIDs {
+		if _, err := s.AdminResetQuota(ctx, subscriptionID, resetDaily, resetWeekly, resetMonthly); err != nil {
+			result.FailedCount++
+			result.Errors = append(result.Errors, fmt.Sprintf("subscription %d: %v", subscriptionID, err))
+			continue
+		}
+		result.SuccessCount++
+	}
+	return result
+}
+
 // BulkAssignSubscription 批量分配订阅
 func (s *SubscriptionService) BulkAssignSubscription(ctx context.Context, input *BulkAssignSubscriptionInput) (*BulkAssignResult, error) {
 	result := &BulkAssignResult{

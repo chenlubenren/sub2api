@@ -111,6 +111,17 @@ export async function extend(
   return data
 }
 
+export async function bulkExtend(
+  subscriptionIds: number[],
+  days: number
+): Promise<{ success_count: number; failed_count: number; errors: string[] }> {
+  const { data } = await apiClient.post('/admin/subscriptions/bulk-extend', {
+    subscription_ids: subscriptionIds,
+    days
+  })
+  return data
+}
+
 /**
  * Revoke subscription
  * @param id - Subscription ID
@@ -145,6 +156,17 @@ export async function resetQuota(
     `/admin/subscriptions/${id}/reset-quota`,
     options
   )
+  return data
+}
+
+export async function bulkResetQuota(
+  subscriptionIds: number[],
+  options: { daily: boolean; weekly: boolean; monthly: boolean }
+): Promise<{ success_count: number; failed_count: number; errors: string[] }> {
+  const { data } = await apiClient.post('/admin/subscriptions/bulk-reset-quota', {
+    subscription_ids: subscriptionIds,
+    ...options
+  })
   return data
 }
 
@@ -197,9 +219,11 @@ export const subscriptionsAPI = {
   assign,
   bulkAssign,
   extend,
+  bulkExtend,
   revoke,
   restore,
   resetQuota,
+  bulkResetQuota,
   listByGroup,
   listByUser
 }

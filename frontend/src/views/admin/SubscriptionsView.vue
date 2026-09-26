@@ -163,6 +163,14 @@
               <Icon name="plus" size="md" class="mr-2" />
               {{ t('admin.subscriptions.assignSubscription') }}
             </button>
+            <button @click="openBulkExtend" :disabled="loading || pagination.total === 0" class="btn btn-secondary">
+              <Icon name="calendar" size="md" class="mr-2" />
+              批量调整
+            </button>
+            <button @click="openBulkResetQuota" :disabled="loading || pagination.total === 0" class="btn btn-secondary">
+              <Icon name="refresh" size="md" class="mr-2" />
+              批量重新配额
+            </button>
           </div>
         </div>
       </template>
@@ -578,6 +586,23 @@
       </template>
     </BaseDialog>
 
+    <BaseDialog :show="showBulkExtendModal" title="批量调整订阅天数" width="narrow" @close="showBulkExtendModal = false">
+      <form id="bulk-extend-subscription-form" class="space-y-5" @submit.prevent="handleBulkExtend">
+        <p class="text-sm text-gray-600 dark:text-gray-400">将调整当前筛选结果中的全部订阅。</p>
+        <div>
+          <label class="input-label">调整天数</label>
+          <input v-model.number="bulkExtendForm.days" type="number" required class="input text-center" />
+          <p class="input-hint">正数延长，负数缩短。无法调整到已过期的订阅会被跳过。</p>
+        </div>
+      </form>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn btn-secondary" @click="showBulkExtendModal = false">{{ t('common.cancel') }}</button>
+          <button type="submit" form="bulk-extend-subscription-form" :disabled="submitting" class="btn btn-primary">{{ submitting ? t('admin.subscriptions.adjusting') : '批量调整' }}</button>
+        </div>
+      </template>
+    </BaseDialog>
+
     <!-- Adjust Subscription Modal -->
     <BaseDialog
       :show="showExtendModal"
@@ -669,16 +694,24 @@
       @cancel="showRestoreDialog = false"
     />
 
-    <!-- Reset Quota Confirmation Dialog -->
-    <ConfirmDialog
-      :show="showResetQuotaConfirm"
-      :title="t('admin.subscriptions.resetQuotaTitle')"
-      :message="t('admin.subscriptions.resetQuotaConfirm', { user: resettingSubscription?.user?.email })"
-      :confirm-text="t('admin.subscriptions.resetQuota')"
-      :cancel-text="t('common.cancel')"
-      @confirm="confirmResetQuota"
-      @cancel="showResetQuotaConfirm = false"
-    />
+    <BaseDialog :show="showResetQuotaModal" :title="resetQuotaTarget === 'bulk' ? '批量重新配额' : t('admin.subscriptions.resetQuotaTitle')" width="narrow" @close="showResetQuotaModal = false">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          {{ resetQuotaTarget === 'bulk' ? '将重置当前筛选结果中的订阅用量，并从现在开始重新计算。' : t('admin.subscriptions.resetQuotaConfirm', { user: resettingSubscription?.user?.email }) }}
+        </p>
+        <div class="space-y-2">
+          <label class="flex items-center gap-2"><input v-model="resetQuotaForm.daily" type="checkbox" class="rounded" /> 当日用量</label>
+          <label class="flex items-center gap-2"><input v-model="resetQuotaForm.weekly" type="checkbox" class="rounded" /> 当周用量</label>
+          <label class="flex items-center gap-2"><input v-model="resetQuotaForm.monthly" type="checkbox" class="rounded" /> 当月用量</label>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn btn-secondary" @click="showResetQuotaModal = false">{{ t('common.cancel') }}</button>
+          <button type="button" :disabled="resettingQuota || !hasResetQuotaSelection" class="btn btn-primary" @click="confirmResetQuota">{{ resettingQuota ? t('common.loading') : t('admin.subscriptions.resetQuota') }}</button>
+        </div>
+      </template>
+    </BaseDialog>
     <!-- Subscription Guide Modal -->
     <teleport to="body">
       <transition name="modal">
@@ -969,12 +1002,14 @@ const pagination = reactive({
 
 const showAssignModal = ref(false)
 const showExtendModal = ref(false)
+const showBulkExtendModal = ref(false)
 const showRevokeDialog = ref(false)
 const showRestoreDialog = ref(false)
-const showResetQuotaConfirm = ref(false)
+const showResetQuotaModal = ref(false)
 const submitting = ref(false)
 const resettingSubscription = ref<UserSubscription | null>(null)
 const resettingQuota = ref(false)
+const resetQuotaTarget = ref<'single' | 'bulk'>('single')
 const extendingSubscription = ref<UserSubscription | null>(null)
 const revokingSubscription = ref<UserSubscription | null>(null)
 const restoringSubscription = ref<UserSubscription | null>(null)
@@ -988,6 +1023,10 @@ const assignForm = reactive({
 const extendForm = reactive({
   days: 30
 })
+
+const bulkExtendForm = reactive({ days: 30 })
+const resetQuotaForm = reactive({ daily: true, weekly: true, monthly: true })
+const hasResetQuotaSelection = computed(() => resetQuotaForm.daily || resetQuotaForm.weekly || resetQuotaForm.monthly)
 
 // Group options for filter (all groups)
 const groupOptions = computed(() => [
@@ -1270,6 +1309,48 @@ const handleExtendSubscription = async () => {
   }
 }
 
+const getFilteredSubscriptionIDs = async () => {
+  const ids: number[] = []
+  const pageSize = 100
+  let page = 1
+  let pages = 1
+  do {
+    const response = await adminAPI.subscriptions.list(page, pageSize, {
+      status: (filters.status as any) || undefined,
+      group_id: filters.group_id ? parseInt(filters.group_id) : undefined,
+      platform: filters.platform || undefined,
+      user_id: filters.user_id || undefined,
+      sort_by: sortState.sort_by,
+      sort_order: sortState.sort_order
+    })
+    ids.push(...response.items.map(subscription => subscription.id))
+    pages = response.pages
+    page++
+  } while (page <= pages)
+  return ids
+}
+
+const openBulkExtend = () => {
+  bulkExtendForm.days = 30
+  showBulkExtendModal.value = true
+}
+
+const handleBulkExtend = async () => {
+  if (!bulkExtendForm.days) return
+  submitting.value = true
+  try {
+    const ids = await getFilteredSubscriptionIDs()
+    const result = await adminAPI.subscriptions.bulkExtend(ids, bulkExtendForm.days)
+    appStore.showSuccess(`已调整 ${result.success_count} 个订阅${result.failed_count ? `，${result.failed_count} 个未完成` : ''}`)
+    showBulkExtendModal.value = false
+    await loadSubscriptions()
+  } catch (error: any) {
+    appStore.showError(error.response?.data?.detail || t('admin.subscriptions.failedToAdjust'))
+  } finally {
+    submitting.value = false
+  }
+}
+
 const handleRevoke = (subscription: UserSubscription) => {
   revokingSubscription.value = subscription
   showRevokeDialog.value = true
@@ -1312,17 +1393,37 @@ const confirmRestore = async () => {
 
 const handleResetQuota = (subscription: UserSubscription) => {
   resettingSubscription.value = subscription
-  showResetQuotaConfirm.value = true
+  resetQuotaTarget.value = 'single'
+  resetQuotaForm.daily = true
+  resetQuotaForm.weekly = true
+  resetQuotaForm.monthly = true
+  showResetQuotaModal.value = true
+}
+
+const openBulkResetQuota = () => {
+  resettingSubscription.value = null
+  resetQuotaTarget.value = 'bulk'
+  resetQuotaForm.daily = true
+  resetQuotaForm.weekly = true
+  resetQuotaForm.monthly = true
+  showResetQuotaModal.value = true
 }
 
 const confirmResetQuota = async () => {
-  if (!resettingSubscription.value) return
+  if (!hasResetQuotaSelection.value) return
   if (resettingQuota.value) return
   resettingQuota.value = true
   try {
-    await adminAPI.subscriptions.resetQuota(resettingSubscription.value.id, { daily: true, weekly: true, monthly: true })
-    appStore.showSuccess(t('admin.subscriptions.quotaResetSuccess'))
-    showResetQuotaConfirm.value = false
+    const options = { daily: resetQuotaForm.daily, weekly: resetQuotaForm.weekly, monthly: resetQuotaForm.monthly }
+    if (resetQuotaTarget.value === 'bulk') {
+      const ids = await getFilteredSubscriptionIDs()
+      const result = await adminAPI.subscriptions.bulkResetQuota(ids, options)
+      appStore.showSuccess(`已重新配额 ${result.success_count} 个订阅${result.failed_count ? `，${result.failed_count} 个未完成` : ''}`)
+    } else if (resettingSubscription.value) {
+      await adminAPI.subscriptions.resetQuota(resettingSubscription.value.id, options)
+      appStore.showSuccess(t('admin.subscriptions.quotaResetSuccess'))
+    }
+    showResetQuotaModal.value = false
     resettingSubscription.value = null
     await loadSubscriptions()
   } catch (error: any) {

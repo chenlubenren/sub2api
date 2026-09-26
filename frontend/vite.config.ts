@@ -3,6 +3,108 @@ import vue from '@vitejs/plugin-vue'
 import checker from 'vite-plugin-checker'
 import { resolve } from 'path'
 
+const mockUser = {
+  id: 1001,
+  username: 'mock-user',
+  email: 'mock@example.com',
+  role: 'admin',
+  balance: 256.8,
+  concurrency: 5,
+  rpm_limit: 0,
+  status: 'active',
+  allowed_groups: null,
+  balance_notify_enabled: false,
+  balance_notify_threshold: null,
+  balance_notify_extra_emails: [],
+  created_at: '2026-09-25T00:00:00Z',
+  updated_at: '2026-09-25T00:00:00Z'
+}
+
+function mockResponse(res: import('http').ServerResponse, data: unknown, status = 200): void {
+  res.writeHead(status, { 'Content-Type': 'application/json' })
+  res.end(JSON.stringify({ code: 0, message: 'ok', data }))
+}
+
+function createMockApi(): Plugin {
+  const mockGroups = [
+    { id: 1, name: 'OpenAI Pro', description: '本地模拟 OpenAI 分组', platform: 'openai', rate_multiplier: 1.2, cache_read_multiplier: 2, is_exclusive: false, status: 'active', subscription_type: 'subscription', daily_limit_usd: 25, weekly_limit_usd: 100, monthly_limit_usd: 300, long_context_pricing_enabled: true, peak_rate_enabled: false, peak_start: '', peak_end: '', peak_rate_multiplier: 1, night_rate_enabled: true, night_start: '01:30', night_end: '06:30', night_rate_multiplier: 1.5, rpm_limit: 0, model_pricing: [], sort_order: 1 },
+    { id: 2, name: 'Claude Standard', description: '本地模拟 Anthropic 分组', platform: 'anthropic', rate_multiplier: 1, cache_read_multiplier: 2, is_exclusive: false, status: 'active', subscription_type: 'standard', daily_limit_usd: null, weekly_limit_usd: null, monthly_limit_usd: null, long_context_pricing_enabled: true, peak_rate_enabled: false, peak_start: '', peak_end: '', peak_rate_multiplier: 1, night_rate_enabled: true, night_start: '01:30', night_end: '06:30', night_rate_multiplier: 1.5, rpm_limit: 0, model_pricing: [], sort_order: 2 }
+  ]
+  const mockSubscriptions = [
+    { id: 1, user_id: 1001, group_id: 1, status: 'active', starts_at: '2026-09-01T00:00:00Z', expires_at: '2026-10-01T00:00:00Z', daily_usage_usd: 1.2, weekly_usage_usd: 5.4, monthly_usage_usd: 12.8, daily_window_start: '2026-09-25T00:00:00Z', weekly_window_start: '2026-09-22T00:00:00Z', monthly_window_start: '2026-09-01T00:00:00Z', created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-25T00:00:00Z', user: mockUser, group: mockGroups[0] }
+  ]
+  return {
+    name: 'local-mock-api',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const path = new URL(req.url || '/', 'http://localhost').pathname
+        if (!path.startsWith('/api/v1/')) return next()
+
+        if (path === '/api/v1/auth/login' && req.method === 'POST') {
+          return mockResponse(res, {
+            access_token: 'mock-access-token',
+            refresh_token: 'mock-refresh-token',
+            expires_in: 86400,
+            token_type: 'Bearer',
+            user: mockUser
+          })
+        }
+        if (path === '/api/v1/auth/me') return mockResponse(res, { ...mockUser, run_mode: 'standard' })
+        if (path === '/api/v1/auth/refresh') {
+          return mockResponse(res, { access_token: 'mock-access-token', refresh_token: 'mock-refresh-token', expires_in: 86400, token_type: 'Bearer' })
+        }
+        if (path === '/api/v1/auth/logout') return mockResponse(res, {})
+        if (path === '/api/v1/settings/public') {
+          return mockResponse(res, { site_name: 'Sub2API Local Mock', registration_enabled: true, email_login_enabled: true })
+        }
+        if (path === '/api/v1/usage/dashboard/stats') {
+          return mockResponse(res, {
+            total_api_keys: 2, active_api_keys: 2, total_requests: 1284,
+            total_input_tokens: 860000, total_output_tokens: 224000, total_cache_creation_tokens: 18000, total_cache_read_tokens: 96000,
+            total_tokens: 1198000, total_cost: 3.8079, total_actual_cost: 3.8079, total_account_cost: 0,
+            today_requests: 36, today_input_tokens: 24000, today_output_tokens: 6800, today_cache_creation_tokens: 600, today_cache_read_tokens: 4200,
+            today_tokens: 35600, today_cost: 0.12, today_actual_cost: 0.12, today_account_cost: 0,
+            average_duration_ms: 820, rpm: 1, tpm: 460
+          })
+        }
+        if (path === '/api/v1/usage/dashboard/trend') {
+          return mockResponse(res, { trend: Array.from({ length: 7 }, (_, index) => ({
+            date: `2026-09-${String(19 + index).padStart(2, '0')}`,
+            requests: 80 + index * 13,
+            input_tokens: 36000 + index * 3200,
+            output_tokens: 12000 + index * 1100,
+            cache_creation_tokens: 1800 + index * 160,
+            cache_read_tokens: 14200 + index * 940,
+            total_tokens: 62000 + index * 5400,
+            cost: 0.22 + index * 0.03,
+            actual_cost: 0.22 + index * 0.03
+          })), start_date: '2026-09-19', end_date: '2026-09-25', granularity: 'day' })
+        }
+        if (path === '/api/v1/usage/dashboard/models') {
+          return mockResponse(res, { models: [
+            { model: 'gpt-5', requests: 860, input_tokens: 540000, output_tokens: 164000, total_tokens: 704000, actual_cost: 2.46, cost: 2.46 },
+            { model: 'claude-sonnet-4', requests: 424, input_tokens: 320000, output_tokens: 60000, total_tokens: 380000, actual_cost: 1.35, cost: 1.35 }
+          ], start_date: '2026-09-19', end_date: '2026-09-25' })
+        }
+        if (path === '/api/v1/usage') {
+          return mockResponse(res, { items: [], total: 0, page: 1, page_size: 20, pages: 0 })
+        }
+        if (path === '/api/v1/admin/dashboard/stats') {
+          return mockResponse(res, { total_users: 12, active_users: 8, total_api_keys: 18, active_api_keys: 14, today_requests: 128, total_requests: 12684, today_actual_cost: 3.2, total_actual_cost: 438.9, total_account_cost: 0, today_tokens: 92000, total_tokens: 9840000 })
+        }
+        if (path === '/api/v1/admin/groups/all') return mockResponse(res, mockGroups)
+        if (path === '/api/v1/admin/groups') return mockResponse(res, { items: mockGroups, total: mockGroups.length, page: 1, page_size: 20, pages: 1 })
+        if (path === '/api/v1/admin/subscriptions') return mockResponse(res, { items: mockSubscriptions, total: mockSubscriptions.length, page: 1, page_size: 20, pages: 1 })
+        if (path === '/api/v1/admin/users') return mockResponse(res, { items: [mockUser], total: 1, page: 1, page_size: 20, pages: 1 })
+        if (path === '/api/v1/admin/groups/usage-summary' || path === '/api/v1/admin/groups/capacity-summary') return mockResponse(res, [])
+        if (path === '/api/v1/announcements') return mockResponse(res, [])
+        return mockResponse(res, { items: [], total: 0, page: 1, page_size: 20, pages: 0 })
+      })
+    }
+  }
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
     '&': '&amp;',
@@ -89,6 +191,7 @@ export default defineConfig(({ mode }) => {
       checker({
         vueTsc: true
       }),
+      ...(env.VITE_MOCK_API === 'true' ? [createMockApi()] : []),
       injectPublicSettings(backendUrl)
     ],
   resolve: {
@@ -157,7 +260,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: devPort,
-      proxy: {
+      proxy: env.VITE_MOCK_API === 'true' ? undefined : {
         '/api': {
           target: backendUrl,
           changeOrigin: true

@@ -32,3 +32,8 @@ func TestDefaultModelsIncludeGPTImage25(t *testing.T) {
 	require.Contains(t, DefaultModelIDs(), "gpt-image-2.5-flare")
 	require.Contains(t, DefaultModelIDs(), "gpt-image-2.5-sunburst")
 }
+
+func TestDefaultModelsIncludeGPT6SolAndLuna(t *testing.T) {
+	require.Contains(t, DefaultModelIDs(), "gpt-6-sol")
+	require.Contains(t, DefaultModelIDs(), "gpt-6-luna")
+}

@@ -612,10 +612,7 @@
             data-tour="group-form-multiplier"
           />
           <p class="input-hint">{{ t("admin.groups.rateMultiplierHint") }}</p>
-        </div>
-        <div>
-          <label class="input-label">缓存命中倍率（仅管理员可见）</label>
-          <input v-model.number="createForm.cache_read_multiplier" type="number" step="0.001" min="0.001" required class="input" />
+          <button type="button" class="btn btn-secondary btn-sm mt-2" @click="applyBillingSetting('rate', createForm)">应用于所有分组</button>
         </div>
         <div>
           <label class="input-label">{{ t("admin.groups.form.rpmLimit") }}</label>
@@ -895,7 +892,7 @@
           <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
             {{ t(imagePricingI18nKey(createForm.platform, "description")) }}
           </p>
-          <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div class="mb-4 flex items-center justify-between gap-3">
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 v-model="createForm.allow_image_generation"
@@ -1167,7 +1164,7 @@
 
         <!-- 高峰时段倍率配置（仅订阅类型分组） -->
         <div v-if="createForm.subscription_type === 'subscription'" class="border-t pt-4">
-          <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div class="mb-4 flex items-center justify-between gap-3">
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 v-model="createForm.peak_rate_enabled"
@@ -1176,6 +1173,7 @@
               />
               <span>{{ t("admin.groups.peakRate.enable") }}</span>
             </label>
+            <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('peak', createForm)">应用于所有分组</button>
           </div>
           <div
             v-if="createForm.peak_rate_enabled"
@@ -1213,14 +1211,18 @@
         </div>
 
         <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+          <div class="flex items-center justify-between gap-3">
           <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input v-model="createForm.night_rate_enabled" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
             <span>夜间计费规则（仅管理员可见）</span>
           </label>
-          <div v-if="createForm.night_rate_enabled" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('night', createForm)">应用于所有分组</button>
+          </div>
+          <div v-if="createForm.night_rate_enabled" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
             <label><span class="input-label">开始时间</span><input v-model="createForm.night_start" type="time" class="input" /></label>
             <label><span class="input-label">结束时间</span><input v-model="createForm.night_end" type="time" class="input" /></label>
             <label><span class="input-label">夜间倍率</span><input v-model.number="createForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
+            <label><span class="input-label">夜间缓存命中倍率</span><input v-model.number="createForm.cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -2427,10 +2429,7 @@
             class="input"
             data-tour="group-form-multiplier"
           />
-        </div>
-        <div>
-          <label class="input-label">缓存命中倍率（仅管理员可见）</label>
-          <input v-model.number="editForm.cache_read_multiplier" type="number" step="0.001" min="0.001" required class="input" />
+          <button type="button" class="btn btn-secondary btn-sm mt-2" @click="applyBillingSetting('rate', editForm)">应用于所有分组</button>
         </div>
         <div>
           <label class="input-label">{{ t("admin.groups.form.rpmLimit") }}</label>
@@ -2712,7 +2711,7 @@
           <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
             {{ t(imagePricingI18nKey(editForm.platform, "description")) }}
           </p>
-          <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div class="mb-4 flex items-center justify-between gap-3">
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 v-model="editForm.allow_image_generation"
@@ -2984,7 +2983,7 @@
 
         <!-- 高峰时段倍率配置（仅订阅类型分组） -->
         <div v-if="editForm.subscription_type === 'subscription'" class="border-t pt-4">
-          <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div class="mb-4 flex items-center justify-between gap-3">
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 v-model="editForm.peak_rate_enabled"
@@ -2993,6 +2992,7 @@
               />
               <span>{{ t("admin.groups.peakRate.enable") }}</span>
             </label>
+            <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('peak', editForm)">应用于所有分组</button>
           </div>
           <div
             v-if="editForm.peak_rate_enabled"
@@ -3030,14 +3030,18 @@
         </div>
 
         <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+          <div class="flex items-center justify-between gap-3">
           <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input v-model="editForm.night_rate_enabled" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
             <span>夜间计费规则（仅管理员可见）</span>
           </label>
-          <div v-if="editForm.night_rate_enabled" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('night', editForm)">应用于所有分组</button>
+          </div>
+          <div v-if="editForm.night_rate_enabled" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
             <label><span class="input-label">开始时间</span><input v-model="editForm.night_start" type="time" class="input" /></label>
             <label><span class="input-label">结束时间</span><input v-model="editForm.night_end" type="time" class="input" /></label>
             <label><span class="input-label">夜间倍率</span><input v-model.number="editForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
+            <label><span class="input-label">夜间缓存命中倍率</span><input v-model.number="editForm.cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -5321,6 +5325,39 @@ const createForm = reactive({
   max_reasoning_effort_over_limit: reasoningEffortOverLimitDowngrade,
   reasoning_effort_mappings: [] as ReasoningEffortMappingRow[],
 });
+
+type BillingSettingsForm = {
+  rate_multiplier: number
+  cache_read_multiplier: number
+  peak_rate_enabled: boolean
+  peak_start: string
+  peak_end: string
+  peak_rate_multiplier: number
+  night_rate_enabled: boolean
+  night_start: string
+  night_end: string
+  night_rate_multiplier: number
+}
+
+const applyBillingSetting = async (kind: 'rate' | 'cache' | 'peak' | 'night', form: BillingSettingsForm) => {
+  try {
+    const allGroups = await adminAPI.groups.getAllIncludingInactive()
+    const targets = kind === 'peak' ? allGroups.filter(group => group.subscription_type === 'subscription') : allGroups
+    const payload = kind === 'rate'
+      ? { rate_multiplier: normalizeRateMultiplier(form.rate_multiplier) }
+      : kind === 'cache'
+        ? { cache_read_multiplier: normalizeRateMultiplier(form.cache_read_multiplier) }
+        : kind === 'peak'
+          ? { peak_rate_enabled: form.peak_rate_enabled, peak_start: form.peak_start, peak_end: form.peak_end, peak_rate_multiplier: normalizeRateMultiplier(form.peak_rate_multiplier) }
+          : { night_rate_enabled: form.night_rate_enabled, night_start: form.night_start, night_end: form.night_end, night_rate_multiplier: normalizeRateMultiplier(form.night_rate_multiplier), cache_read_multiplier: normalizeRateMultiplier(form.cache_read_multiplier) }
+    await Promise.all(targets.map(group => adminAPI.groups.update(group.id, payload)))
+    appStore.showSuccess(`已应用到 ${targets.length} 个分组`)
+    await loadGroups()
+  } catch (error) {
+    console.error('Failed to apply billing setting to groups:', error)
+    appStore.showError('应用到所有分组失败')
+  }
+}
 
 // 简单账号类型（用于模型路由选择）
 interface SimpleAccount {
