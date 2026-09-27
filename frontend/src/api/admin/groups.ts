@@ -220,6 +220,24 @@ export async function update(id: number, updates: UpdateGroupRequest): Promise<A
   return data
 }
 
+export async function updateBillingSettings(settings: {
+  kind: 'rate' | 'cache' | 'peak' | 'night'
+  rate_multiplier?: number
+  cache_read_multiplier?: number
+  peak_rate_enabled?: boolean
+  peak_start?: string
+  peak_end?: string
+  peak_rate_multiplier?: number
+  night_rate_enabled?: boolean
+  night_start?: string
+  night_end?: string
+  night_rate_multiplier?: number
+  night_cache_read_multiplier?: number
+}): Promise<{ updated: number }> {
+  const { data } = await apiClient.put<{ updated: number }>('/admin/groups/billing-settings', settings)
+  return data
+}
+
 /**
  * Delete group
  * @param id - Group ID
@@ -481,6 +499,7 @@ export const groupsAPI = {
   create,
   duplicate,
   update,
+  updateBillingSettings,
   delete: deleteGroup,
   toggleStatus,
   getStats,

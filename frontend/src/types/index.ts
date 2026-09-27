@@ -884,6 +884,16 @@ export interface UpdateGroupRequest {
   image_price_4k?: number | null
   video_rate_independent?: boolean
   video_rate_multiplier?: number
+  peak_rate_enabled?: boolean
+  peak_start?: string
+  peak_end?: string
+  peak_rate_multiplier?: number
+  cache_read_multiplier?: number
+  night_rate_enabled?: boolean
+  night_start?: string
+  night_end?: string
+  night_rate_multiplier?: number
+  night_cache_read_multiplier?: number
   video_price_480p?: number | null
   video_price_720p?: number | null
   video_price_1080p?: number | null

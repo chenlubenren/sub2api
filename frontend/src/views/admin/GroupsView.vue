@@ -5357,8 +5357,6 @@ type BillingSettingsForm = {
 
 const applyBillingSetting = async (kind: 'rate' | 'cache' | 'peak' | 'night', form: BillingSettingsForm) => {
   try {
-    const allGroups = await adminAPI.groups.getAllIncludingInactive()
-    const targets = kind === 'peak' ? allGroups.filter(group => group.subscription_type === 'subscription') : allGroups
     const payload = kind === 'rate'
       ? { rate_multiplier: normalizeRateMultiplier(form.rate_multiplier) }
       : kind === 'cache'
@@ -5366,23 +5364,8 @@ const applyBillingSetting = async (kind: 'rate' | 'cache' | 'peak' | 'night', fo
         : kind === 'peak'
           ? { peak_rate_enabled: form.peak_rate_enabled, peak_start: form.peak_start, peak_end: form.peak_end, peak_rate_multiplier: normalizeRateMultiplier(form.peak_rate_multiplier) }
           : { night_rate_enabled: form.night_rate_enabled, night_start: form.night_start, night_end: form.night_end, night_rate_multiplier: normalizeRateMultiplier(form.night_rate_multiplier), night_cache_read_multiplier: normalizeRateMultiplier(form.night_cache_read_multiplier) }
-    const failedGroupNames: string[] = []
-    // Apply sequentially so the panel rate limiter cannot drop part of a bulk edit.
-    // A success message is only shown when every target has persisted the setting.
-    for (const group of targets) {
-      try {
-        await adminAPI.groups.update(group.id, payload)
-      } catch (error) {
-        console.error(`Failed to apply billing setting to group ${group.id}:`, error)
-        failedGroupNames.push(group.name)
-      }
-    }
-    if (failedGroupNames.length > 0) {
-      await loadGroups()
-      appStore.showError(`有 ${failedGroupNames.length} 个分组未应用，请重试：${failedGroupNames.join('、')}`)
-      return
-    }
-    appStore.showSuccess(`已应用到 ${targets.length} 个分组`)
+    const result = await adminAPI.groups.updateBillingSettings({ kind, ...payload })
+    appStore.showSuccess(`已应用到 ${result.updated} 个分组`)
     await loadGroups()
   } catch (error) {
     console.error('Failed to apply billing setting to groups:', error)

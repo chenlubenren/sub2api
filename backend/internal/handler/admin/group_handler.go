@@ -257,6 +257,24 @@ type UpdateGroupRequest struct {
 	CopyAccountsFromGroupIDs []int64 `json:"copy_accounts_from_group_ids"`
 }
 
+// BulkBillingSettingsRequest contains exactly one billing setting family to
+// apply to every eligible group. Keeping this server-side avoids browser-side
+// fan-out being interrupted by panel rate limits or navigation.
+type BulkBillingSettingsRequest struct {
+	Kind                     string   `json:"kind" binding:"required,oneof=rate cache peak night"`
+	RateMultiplier           *float64 `json:"rate_multiplier"`
+	CacheReadMultiplier      *float64 `json:"cache_read_multiplier"`
+	PeakRateEnabled          *bool    `json:"peak_rate_enabled"`
+	PeakStart                *string  `json:"peak_start"`
+	PeakEnd                  *string  `json:"peak_end"`
+	PeakRateMultiplier       *float64 `json:"peak_rate_multiplier"`
+	NightRateEnabled         *bool    `json:"night_rate_enabled"`
+	NightStart               *string  `json:"night_start"`
+	NightEnd                 *string  `json:"night_end"`
+	NightRateMultiplier      *float64 `json:"night_rate_multiplier"`
+	NightCacheReadMultiplier *float64 `json:"night_cache_read_multiplier"`
+}
+
 type CompositeRouteRequest struct {
 	PublicModel    string `json:"public_model" binding:"required"`
 	MatchType      string `json:"match_type" binding:"omitempty,oneof=exact prefix"`
@@ -465,6 +483,73 @@ func (h *GroupHandler) GetAll(c *gin.Context) {
 		outGroups = append(outGroups, *dto.GroupFromServiceAdmin(&groups[i]))
 	}
 	response.Success(c, outGroups)
+}
+
+// UpdateBillingSettings applies one billing configuration family to every
+// eligible group. This is intentionally a server-side operation: sending one
+// request per group from the browser can be partially blocked by panel limits.
+// PUT /api/v1/admin/groups/billing-settings
+func (h *GroupHandler) UpdateBillingSettings(c *gin.Context) {
+	var req BulkBillingSettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	input := &service.UpdateGroupInput{}
+	switch req.Kind {
+	case "rate":
+		if req.RateMultiplier == nil {
+			response.BadRequest(c, "rate_multiplier is required")
+			return
+		}
+		input.RateMultiplier = req.RateMultiplier
+	case "cache":
+		if req.CacheReadMultiplier == nil {
+			response.BadRequest(c, "cache_read_multiplier is required")
+			return
+		}
+		input.CacheReadMultiplier = req.CacheReadMultiplier
+	case "peak":
+		if req.PeakRateEnabled == nil || req.PeakStart == nil || req.PeakEnd == nil || req.PeakRateMultiplier == nil {
+			response.BadRequest(c, "complete peak billing settings are required")
+			return
+		}
+		input.PeakRateEnabled = req.PeakRateEnabled
+		input.PeakStart = req.PeakStart
+		input.PeakEnd = req.PeakEnd
+		input.PeakRateMultiplier = req.PeakRateMultiplier
+	case "night":
+		if req.NightRateEnabled == nil || req.NightStart == nil || req.NightEnd == nil || req.NightRateMultiplier == nil || req.NightCacheReadMultiplier == nil {
+			response.BadRequest(c, "complete night billing settings are required")
+			return
+		}
+		input.NightRateEnabled = req.NightRateEnabled
+		input.NightStart = req.NightStart
+		input.NightEnd = req.NightEnd
+		input.NightRateMultiplier = req.NightRateMultiplier
+		input.NightCacheReadMultiplier = req.NightCacheReadMultiplier
+	}
+
+	groups, err := h.adminService.GetAllGroupsIncludingInactive(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	updated := 0
+	for _, group := range groups {
+		if req.Kind == "peak" && group.SubscriptionType != "subscription" {
+			continue
+		}
+		if _, err := h.adminService.UpdateGroup(c.Request.Context(), group.ID, input); err != nil {
+			response.ErrorFrom(c, fmt.Errorf("apply billing settings to group %d: %w", group.ID, err))
+			return
+		}
+		updated++
+	}
+
+	response.Success(c, gin.H{"updated": updated})
 }
 
 // GetByID handles getting a group by ID
