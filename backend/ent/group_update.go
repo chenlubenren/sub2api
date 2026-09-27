@@ -272,6 +272,20 @@ func (_u *GroupUpdate) SetNightCacheReadMultiplier(v float64) *GroupUpdate {
 	return _u
 }
 
+// SetNillableNightCacheReadMultiplier sets the "night_cache_read_multiplier" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableNightCacheReadMultiplier(v *float64) *GroupUpdate {
+	if v != nil {
+		_u.SetNightCacheReadMultiplier(*v)
+	}
+	return _u
+}
+
+// AddNightCacheReadMultiplier adds value to the "night_cache_read_multiplier" field.
+func (_u *GroupUpdate) AddNightCacheReadMultiplier(v float64) *GroupUpdate {
+	_u.mutation.AddNightCacheReadMultiplier(v)
+	return _u
+}
+
 // SetIsExclusive sets the "is_exclusive" field.
 func (_u *GroupUpdate) SetIsExclusive(v bool) *GroupUpdate {
 	_u.mutation.SetIsExclusive(v)
@@ -1724,6 +1738,12 @@ func (_u *GroupUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.AddedCacheReadMultiplier(); ok {
 		_spec.AddField(group.FieldCacheReadMultiplier, field.TypeFloat64, value)
 	}
+	if value, ok := _u.mutation.NightCacheReadMultiplier(); ok {
+		_spec.SetField(group.FieldNightCacheReadMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedNightCacheReadMultiplier(); ok {
+		_spec.AddField(group.FieldNightCacheReadMultiplier, field.TypeFloat64, value)
+	}
 	if value, ok := _u.mutation.IsExclusive(); ok {
 		_spec.SetField(group.FieldIsExclusive, field.TypeBool, value)
 	}
@@ -2585,6 +2605,20 @@ func (_u *GroupUpdateOne) AddCacheReadMultiplier(v float64) *GroupUpdateOne {
 func (_u *GroupUpdateOne) SetNightCacheReadMultiplier(v float64) *GroupUpdateOne {
 	_u.mutation.ResetNightCacheReadMultiplier()
 	_u.mutation.SetNightCacheReadMultiplier(v)
+	return _u
+}
+
+// SetNillableNightCacheReadMultiplier sets the "night_cache_read_multiplier" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableNightCacheReadMultiplier(v *float64) *GroupUpdateOne {
+	if v != nil {
+		_u.SetNightCacheReadMultiplier(*v)
+	}
+	return _u
+}
+
+// AddNightCacheReadMultiplier adds value to the "night_cache_read_multiplier" field.
+func (_u *GroupUpdateOne) AddNightCacheReadMultiplier(v float64) *GroupUpdateOne {
+	_u.mutation.AddNightCacheReadMultiplier(v)
 	return _u
 }
 
@@ -4069,6 +4103,12 @@ func (_u *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error)
 	}
 	if value, ok := _u.mutation.AddedCacheReadMultiplier(); ok {
 		_spec.AddField(group.FieldCacheReadMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.NightCacheReadMultiplier(); ok {
+		_spec.SetField(group.FieldNightCacheReadMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedNightCacheReadMultiplier(); ok {
+		_spec.AddField(group.FieldNightCacheReadMultiplier, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.IsExclusive(); ok {
 		_spec.SetField(group.FieldIsExclusive, field.TypeBool, value)
