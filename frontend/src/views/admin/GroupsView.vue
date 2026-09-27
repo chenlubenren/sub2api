@@ -1220,16 +1220,16 @@
         <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
           <div class="flex items-center justify-between gap-3">
           <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-            <input v-model="createForm.night_rate_enabled" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+            <input id="create-night-rate-enabled" v-model="createForm.night_rate_enabled" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
             <span>夜间计费规则（仅管理员可见）</span>
           </label>
-          <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('night', createForm)">应用于所有分组</button>
+          <button id="create-night-billing-apply-all" type="button" class="btn btn-secondary btn-sm" @click="applyNightBillingSettings(createForm, 'create')">应用于所有分组</button>
           </div>
           <div v-if="createForm.night_rate_enabled" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <label><span class="input-label">开始时间</span><input v-model="createForm.night_start" type="time" class="input" /></label>
-            <label><span class="input-label">结束时间</span><input v-model="createForm.night_end" type="time" class="input" /></label>
-            <label><span class="input-label">夜间倍率</span><input v-model.number="createForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
-            <label><span class="input-label">夜间缓存命中倍率</span><input v-model.number="createForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
+            <label><span class="input-label">开始时间</span><input id="create-night-start" v-model="createForm.night_start" type="time" class="input" /></label>
+            <label><span class="input-label">结束时间</span><input id="create-night-end" v-model="createForm.night_end" type="time" class="input" /></label>
+            <label><span class="input-label">夜间倍率</span><input id="create-night-rate-multiplier" v-model.number="createForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
+            <label><span class="input-label">夜间缓存命中倍率</span><input id="create-night-cache-read-multiplier" v-model.number="createForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -3046,16 +3046,16 @@
         <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
           <div class="flex items-center justify-between gap-3">
           <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-            <input v-model="editForm.night_rate_enabled" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+            <input id="edit-night-rate-enabled" v-model="editForm.night_rate_enabled" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
             <span>夜间计费规则（仅管理员可见）</span>
           </label>
-          <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('night', editForm)">应用于所有分组</button>
+          <button id="edit-night-billing-apply-all" type="button" class="btn btn-secondary btn-sm" @click="applyNightBillingSettings(editForm, 'edit')">应用于所有分组</button>
           </div>
           <div v-if="editForm.night_rate_enabled" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <label><span class="input-label">开始时间</span><input v-model="editForm.night_start" type="time" class="input" /></label>
-            <label><span class="input-label">结束时间</span><input v-model="editForm.night_end" type="time" class="input" /></label>
-            <label><span class="input-label">夜间倍率</span><input v-model.number="editForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
-            <label><span class="input-label">夜间缓存命中倍率</span><input v-model.number="editForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
+            <label><span class="input-label">开始时间</span><input id="edit-night-start" v-model="editForm.night_start" type="time" class="input" /></label>
+            <label><span class="input-label">结束时间</span><input id="edit-night-end" v-model="editForm.night_end" type="time" class="input" /></label>
+            <label><span class="input-label">夜间倍率</span><input id="edit-night-rate-multiplier" v-model.number="editForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
+            <label><span class="input-label">夜间缓存命中倍率</span><input id="edit-night-cache-read-multiplier" v-model.number="editForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -5355,15 +5355,131 @@ type BillingSettingsForm = {
   night_rate_multiplier: number
 }
 
-const applyBillingSetting = async (kind: 'rate' | 'cache' | 'peak' | 'night', form: BillingSettingsForm) => {
+type NightBillingSettings = Pick<
+  BillingSettingsForm,
+  | 'night_rate_enabled'
+  | 'night_start'
+  | 'night_end'
+  | 'night_rate_multiplier'
+  | 'night_cache_read_multiplier'
+>
+
+const readNightBillingInput = (
+  scope: 'create' | 'edit',
+  field: string,
+  fallback: string | number,
+): string | number => {
+  const input = document.getElementById(`${scope}-${field}`)
+  return input instanceof HTMLInputElement ? input.value : fallback
+}
+
+const readNightBillingSettings = (
+  form: BillingSettingsForm,
+  scope: 'create' | 'edit',
+): NightBillingSettings => {
+  const enabledInput = document.getElementById(`${scope}-night-rate-enabled`)
+  const nightRateEnabled = enabledInput instanceof HTMLInputElement
+    ? enabledInput.checked
+    : form.night_rate_enabled
+  const nightStart = String(readNightBillingInput(scope, 'night-start', form.night_start)).trim()
+  const nightEnd = String(readNightBillingInput(scope, 'night-end', form.night_end)).trim()
+  const nightRateMultiplier = Number(
+    readNightBillingInput(scope, 'night-rate-multiplier', form.night_rate_multiplier),
+  )
+  const nightCacheReadMultiplier = Number(
+    readNightBillingInput(
+      scope,
+      'night-cache-read-multiplier',
+      form.night_cache_read_multiplier,
+    ),
+  )
+
+  if (nightRateEnabled && (!nightStart || !nightEnd)) {
+    throw new Error('启用夜间计费时必须填写开始时间和结束时间')
+  }
+  if (!Number.isFinite(nightRateMultiplier) || nightRateMultiplier <= 0) {
+    throw new Error('夜间倍率必须大于 0')
+  }
+  if (!Number.isFinite(nightCacheReadMultiplier) || nightCacheReadMultiplier <= 0) {
+    throw new Error('夜间缓存命中倍率必须大于 0')
+  }
+
+  return {
+    night_rate_enabled: nightRateEnabled,
+    night_start: nightStart,
+    night_end: nightEnd,
+    night_rate_multiplier: nightRateMultiplier,
+    night_cache_read_multiplier: nightCacheReadMultiplier,
+  }
+}
+
+const nightBillingSettingsMatch = (
+  group: AdminGroup,
+  settings: NightBillingSettings,
+): boolean => {
+  const multiplierMatches = (actual: number, expected: number) =>
+    Math.abs(Number(actual) - expected) < 1e-9
+
+  return group.night_rate_enabled === settings.night_rate_enabled
+    && group.night_start === settings.night_start
+    && group.night_end === settings.night_end
+    && multiplierMatches(group.night_rate_multiplier, settings.night_rate_multiplier)
+    && multiplierMatches(
+      group.night_cache_read_multiplier,
+      settings.night_cache_read_multiplier,
+    )
+}
+
+const applyNightBillingSettings = async (
+  form: BillingSettingsForm,
+  scope: 'create' | 'edit',
+) => {
+  try {
+    const settings = readNightBillingSettings(form, scope)
+
+    // Keep the reactive form aligned with the exact values submitted from the visible inputs.
+    Object.assign(form, settings)
+
+    const result = await adminAPI.groups.updateBillingSettings({
+      kind: 'night',
+      ...settings,
+    })
+    const allGroups = await adminAPI.groups.getAllIncludingInactive()
+    const mismatchedGroups = allGroups.filter(
+      (group) => !nightBillingSettingsMatch(group, settings),
+    )
+
+    await loadGroups()
+
+    if (result.updated !== allGroups.length || mismatchedGroups.length > 0) {
+      console.error('Night billing settings verification failed', {
+        submitted: settings,
+        updated: result.updated,
+        expected: allGroups.length,
+        mismatchedGroupIds: mismatchedGroups.map((group) => group.id),
+      })
+      appStore.showError(
+        `批量应用校验失败：${mismatchedGroups.length} 个分组设置不一致，请重试`,
+      )
+      return
+    }
+
+    appStore.showSuccess(`已应用并核验 ${result.updated} 个分组`)
+  } catch (error) {
+    console.error('Failed to apply night billing settings to groups:', error)
+    appStore.showError(
+      error instanceof Error ? error.message : '应用到所有分组失败',
+    )
+  }
+}
+
+const applyBillingSetting = async (kind: 'rate' | 'cache' | 'peak', form: BillingSettingsForm) => {
   try {
     const payload = kind === 'rate'
       ? { rate_multiplier: normalizeRateMultiplier(form.rate_multiplier) }
       : kind === 'cache'
         ? { cache_read_multiplier: normalizeRateMultiplier(form.cache_read_multiplier) }
-        : kind === 'peak'
-          ? { peak_rate_enabled: form.peak_rate_enabled, peak_start: form.peak_start, peak_end: form.peak_end, peak_rate_multiplier: normalizeRateMultiplier(form.peak_rate_multiplier) }
-          : { night_rate_enabled: form.night_rate_enabled, night_start: form.night_start, night_end: form.night_end, night_rate_multiplier: normalizeRateMultiplier(form.night_rate_multiplier), night_cache_read_multiplier: normalizeRateMultiplier(form.night_cache_read_multiplier) }
+        : { peak_rate_enabled: form.peak_rate_enabled, peak_start: form.peak_start, peak_end: form.peak_end, peak_rate_multiplier: normalizeRateMultiplier(form.peak_rate_multiplier) }
     const result = await adminAPI.groups.updateBillingSettings({ kind, ...payload })
     appStore.showSuccess(`已应用到 ${result.updated} 个分组`)
     await loadGroups()

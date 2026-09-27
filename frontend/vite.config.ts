@@ -25,11 +25,29 @@ function mockResponse(res: import('http').ServerResponse, data: unknown, status 
   res.end(JSON.stringify({ code: 0, message: 'ok', data }))
 }
 
+async function readMockJsonBody(req: import('http').IncomingMessage): Promise<Record<string, unknown>> {
+  const chunks: Buffer[] = []
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+  }
+  if (chunks.length === 0) return {}
+  return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>
+}
+
 function createMockApi(): Plugin {
   const mockGroups = [
     { id: 1, name: 'OpenAI Pro', description: '本地模拟 OpenAI 分组', platform: 'openai', rate_multiplier: 1.2, cache_read_multiplier: 1.1, night_cache_read_multiplier: 1.2, is_exclusive: false, status: 'active', subscription_type: 'subscription', daily_limit_usd: 25, weekly_limit_usd: 100, monthly_limit_usd: 300, long_context_pricing_enabled: true, peak_rate_enabled: false, peak_start: '', peak_end: '', peak_rate_multiplier: 1, night_rate_enabled: true, night_start: '01:30', night_end: '06:30', night_rate_multiplier: 1.5, rpm_limit: 0, model_pricing: [], sort_order: 1 },
     { id: 2, name: 'Claude Standard', description: '本地模拟 Anthropic 分组', platform: 'anthropic', rate_multiplier: 1, cache_read_multiplier: 1.1, night_cache_read_multiplier: 1.2, is_exclusive: false, status: 'active', subscription_type: 'standard', daily_limit_usd: null, weekly_limit_usd: null, monthly_limit_usd: null, long_context_pricing_enabled: true, peak_rate_enabled: false, peak_start: '', peak_end: '', peak_rate_multiplier: 1, night_rate_enabled: true, night_start: '01:30', night_end: '06:30', night_rate_multiplier: 1.5, rpm_limit: 0, model_pricing: [], sort_order: 2 }
   ]
+  for (let id = 3; id <= 12; id += 1) {
+    const template = mockGroups[(id - 1) % 2]
+    mockGroups.push({
+      ...template,
+      id,
+      name: `Mock Group ${id}`,
+      sort_order: id,
+    })
+  }
   const mockSubscriptions = [
     { id: 1, user_id: 1001, group_id: 1, status: 'active', starts_at: '2026-09-01T00:00:00Z', expires_at: '2026-10-01T00:00:00Z', daily_usage_usd: 1.2, weekly_usage_usd: 5.4, monthly_usage_usd: 12.8, daily_window_start: '2026-09-25T00:00:00Z', weekly_window_start: '2026-09-22T00:00:00Z', monthly_window_start: '2026-09-01T00:00:00Z', created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-25T00:00:00Z', user: mockUser, group: mockGroups[0] }
   ]
@@ -37,7 +55,7 @@ function createMockApi(): Plugin {
     name: 'local-mock-api',
     apply: 'serve',
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
+      server.middlewares.use(async (req, res, next) => {
         const path = new URL(req.url || '/', 'http://localhost').pathname
         if (!path.startsWith('/api/v1/')) return next()
 
@@ -92,6 +110,19 @@ function createMockApi(): Plugin {
         }
         if (path === '/api/v1/admin/dashboard/stats') {
           return mockResponse(res, { total_users: 12, active_users: 8, total_api_keys: 18, active_api_keys: 14, today_requests: 128, total_requests: 12684, today_actual_cost: 3.2, total_actual_cost: 438.9, total_account_cost: 0, today_tokens: 92000, total_tokens: 9840000 })
+        }
+        if (path === '/api/v1/admin/groups/billing-settings' && req.method === 'PUT') {
+          const settings = await readMockJsonBody(req)
+          if (settings.kind === 'night') {
+            mockGroups.forEach((group) => {
+              group.night_rate_enabled = Boolean(settings.night_rate_enabled)
+              group.night_start = String(settings.night_start ?? '')
+              group.night_end = String(settings.night_end ?? '')
+              group.night_rate_multiplier = Number(settings.night_rate_multiplier)
+              group.night_cache_read_multiplier = Number(settings.night_cache_read_multiplier)
+            })
+          }
+          return mockResponse(res, { updated: mockGroups.length })
         }
         if (path === '/api/v1/admin/groups/all') return mockResponse(res, mockGroups)
         if (path === '/api/v1/admin/groups') return mockResponse(res, { items: mockGroups, total: mockGroups.length, page: 1, page_size: 20, pages: 1 })
