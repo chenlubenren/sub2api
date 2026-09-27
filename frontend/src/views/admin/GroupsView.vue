@@ -1229,7 +1229,7 @@
             <label><span class="input-label">开始时间</span><input v-model="createForm.night_start" type="time" class="input" /></label>
             <label><span class="input-label">结束时间</span><input v-model="createForm.night_end" type="time" class="input" /></label>
             <label><span class="input-label">夜间倍率</span><input v-model.number="createForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
-            <label><span class="input-label">夜间缓存命中倍率（仅管理员可见）</span><input v-model.number="createForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
+            <label><span class="input-label">夜间缓存命中倍率</span><input v-model.number="createForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -3055,7 +3055,7 @@
             <label><span class="input-label">开始时间</span><input v-model="editForm.night_start" type="time" class="input" /></label>
             <label><span class="input-label">结束时间</span><input v-model="editForm.night_end" type="time" class="input" /></label>
             <label><span class="input-label">夜间倍率</span><input v-model.number="editForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
-            <label><span class="input-label">夜间缓存命中倍率（仅管理员可见）</span><input v-model.number="editForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
+            <label><span class="input-label">夜间缓存命中倍率</span><input v-model.number="editForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -5366,7 +5366,22 @@ const applyBillingSetting = async (kind: 'rate' | 'cache' | 'peak' | 'night', fo
         : kind === 'peak'
           ? { peak_rate_enabled: form.peak_rate_enabled, peak_start: form.peak_start, peak_end: form.peak_end, peak_rate_multiplier: normalizeRateMultiplier(form.peak_rate_multiplier) }
           : { night_rate_enabled: form.night_rate_enabled, night_start: form.night_start, night_end: form.night_end, night_rate_multiplier: normalizeRateMultiplier(form.night_rate_multiplier), night_cache_read_multiplier: normalizeRateMultiplier(form.night_cache_read_multiplier) }
-    await Promise.all(targets.map(group => adminAPI.groups.update(group.id, payload)))
+    const failedGroupNames: string[] = []
+    // Apply sequentially so the panel rate limiter cannot drop part of a bulk edit.
+    // A success message is only shown when every target has persisted the setting.
+    for (const group of targets) {
+      try {
+        await adminAPI.groups.update(group.id, payload)
+      } catch (error) {
+        console.error(`Failed to apply billing setting to group ${group.id}:`, error)
+        failedGroupNames.push(group.name)
+      }
+    }
+    if (failedGroupNames.length > 0) {
+      await loadGroups()
+      appStore.showError(`有 ${failedGroupNames.length} 个分组未应用，请重试：${failedGroupNames.join('、')}`)
+      return
+    }
     appStore.showSuccess(`已应用到 ${targets.length} 个分组`)
     await loadGroups()
   } catch (error) {

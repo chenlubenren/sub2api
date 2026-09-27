@@ -825,6 +825,12 @@ export interface CreateGroupRequest {
   peak_start?: string
   peak_end?: string
   peak_rate_multiplier?: number
+  cache_read_multiplier?: number
+  night_rate_enabled?: boolean
+  night_start?: string
+  night_end?: string
+  night_rate_multiplier?: number
+  night_cache_read_multiplier?: number
   // 分组利润控制（五个 token 平台；margin/buffer 为小数）
   profit_control_enabled?: boolean
   profit_min_margin?: number
