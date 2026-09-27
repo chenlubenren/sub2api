@@ -221,7 +221,7 @@ export async function update(id: number, updates: UpdateGroupRequest): Promise<A
 }
 
 export async function updateBillingSettings(settings: {
-  kind: 'rate' | 'cache' | 'peak' | 'night'
+  kind: 'rate' | 'cache' | 'night-cache' | 'peak' | 'night'
   rate_multiplier?: number
   cache_read_multiplier?: number
   peak_rate_enabled?: boolean
