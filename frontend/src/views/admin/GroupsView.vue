@@ -1229,13 +1229,7 @@
             <label><span class="input-label">开始时间</span><input v-model="createForm.night_start" type="time" class="input" /></label>
             <label><span class="input-label">结束时间</span><input v-model="createForm.night_end" type="time" class="input" /></label>
             <label><span class="input-label">夜间倍率</span><input v-model.number="createForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
-            <div>
-              <div class="mb-2 flex items-center justify-between gap-3">
-                <label class="input-label mb-0">夜间缓存命中倍率</label>
-                <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('night-cache', createForm)">应用于所有分组</button>
-              </div>
-              <input v-model.number="createForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" />
-            </div>
+            <label><span class="input-label">夜间缓存命中倍率</span><input v-model.number="createForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -3061,13 +3055,7 @@
             <label><span class="input-label">开始时间</span><input v-model="editForm.night_start" type="time" class="input" /></label>
             <label><span class="input-label">结束时间</span><input v-model="editForm.night_end" type="time" class="input" /></label>
             <label><span class="input-label">夜间倍率</span><input v-model.number="editForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
-            <div>
-              <div class="mb-2 flex items-center justify-between gap-3">
-                <label class="input-label mb-0">夜间缓存命中倍率</label>
-                <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('night-cache', editForm)">应用于所有分组</button>
-              </div>
-              <input v-model.number="editForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" />
-            </div>
+            <label><span class="input-label">夜间缓存命中倍率</span><input v-model.number="editForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -5367,14 +5355,12 @@ type BillingSettingsForm = {
   night_rate_multiplier: number
 }
 
-const applyBillingSetting = async (kind: 'rate' | 'cache' | 'night-cache' | 'peak' | 'night', form: BillingSettingsForm) => {
+const applyBillingSetting = async (kind: 'rate' | 'cache' | 'peak' | 'night', form: BillingSettingsForm) => {
   try {
     const payload = kind === 'rate'
       ? { rate_multiplier: normalizeRateMultiplier(form.rate_multiplier) }
       : kind === 'cache'
         ? { cache_read_multiplier: normalizeRateMultiplier(form.cache_read_multiplier) }
-        : kind === 'night-cache'
-          ? { night_cache_read_multiplier: normalizeRateMultiplier(form.night_cache_read_multiplier) }
         : kind === 'peak'
           ? { peak_rate_enabled: form.peak_rate_enabled, peak_start: form.peak_start, peak_end: form.peak_end, peak_rate_multiplier: normalizeRateMultiplier(form.peak_rate_multiplier) }
           : { night_rate_enabled: form.night_rate_enabled, night_start: form.night_start, night_end: form.night_end, night_rate_multiplier: normalizeRateMultiplier(form.night_rate_multiplier), night_cache_read_multiplier: normalizeRateMultiplier(form.night_cache_read_multiplier) }

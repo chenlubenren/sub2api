@@ -261,7 +261,7 @@ type UpdateGroupRequest struct {
 // apply to every eligible group. Keeping this server-side avoids browser-side
 // fan-out being interrupted by panel rate limits or navigation.
 type BulkBillingSettingsRequest struct {
-	Kind                     string   `json:"kind" binding:"required,oneof=rate cache night-cache peak night"`
+	Kind                     string   `json:"kind" binding:"required,oneof=rate cache peak night"`
 	RateMultiplier           *float64 `json:"rate_multiplier"`
 	CacheReadMultiplier      *float64 `json:"cache_read_multiplier"`
 	PeakRateEnabled          *bool    `json:"peak_rate_enabled"`
@@ -510,12 +510,6 @@ func (h *GroupHandler) UpdateBillingSettings(c *gin.Context) {
 			return
 		}
 		input.CacheReadMultiplier = req.CacheReadMultiplier
-	case "night-cache":
-		if req.NightCacheReadMultiplier == nil {
-			response.BadRequest(c, "night_cache_read_multiplier is required")
-			return
-		}
-		input.NightCacheReadMultiplier = req.NightCacheReadMultiplier
 	case "peak":
 		if req.PeakRateEnabled == nil || req.PeakStart == nil || req.PeakEnd == nil || req.PeakRateMultiplier == nil {
 			response.BadRequest(c, "complete peak billing settings are required")
