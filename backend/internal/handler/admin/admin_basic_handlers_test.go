@@ -33,6 +33,7 @@ func setupAdminRouter() (*gin.Engine, *stubAdminService) {
 
 	router.GET("/api/v1/admin/groups", groupHandler.List)
 	router.GET("/api/v1/admin/groups/all", groupHandler.GetAll)
+	router.PUT("/api/v1/admin/groups/billing-settings", groupHandler.UpdateBillingSettings)
 	router.GET("/api/v1/admin/groups/:id/models-list-candidates", groupHandler.GetModelsListCandidates)
 	router.GET("/api/v1/admin/groups/:id/composite-routes", groupHandler.ListCompositeRoutes)
 	router.POST("/api/v1/admin/groups/:id/composite-routes", groupHandler.CreateCompositeRoute)
@@ -264,6 +265,38 @@ func TestGroupHandlerEndpoints(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/groups/2/api-keys", nil)
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestGroupHandlerBulkNightBillingIncludesCacheMultiplier(t *testing.T) {
+	router, adminSvc := setupAdminRouter()
+
+	body := bytes.NewBufferString(`{
+		"kind":"night",
+		"night_rate_enabled":true,
+		"night_start":"01:30",
+		"night_end":"06:30",
+		"night_rate_multiplier":1.0,
+		"night_cache_read_multiplier":1.1
+	}`)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/groups/billing-settings", body)
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Contains(t, rec.Body.String(), `"updated":1`)
+	require.Len(t, adminSvc.updatedGroups, 1)
+	input := adminSvc.updatedGroups[0]
+	require.NotNil(t, input.NightRateEnabled)
+	require.True(t, *input.NightRateEnabled)
+	require.NotNil(t, input.NightStart)
+	require.Equal(t, "01:30", *input.NightStart)
+	require.NotNil(t, input.NightEnd)
+	require.Equal(t, "06:30", *input.NightEnd)
+	require.NotNil(t, input.NightRateMultiplier)
+	require.InDelta(t, 1.0, *input.NightRateMultiplier, 1e-12)
+	require.NotNil(t, input.NightCacheReadMultiplier)
+	require.InDelta(t, 1.1, *input.NightCacheReadMultiplier, 1e-12)
 }
 
 func TestProxyHandlerEndpoints(t *testing.T) {

@@ -27,6 +27,7 @@ type stubAdminService struct {
 	createdProxies                      []*service.CreateProxyInput
 	updatedProxyIDs                     []int64
 	updatedProxies                      []*service.UpdateProxyInput
+	updatedGroups                       []*service.UpdateGroupInput
 	testedProxyIDs                      []int64
 	getUserErr                          error
 	createAccountErr                    error
@@ -367,6 +368,8 @@ func (s *stubAdminService) RecoverDuplicateGroup(ctx context.Context, id int64, 
 }
 
 func (s *stubAdminService) UpdateGroup(ctx context.Context, id int64, input *service.UpdateGroupInput) (*service.Group, error) {
+	inputSnapshot := *input
+	s.updatedGroups = append(s.updatedGroups, &inputSnapshot)
 	group := service.Group{ID: id, Name: input.Name, Status: service.StatusActive}
 	return &group, nil
 }
