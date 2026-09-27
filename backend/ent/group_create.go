@@ -232,6 +232,20 @@ func (_c *GroupCreate) SetNillableCacheReadMultiplier(v *float64) *GroupCreate {
 	return _c
 }
 
+// SetNightCacheReadMultiplier sets the "night_cache_read_multiplier" field.
+func (_c *GroupCreate) SetNightCacheReadMultiplier(v float64) *GroupCreate {
+	_c.mutation.SetNightCacheReadMultiplier(v)
+	return _c
+}
+
+// SetNillableNightCacheReadMultiplier sets the "night_cache_read_multiplier" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableNightCacheReadMultiplier(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetNightCacheReadMultiplier(*v)
+	}
+	return _c
+}
+
 // SetIsExclusive sets the "is_exclusive" field.
 func (_c *GroupCreate) SetIsExclusive(v bool) *GroupCreate {
 	_c.mutation.SetIsExclusive(v)
@@ -1157,6 +1171,10 @@ func (_c *GroupCreate) defaults() error {
 		v := group.DefaultCacheReadMultiplier
 		_c.mutation.SetCacheReadMultiplier(v)
 	}
+	if _, ok := _c.mutation.NightCacheReadMultiplier(); !ok {
+		v := group.DefaultNightCacheReadMultiplier
+		_c.mutation.SetNightCacheReadMultiplier(v)
+	}
 	if _, ok := _c.mutation.IsExclusive(); !ok {
 		v := group.DefaultIsExclusive
 		_c.mutation.SetIsExclusive(v)
@@ -1369,6 +1387,9 @@ func (_c *GroupCreate) check() error {
 	}
 	if _, ok := _c.mutation.CacheReadMultiplier(); !ok {
 		return &ValidationError{Name: "cache_read_multiplier", err: errors.New(`ent: missing required field "Group.cache_read_multiplier"`)}
+	}
+	if _, ok := _c.mutation.NightCacheReadMultiplier(); !ok {
+		return &ValidationError{Name: "night_cache_read_multiplier", err: errors.New(`ent: missing required field "Group.night_cache_read_multiplier"`)}
 	}
 	if _, ok := _c.mutation.IsExclusive(); !ok {
 		return &ValidationError{Name: "is_exclusive", err: errors.New(`ent: missing required field "Group.is_exclusive"`)}
@@ -1619,6 +1640,10 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CacheReadMultiplier(); ok {
 		_spec.SetField(group.FieldCacheReadMultiplier, field.TypeFloat64, value)
 		_node.CacheReadMultiplier = value
+	}
+	if value, ok := _c.mutation.NightCacheReadMultiplier(); ok {
+		_spec.SetField(group.FieldNightCacheReadMultiplier, field.TypeFloat64, value)
+		_node.NightCacheReadMultiplier = value
 	}
 	if value, ok := _c.mutation.IsExclusive(); ok {
 		_spec.SetField(group.FieldIsExclusive, field.TypeBool, value)
@@ -2201,6 +2226,24 @@ func (u *GroupUpsert) UpdateCacheReadMultiplier() *GroupUpsert {
 // AddCacheReadMultiplier adds v to the "cache_read_multiplier" field.
 func (u *GroupUpsert) AddCacheReadMultiplier(v float64) *GroupUpsert {
 	u.Add(group.FieldCacheReadMultiplier, v)
+	return u
+}
+
+// SetNightCacheReadMultiplier sets the "night_cache_read_multiplier" field.
+func (u *GroupUpsert) SetNightCacheReadMultiplier(v float64) *GroupUpsert {
+	u.Set(group.FieldNightCacheReadMultiplier, v)
+	return u
+}
+
+// UpdateNightCacheReadMultiplier sets the "night_cache_read_multiplier" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateNightCacheReadMultiplier() *GroupUpsert {
+	u.SetExcluded(group.FieldNightCacheReadMultiplier)
+	return u
+}
+
+// AddNightCacheReadMultiplier adds v to the "night_cache_read_multiplier" field.
+func (u *GroupUpsert) AddNightCacheReadMultiplier(v float64) *GroupUpsert {
+	u.Add(group.FieldNightCacheReadMultiplier, v)
 	return u
 }
 
@@ -3411,6 +3454,27 @@ func (u *GroupUpsertOne) AddCacheReadMultiplier(v float64) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdateCacheReadMultiplier() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateCacheReadMultiplier()
+	})
+}
+
+// SetNightCacheReadMultiplier sets the "night_cache_read_multiplier" field.
+func (u *GroupUpsertOne) SetNightCacheReadMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetNightCacheReadMultiplier(v)
+	})
+}
+
+// AddNightCacheReadMultiplier adds v to the "night_cache_read_multiplier" field.
+func (u *GroupUpsertOne) AddNightCacheReadMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddNightCacheReadMultiplier(v)
+	})
+}
+
+// UpdateNightCacheReadMultiplier sets the "night_cache_read_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateNightCacheReadMultiplier() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateNightCacheReadMultiplier()
 	})
 }
 
@@ -4941,6 +5005,27 @@ func (u *GroupUpsertBulk) AddCacheReadMultiplier(v float64) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdateCacheReadMultiplier() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateCacheReadMultiplier()
+	})
+}
+
+// SetNightCacheReadMultiplier sets the "night_cache_read_multiplier" field.
+func (u *GroupUpsertBulk) SetNightCacheReadMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetNightCacheReadMultiplier(v)
+	})
+}
+
+// AddNightCacheReadMultiplier adds v to the "night_cache_read_multiplier" field.
+func (u *GroupUpsertBulk) AddNightCacheReadMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddNightCacheReadMultiplier(v)
+	})
+}
+
+// UpdateNightCacheReadMultiplier sets the "night_cache_read_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateNightCacheReadMultiplier() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateNightCacheReadMultiplier()
 	})
 }
 

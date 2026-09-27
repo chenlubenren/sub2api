@@ -1863,6 +1863,26 @@ func TestComputeTokenBreakdown_HiddenCacheReadMultiplier(t *testing.T) {
 	require.InDelta(t, 2.0, bd.CacheReadCost, 1e-12)
 }
 
+func TestCacheReadBillingMultiplierAt_AppliesRegularAndNightRates(t *testing.T) {
+	group := &Group{
+		NightRateEnabled:         true,
+		NightStart:               "01:30",
+		NightEnd:                 "06:30",
+		CacheReadMultiplier:      1.1,
+		NightCacheReadMultiplier: 1.2,
+	}
+
+	regular := &CostBreakdown{CacheReadCost: 1, TotalCost: 1, ActualCost: 1}
+	applyCacheReadBillingMultiplier(regular, cacheReadBillingMultiplierAt(group, at(12, 0)))
+	require.InDelta(t, 1.1, regular.CacheReadCost, 1e-12)
+	require.InDelta(t, 1.1, regular.TotalCost, 1e-12)
+
+	night := &CostBreakdown{CacheReadCost: 1, TotalCost: 1, ActualCost: 1}
+	applyCacheReadBillingMultiplier(night, cacheReadBillingMultiplierAt(group, at(2, 0)))
+	require.InDelta(t, 1.2, night.CacheReadCost, 1e-12)
+	require.InDelta(t, 1.2, night.TotalCost, 1e-12)
+}
+
 func TestComputeTokenBreakdown_NonExplicitZeroImagePrice_FallsBackToOutput(t *testing.T) {
 	svc := newTestBillingService()
 

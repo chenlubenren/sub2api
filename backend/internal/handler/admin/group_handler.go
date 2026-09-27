@@ -125,6 +125,7 @@ type CreateGroupRequest struct {
 	NightEnd                     string   `json:"night_end"`
 	NightRateMultiplier          *float64 `json:"night_rate_multiplier"`
 	CacheReadMultiplier          *float64 `json:"cache_read_multiplier"`
+	NightCacheReadMultiplier     *float64 `json:"night_cache_read_multiplier"`
 
 	ProfitControlEnabled            bool                          `json:"profit_control_enabled"`
 	ProfitMinMargin                 *float64                      `json:"profit_min_margin"`
@@ -206,6 +207,7 @@ type UpdateGroupRequest struct {
 	NightEnd                     *string  `json:"night_end"`
 	NightRateMultiplier          *float64 `json:"night_rate_multiplier"`
 	CacheReadMultiplier          *float64 `json:"cache_read_multiplier"`
+	NightCacheReadMultiplier     *float64 `json:"night_cache_read_multiplier"`
 
 	ProfitControlEnabled            *bool                         `json:"profit_control_enabled"`
 	ProfitMinMargin                 *float64                      `json:"profit_min_margin"`
@@ -550,7 +552,7 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		PeakStart:                    req.PeakStart,
 		PeakEnd:                      req.PeakEnd,
 		PeakRateMultiplier:           req.PeakRateMultiplier,
-		NightRateEnabled:             req.NightRateEnabled, NightStart: req.NightStart, NightEnd: req.NightEnd, NightRateMultiplier: req.NightRateMultiplier, CacheReadMultiplier: req.CacheReadMultiplier,
+		NightRateEnabled:             req.NightRateEnabled, NightStart: req.NightStart, NightEnd: req.NightEnd, NightRateMultiplier: req.NightRateMultiplier, CacheReadMultiplier: req.CacheReadMultiplier, NightCacheReadMultiplier: req.NightCacheReadMultiplier,
 		ProfitControlEnabled:            req.ProfitControlEnabled,
 		ProfitMinMargin:                 req.ProfitMinMargin,
 		ProfitSafetyBuffer:              req.ProfitSafetyBuffer,
@@ -684,7 +686,7 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		PeakStart:                    req.PeakStart,
 		PeakEnd:                      req.PeakEnd,
 		PeakRateMultiplier:           req.PeakRateMultiplier,
-		NightRateEnabled:             req.NightRateEnabled, NightStart: req.NightStart, NightEnd: req.NightEnd, NightRateMultiplier: req.NightRateMultiplier, CacheReadMultiplier: req.CacheReadMultiplier,
+		NightRateEnabled:             req.NightRateEnabled, NightStart: req.NightStart, NightEnd: req.NightEnd, NightRateMultiplier: req.NightRateMultiplier, CacheReadMultiplier: req.CacheReadMultiplier, NightCacheReadMultiplier: req.NightCacheReadMultiplier,
 		ProfitControlEnabled:            req.ProfitControlEnabled,
 		ProfitMinMargin:                 req.ProfitMinMargin,
 		ProfitSafetyBuffer:              req.ProfitSafetyBuffer,

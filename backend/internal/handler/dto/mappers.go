@@ -153,6 +153,7 @@ func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
 		NightEnd:                    g.NightEnd,
 		NightRateMultiplier:         g.NightRateMultiplier,
 		CacheReadMultiplier:         g.CacheReadMultiplier,
+		NightCacheReadMultiplier:    g.NightCacheReadMultiplier,
 		ForceOpenAIFast:             g.ForceOpenAIFast,
 		FreeOpenAIFast:              g.FreeOpenAIFast,
 		ProfitControlEnabled:        g.ProfitControlEnabled,

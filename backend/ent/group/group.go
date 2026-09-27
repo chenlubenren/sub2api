@@ -46,6 +46,8 @@ const (
 	FieldNightRateMultiplier = "night_rate_multiplier"
 	// FieldCacheReadMultiplier holds the string denoting the cache_read_multiplier field in the database.
 	FieldCacheReadMultiplier = "cache_read_multiplier"
+	// FieldNightCacheReadMultiplier holds the string denoting the night_cache_read_multiplier field in the database.
+	FieldNightCacheReadMultiplier = "night_cache_read_multiplier"
 	// FieldIsExclusive holds the string denoting the is_exclusive field in the database.
 	FieldIsExclusive = "is_exclusive"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -248,6 +250,7 @@ var Columns = []string{
 	FieldNightEnd,
 	FieldNightRateMultiplier,
 	FieldCacheReadMultiplier,
+	FieldNightCacheReadMultiplier,
 	FieldIsExclusive,
 	FieldStatus,
 	FieldDuplicateOperationID,
@@ -369,6 +372,8 @@ var (
 	DefaultNightRateMultiplier float64
 	// DefaultCacheReadMultiplier holds the default value on creation for the "cache_read_multiplier" field.
 	DefaultCacheReadMultiplier float64
+	// DefaultNightCacheReadMultiplier holds the default value on creation for the "night_cache_read_multiplier" field.
+	DefaultNightCacheReadMultiplier float64
 	// DefaultIsExclusive holds the default value on creation for the "is_exclusive" field.
 	DefaultIsExclusive bool
 	// DefaultStatus holds the default value on creation for the "status" field.
@@ -546,6 +551,11 @@ func ByNightRateMultiplier(opts ...sql.OrderTermOption) OrderOption {
 // ByCacheReadMultiplier orders the results by the cache_read_multiplier field.
 func ByCacheReadMultiplier(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCacheReadMultiplier, opts...).ToFunc()
+}
+
+// ByNightCacheReadMultiplier orders the results by the night_cache_read_multiplier field.
+func ByNightCacheReadMultiplier(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNightCacheReadMultiplier, opts...).ToFunc()
 }
 
 // ByIsExclusive orders the results by the is_exclusive field.

@@ -35,9 +35,11 @@ type Group struct {
 	NightRateMultiplier float64
 	// 内部缓存读取计费倍率，仅管理员可见。
 	CacheReadMultiplier float64
-	IsExclusive         bool
-	Status              string
-	Hydrated            bool // indicates the group was loaded from a trusted repository source
+	// 内部夜间缓存读取计费倍率，仅管理员可见。
+	NightCacheReadMultiplier float64
+	IsExclusive              bool
+	Status                   string
+	Hydrated                 bool // indicates the group was loaded from a trusted repository source
 	// DuplicateOperationID is internal persistence metadata used only to recover
 	// an already committed one-click copy. It must never be mapped to API DTOs.
 	DuplicateOperationID string
@@ -349,6 +351,43 @@ func (g *Group) PeakMultiplierAt(now time.Time) float64 {
 		return g.PeakRateMultiplier
 	}
 	return 1.0
+}
+
+// CacheReadMultiplierAt returns the cache-read billing multiplier for the
+// configured local-time window. The cache-read schedule is internal billing
+// policy and applies to every group; it uses the group's local-time window.
+func (g *Group) CacheReadMultiplierAt(now time.Time) float64 {
+	if g == nil {
+		return 1.1
+	}
+	regular := g.CacheReadMultiplier
+	if regular <= 0 {
+		regular = 1.1
+	}
+	if !g.NightRateEnabled {
+		return regular
+	}
+	if now.IsZero() {
+		now = timezone.Now()
+	}
+	start, okStart := parseMinutes(g.NightStart)
+	end, okEnd := parseMinutes(g.NightEnd)
+	if !okStart {
+		start, _ = parseMinutes("01:30")
+	}
+	if !okEnd {
+		end, _ = parseMinutes("06:30")
+	}
+	t := now.In(timezone.Location())
+	cur := t.Hour()*60 + t.Minute()
+	if start < end && cur >= start && cur < end {
+		night := g.NightCacheReadMultiplier
+		if night <= 0 {
+			night = 1.2
+		}
+		return night
+	}
+	return regular
 }
 
 // ValidatePeakRateConfig 是高峰倍率配置的唯一校验来源，供 handler 与 service 层共用。

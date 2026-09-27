@@ -130,6 +130,11 @@ func CacheReadMultiplier(v float64) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldCacheReadMultiplier, v))
 }
 
+// NightCacheReadMultiplier applies equality check predicate on the "night_cache_read_multiplier" field. It's identical to NightCacheReadMultiplierEQ.
+func NightCacheReadMultiplier(v float64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldNightCacheReadMultiplier, v))
+}
+
 // IsExclusive applies equality check predicate on the "is_exclusive" field. It's identical to IsExclusiveEQ.
 func IsExclusive(v bool) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldIsExclusive, v))
@@ -1078,6 +1083,46 @@ func CacheReadMultiplierLT(v float64) predicate.Group {
 // CacheReadMultiplierLTE applies the LTE predicate on the "cache_read_multiplier" field.
 func CacheReadMultiplierLTE(v float64) predicate.Group {
 	return predicate.Group(sql.FieldLTE(FieldCacheReadMultiplier, v))
+}
+
+// NightCacheReadMultiplierEQ applies the EQ predicate on the "night_cache_read_multiplier" field.
+func NightCacheReadMultiplierEQ(v float64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldNightCacheReadMultiplier, v))
+}
+
+// NightCacheReadMultiplierNEQ applies the NEQ predicate on the "night_cache_read_multiplier" field.
+func NightCacheReadMultiplierNEQ(v float64) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldNightCacheReadMultiplier, v))
+}
+
+// NightCacheReadMultiplierIn applies the In predicate on the "night_cache_read_multiplier" field.
+func NightCacheReadMultiplierIn(vs ...float64) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldNightCacheReadMultiplier, vs...))
+}
+
+// NightCacheReadMultiplierNotIn applies the NotIn predicate on the "night_cache_read_multiplier" field.
+func NightCacheReadMultiplierNotIn(vs ...float64) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldNightCacheReadMultiplier, vs...))
+}
+
+// NightCacheReadMultiplierGT applies the GT predicate on the "night_cache_read_multiplier" field.
+func NightCacheReadMultiplierGT(v float64) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldNightCacheReadMultiplier, v))
+}
+
+// NightCacheReadMultiplierGTE applies the GTE predicate on the "night_cache_read_multiplier" field.
+func NightCacheReadMultiplierGTE(v float64) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldNightCacheReadMultiplier, v))
+}
+
+// NightCacheReadMultiplierLT applies the LT predicate on the "night_cache_read_multiplier" field.
+func NightCacheReadMultiplierLT(v float64) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldNightCacheReadMultiplier, v))
+}
+
+// NightCacheReadMultiplierLTE applies the LTE predicate on the "night_cache_read_multiplier" field.
+func NightCacheReadMultiplierLTE(v float64) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldNightCacheReadMultiplier, v))
 }
 
 // IsExclusiveEQ applies the EQ predicate on the "is_exclusive" field.

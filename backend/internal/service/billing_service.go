@@ -317,7 +317,7 @@ type BillingService struct {
 // hiddenCacheReadCostMultiplier is applied only in backend billing. The
 // public pricing responses continue to expose the upstream/base cache-read
 // price so this internal adjustment is not shown in the user-facing UI.
-const defaultCacheReadCostMultiplier = 2.0
+const defaultCacheReadCostMultiplier = 1.1
 
 // NewBillingService 创建计费服务实例
 func NewBillingService(cfg *config.Config, pricingService *PricingService) *BillingService {
@@ -1307,11 +1307,11 @@ type CostInput struct {
 	LongContextBillingEnabled *bool
 }
 
-func cacheReadBillingMultiplier(group *Group) float64 {
-	if group == nil || group.CacheReadMultiplier <= 0 {
+func cacheReadBillingMultiplierAt(group *Group, at time.Time) float64 {
+	if group == nil {
 		return defaultCacheReadCostMultiplier
 	}
-	return group.CacheReadMultiplier
+	return group.CacheReadMultiplierAt(at)
 }
 
 func applyCacheReadBillingMultiplier(cost *CostBreakdown, multiplier float64) {
@@ -1345,7 +1345,7 @@ func (s *BillingService) CalculateCostUnified(input CostInput) (*CostBreakdown, 
 			applyCostBreakdownMultiplier(breakdown, maxReasoningEffortBillingMultiplier(input.Model, input.ReasoningEffort, nil))
 		}
 		if err == nil {
-			applyCacheReadBillingMultiplier(breakdown, cacheReadBillingMultiplier(input.Group))
+			applyCacheReadBillingMultiplier(breakdown, cacheReadBillingMultiplierAt(input.Group, input.PricingAt))
 		}
 		return breakdown, err
 	}
@@ -1374,7 +1374,7 @@ func (s *BillingService) CalculateCostUnified(input CostInput) (*CostBreakdown, 
 		breakdown, err = s.calculateTokenCost(resolved, input)
 	}
 	if err == nil && breakdown != nil {
-		applyCacheReadBillingMultiplier(breakdown, cacheReadBillingMultiplier(input.Group))
+		applyCacheReadBillingMultiplier(breakdown, cacheReadBillingMultiplierAt(input.Group, input.PricingAt))
 		breakdown.BillingMode = string(resolved.Mode)
 		if breakdown.BillingMode == "" {
 			breakdown.BillingMode = string(BillingModeToken)

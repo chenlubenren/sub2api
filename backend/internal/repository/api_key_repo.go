@@ -1027,7 +1027,7 @@ func groupEntityToService(g *dbent.Group) *service.Group {
 		PeakStart:                       g.PeakStart,
 		PeakEnd:                         g.PeakEnd,
 		PeakRateMultiplier:              g.PeakRateMultiplier,
-		NightRateEnabled:                g.NightRateEnabled, NightStart: g.NightStart, NightEnd: g.NightEnd, NightRateMultiplier: g.NightRateMultiplier, CacheReadMultiplier: g.CacheReadMultiplier,
+		NightRateEnabled:                g.NightRateEnabled, NightStart: g.NightStart, NightEnd: g.NightEnd, NightRateMultiplier: g.NightRateMultiplier, CacheReadMultiplier: g.CacheReadMultiplier, NightCacheReadMultiplier: g.NightCacheReadMultiplier,
 		ProfitControlEnabled: g.ProfitControlEnabled,
 		ProfitMinMargin:      g.ProfitMinMargin,
 		ProfitSafetyBuffer:   g.ProfitSafetyBuffer,

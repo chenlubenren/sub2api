@@ -167,6 +167,26 @@ func TestPeakMultiplierAt_StandardTypeDegradesToOne(t *testing.T) {
 	}
 }
 
+func TestCacheReadMultiplierAt_UsesRegularAndNightRates(t *testing.T) {
+	g := &Group{
+		SubscriptionType:         SubscriptionTypeSubscription,
+		NightRateEnabled:         true,
+		NightStart:               "01:30",
+		NightEnd:                 "06:30",
+		CacheReadMultiplier:      1.1,
+		NightCacheReadMultiplier: 1.2,
+	}
+	if got := g.CacheReadMultiplierAt(at(1, 29)); got != 1.1 {
+		t.Fatalf("outside night window: got %v, want 1.1", got)
+	}
+	if got := g.CacheReadMultiplierAt(at(1, 30)); got != 1.2 {
+		t.Fatalf("night window start: got %v, want 1.2", got)
+	}
+	if got := g.CacheReadMultiplierAt(at(6, 30)); got != 1.1 {
+		t.Fatalf("night window end: got %v, want 1.1", got)
+	}
+}
+
 // TestPeakMultiplier_GatewayBillingSequence 调用 gateway_service.recordUsageCore 与
 // openai_gateway_service.RecordUsage 共用的 computePeakAwareMultipliers，验证计费叠加顺序：
 // 图片按次倍率基于基础倍率算出且不受高峰影响，高峰因子只乘入 token 倍率。

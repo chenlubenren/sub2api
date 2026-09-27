@@ -23628,6 +23628,8 @@ type GroupMutation struct {
 	addnight_rate_multiplier                *float64
 	cache_read_multiplier                   *float64
 	addcache_read_multiplier                *float64
+	night_cache_read_multiplier             *float64
+	addnight_cache_read_multiplier          *float64
 	is_exclusive                            *bool
 	status                                  *string
 	duplicate_operation_id                  *string
@@ -24478,6 +24480,62 @@ func (m *GroupMutation) AddedCacheReadMultiplier() (r float64, exists bool) {
 func (m *GroupMutation) ResetCacheReadMultiplier() {
 	m.cache_read_multiplier = nil
 	m.addcache_read_multiplier = nil
+}
+
+// SetNightCacheReadMultiplier sets the "night_cache_read_multiplier" field.
+func (m *GroupMutation) SetNightCacheReadMultiplier(f float64) {
+	m.night_cache_read_multiplier = &f
+	m.addnight_cache_read_multiplier = nil
+}
+
+// NightCacheReadMultiplier returns the value of the "night_cache_read_multiplier" field in the mutation.
+func (m *GroupMutation) NightCacheReadMultiplier() (r float64, exists bool) {
+	v := m.night_cache_read_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNightCacheReadMultiplier returns the old "night_cache_read_multiplier" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldNightCacheReadMultiplier(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNightCacheReadMultiplier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNightCacheReadMultiplier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNightCacheReadMultiplier: %w", err)
+	}
+	return oldValue.NightCacheReadMultiplier, nil
+}
+
+// AddNightCacheReadMultiplier adds f to the "night_cache_read_multiplier" field.
+func (m *GroupMutation) AddNightCacheReadMultiplier(f float64) {
+	if m.addnight_cache_read_multiplier != nil {
+		*m.addnight_cache_read_multiplier += f
+	} else {
+		m.addnight_cache_read_multiplier = &f
+	}
+}
+
+// AddedNightCacheReadMultiplier returns the value that was added to the "night_cache_read_multiplier" field in this mutation.
+func (m *GroupMutation) AddedNightCacheReadMultiplier() (r float64, exists bool) {
+	v := m.addnight_cache_read_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetNightCacheReadMultiplier resets all changes to the "night_cache_read_multiplier" field.
+func (m *GroupMutation) ResetNightCacheReadMultiplier() {
+	m.night_cache_read_multiplier = nil
+	m.addnight_cache_read_multiplier = nil
 }
 
 // SetIsExclusive sets the "is_exclusive" field.
@@ -27676,7 +27734,7 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 71)
+	fields := make([]string, 0, 72)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -27721,6 +27779,9 @@ func (m *GroupMutation) Fields() []string {
 	}
 	if m.cache_read_multiplier != nil {
 		fields = append(fields, group.FieldCacheReadMultiplier)
+	}
+	if m.night_cache_read_multiplier != nil {
+		fields = append(fields, group.FieldNightCacheReadMultiplier)
 	}
 	if m.is_exclusive != nil {
 		fields = append(fields, group.FieldIsExclusive)
@@ -27928,6 +27989,8 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.NightRateMultiplier()
 	case group.FieldCacheReadMultiplier:
 		return m.CacheReadMultiplier()
+	case group.FieldNightCacheReadMultiplier:
+		return m.NightCacheReadMultiplier()
 	case group.FieldIsExclusive:
 		return m.IsExclusive()
 	case group.FieldStatus:
@@ -28079,6 +28142,8 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldNightRateMultiplier(ctx)
 	case group.FieldCacheReadMultiplier:
 		return m.OldCacheReadMultiplier(ctx)
+	case group.FieldNightCacheReadMultiplier:
+		return m.OldNightCacheReadMultiplier(ctx)
 	case group.FieldIsExclusive:
 		return m.OldIsExclusive(ctx)
 	case group.FieldStatus:
@@ -28304,6 +28369,13 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCacheReadMultiplier(v)
+		return nil
+	case group.FieldNightCacheReadMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNightCacheReadMultiplier(v)
 		return nil
 	case group.FieldIsExclusive:
 		v, ok := value.(bool)
@@ -28717,6 +28789,9 @@ func (m *GroupMutation) AddedFields() []string {
 	if m.addcache_read_multiplier != nil {
 		fields = append(fields, group.FieldCacheReadMultiplier)
 	}
+	if m.addnight_cache_read_multiplier != nil {
+		fields = append(fields, group.FieldNightCacheReadMultiplier)
+	}
 	if m.adddaily_limit_usd != nil {
 		fields = append(fields, group.FieldDailyLimitUsd)
 	}
@@ -28808,6 +28883,8 @@ func (m *GroupMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedNightRateMultiplier()
 	case group.FieldCacheReadMultiplier:
 		return m.AddedCacheReadMultiplier()
+	case group.FieldNightCacheReadMultiplier:
+		return m.AddedNightCacheReadMultiplier()
 	case group.FieldDailyLimitUsd:
 		return m.AddedDailyLimitUsd()
 	case group.FieldWeeklyLimitUsd:
@@ -28894,6 +28971,13 @@ func (m *GroupMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddCacheReadMultiplier(v)
+		return nil
+	case group.FieldNightCacheReadMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddNightCacheReadMultiplier(v)
 		return nil
 	case group.FieldDailyLimitUsd:
 		v, ok := value.(float64)
@@ -29276,6 +29360,9 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldCacheReadMultiplier:
 		m.ResetCacheReadMultiplier()
+		return nil
+	case group.FieldNightCacheReadMultiplier:
+		m.ResetNightCacheReadMultiplier()
 		return nil
 	case group.FieldIsExclusive:
 		m.ResetIsExclusive()

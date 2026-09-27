@@ -599,9 +599,10 @@
           <p class="input-hint">{{ t("admin.groups.copyAccounts.hint") }}</p>
         </div>
         <div>
-          <label class="input-label">{{
-            t("admin.groups.form.rateMultiplier")
-          }}</label>
+          <label class="input-label flex items-center justify-between gap-3">
+            <span>{{ t("admin.groups.form.rateMultiplier") }}</span>
+            <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('rate', createForm)">应用于所有分组</button>
+          </label>
           <input
             v-model.number="createForm.rate_multiplier"
             type="number"
@@ -612,7 +613,13 @@
             data-tour="group-form-multiplier"
           />
           <p class="input-hint">{{ t("admin.groups.rateMultiplierHint") }}</p>
-          <button type="button" class="btn btn-secondary btn-sm mt-2" @click="applyBillingSetting('rate', createForm)">应用于所有分组</button>
+        </div>
+        <div>
+          <div class="mb-2 flex items-center justify-between gap-3">
+            <label class="input-label mb-0">缓存命中倍率（仅管理员可见）</label>
+            <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('cache', createForm)">应用于所有分组</button>
+          </div>
+          <input v-model.number="createForm.cache_read_multiplier" type="number" step="0.001" min="0.001" required class="input" />
         </div>
         <div>
           <label class="input-label">{{ t("admin.groups.form.rpmLimit") }}</label>
@@ -1222,7 +1229,7 @@
             <label><span class="input-label">开始时间</span><input v-model="createForm.night_start" type="time" class="input" /></label>
             <label><span class="input-label">结束时间</span><input v-model="createForm.night_end" type="time" class="input" /></label>
             <label><span class="input-label">夜间倍率</span><input v-model.number="createForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
-            <label><span class="input-label">夜间缓存命中倍率</span><input v-model.number="createForm.cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
+            <label><span class="input-label">夜间缓存命中倍率（仅管理员可见）</span><input v-model.number="createForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -2417,9 +2424,10 @@
           </p>
         </div>
         <div>
-          <label class="input-label">{{
-            t("admin.groups.form.rateMultiplier")
-          }}</label>
+          <label class="input-label flex items-center justify-between gap-3">
+            <span>{{ t("admin.groups.form.rateMultiplier") }}</span>
+            <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('rate', editForm)">应用于所有分组</button>
+          </label>
           <input
             v-model.number="editForm.rate_multiplier"
             type="number"
@@ -2429,7 +2437,13 @@
             class="input"
             data-tour="group-form-multiplier"
           />
-          <button type="button" class="btn btn-secondary btn-sm mt-2" @click="applyBillingSetting('rate', editForm)">应用于所有分组</button>
+        </div>
+        <div>
+          <div class="mb-2 flex items-center justify-between gap-3">
+            <label class="input-label mb-0">缓存命中倍率（仅管理员可见）</label>
+            <button type="button" class="btn btn-secondary btn-sm" @click="applyBillingSetting('cache', editForm)">应用于所有分组</button>
+          </div>
+          <input v-model.number="editForm.cache_read_multiplier" type="number" step="0.001" min="0.001" required class="input" />
         </div>
         <div>
           <label class="input-label">{{ t("admin.groups.form.rpmLimit") }}</label>
@@ -3041,7 +3055,7 @@
             <label><span class="input-label">开始时间</span><input v-model="editForm.night_start" type="time" class="input" /></label>
             <label><span class="input-label">结束时间</span><input v-model="editForm.night_end" type="time" class="input" /></label>
             <label><span class="input-label">夜间倍率</span><input v-model.number="editForm.night_rate_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
-            <label><span class="input-label">夜间缓存命中倍率</span><input v-model.number="editForm.cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
+            <label><span class="input-label">夜间缓存命中倍率（仅管理员可见）</span><input v-model.number="editForm.night_cache_read_multiplier" type="number" step="0.001" min="0.001" class="input" /></label>
           </div>
         </div>
 
@@ -5251,7 +5265,8 @@ const createForm = reactive({
   description: "",
   platform: "anthropic" as GroupPlatform,
   rate_multiplier: 1.0,
-  cache_read_multiplier: 2.0,
+  cache_read_multiplier: 1.1,
+  night_cache_read_multiplier: 1.2,
   is_exclusive: false,
   subscription_type: "standard" as SubscriptionType,
   daily_limit_usd: null as number | null,
@@ -5329,6 +5344,7 @@ const createForm = reactive({
 type BillingSettingsForm = {
   rate_multiplier: number
   cache_read_multiplier: number
+  night_cache_read_multiplier: number
   peak_rate_enabled: boolean
   peak_start: string
   peak_end: string
@@ -5349,7 +5365,7 @@ const applyBillingSetting = async (kind: 'rate' | 'cache' | 'peak' | 'night', fo
         ? { cache_read_multiplier: normalizeRateMultiplier(form.cache_read_multiplier) }
         : kind === 'peak'
           ? { peak_rate_enabled: form.peak_rate_enabled, peak_start: form.peak_start, peak_end: form.peak_end, peak_rate_multiplier: normalizeRateMultiplier(form.peak_rate_multiplier) }
-          : { night_rate_enabled: form.night_rate_enabled, night_start: form.night_start, night_end: form.night_end, night_rate_multiplier: normalizeRateMultiplier(form.night_rate_multiplier), cache_read_multiplier: normalizeRateMultiplier(form.cache_read_multiplier) }
+          : { night_rate_enabled: form.night_rate_enabled, night_start: form.night_start, night_end: form.night_end, night_rate_multiplier: normalizeRateMultiplier(form.night_rate_multiplier), night_cache_read_multiplier: normalizeRateMultiplier(form.night_cache_read_multiplier) }
     await Promise.all(targets.map(group => adminAPI.groups.update(group.id, payload)))
     appStore.showSuccess(`已应用到 ${targets.length} 个分组`)
     await loadGroups()
@@ -5652,7 +5668,8 @@ const editForm = reactive({
   description: "",
   platform: "anthropic" as GroupPlatform,
   rate_multiplier: 1.0,
-  cache_read_multiplier: 2.0,
+  cache_read_multiplier: 1.1,
+  night_cache_read_multiplier: 1.2,
   is_exclusive: false,
   status: "active" as "active" | "inactive",
   subscription_type: "standard" as SubscriptionType,
@@ -6120,7 +6137,8 @@ const closeCreateModal = () => {
   createForm.description = "";
   createForm.platform = "anthropic";
   createForm.rate_multiplier = 1.0;
-  createForm.cache_read_multiplier = 2.0;
+  createForm.cache_read_multiplier = 1.1;
+  createForm.night_cache_read_multiplier = 1.2;
   createForm.is_exclusive = false;
   createForm.subscription_type = "standard";
   createForm.daily_limit_usd = null;
@@ -6359,6 +6377,7 @@ const handleCreateGroup = async () => {
     requestData.night_end = createForm.night_end;
     requestData.night_rate_multiplier = normalizeRateMultiplier(createForm.night_rate_multiplier);
     requestData.cache_read_multiplier = normalizeRateMultiplier(createForm.cache_read_multiplier);
+    requestData.night_cache_read_multiplier = normalizeRateMultiplier(createForm.night_cache_read_multiplier);
     await adminAPI.groups.create(requestData);
     appStore.showSuccess(t("admin.groups.groupCreated"));
     closeCreateModal();
@@ -6427,7 +6446,8 @@ const handleEdit = async (group: AdminGroup) => {
   editForm.night_start = group.night_start ?? "01:30";
   editForm.night_end = group.night_end ?? "06:30";
   editForm.night_rate_multiplier = group.night_rate_multiplier ?? 1.5;
-  editForm.cache_read_multiplier = group.cache_read_multiplier ?? 2.0;
+  editForm.cache_read_multiplier = group.cache_read_multiplier ?? 1.1;
+  editForm.night_cache_read_multiplier = group.night_cache_read_multiplier ?? 1.2;
   editForm.profit_control_enabled = group.profit_control_enabled ?? false;
   editForm.profit_min_margin_percent = decimalToPercent(
     group.profit_min_margin ?? 0,
@@ -6525,7 +6545,8 @@ const closeEditModal = () => {
   editForm.night_start = "01:30";
   editForm.night_end = "06:30";
   editForm.night_rate_multiplier = 1.5;
-  editForm.cache_read_multiplier = 2.0;
+  editForm.cache_read_multiplier = 1.1;
+  editForm.night_cache_read_multiplier = 1.2;
   editForm.profit_control_enabled = false;
   editForm.profit_min_margin_percent = 0;
   editForm.profit_safety_buffer_percent = 0;
@@ -6709,6 +6730,7 @@ const handleUpdateGroup = async () => {
     payload.night_end = editForm.night_end;
     payload.night_rate_multiplier = normalizeRateMultiplier(editForm.night_rate_multiplier);
     payload.cache_read_multiplier = normalizeRateMultiplier(editForm.cache_read_multiplier);
+    payload.night_cache_read_multiplier = normalizeRateMultiplier(editForm.night_cache_read_multiplier);
     await adminAPI.groups.update(editingGroup.value.id, payload);
     appStore.showSuccess(t("admin.groups.groupUpdated"));
     closeEditModal();

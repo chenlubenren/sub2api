@@ -407,6 +407,9 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 	if input.CacheReadMultiplier != nil && *input.CacheReadMultiplier <= 0 {
 		return nil, errors.New("cache_read_multiplier must be > 0")
 	}
+	if input.NightCacheReadMultiplier != nil && *input.NightCacheReadMultiplier <= 0 {
+		return nil, errors.New("night_cache_read_multiplier must be > 0")
+	}
 
 	profitMinMargin := 0.0
 	if input.ProfitMinMargin != nil {
@@ -509,7 +512,8 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		NightStart:                      input.NightStart,
 		NightEnd:                        input.NightEnd,
 		NightRateMultiplier:             groupFloat64ValueOrDefault(input.NightRateMultiplier, 1.5),
-		CacheReadMultiplier:             groupFloat64ValueOrDefault(input.CacheReadMultiplier, 2.0),
+		CacheReadMultiplier:             groupFloat64ValueOrDefault(input.CacheReadMultiplier, 1.1),
+		NightCacheReadMultiplier:        groupFloat64ValueOrDefault(input.NightCacheReadMultiplier, 1.2),
 		ProfitControlEnabled:            profitControlEnabled,
 		ProfitMinMargin:                 profitMinMargin,
 		ProfitSafetyBuffer:              profitSafetyBuffer,
@@ -815,6 +819,12 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 			return nil, errors.New("cache_read_multiplier must be > 0")
 		}
 		group.CacheReadMultiplier = *input.CacheReadMultiplier
+	}
+	if input.NightCacheReadMultiplier != nil {
+		if *input.NightCacheReadMultiplier <= 0 {
+			return nil, errors.New("night_cache_read_multiplier must be > 0")
+		}
+		group.NightCacheReadMultiplier = *input.NightCacheReadMultiplier
 	}
 	// 先归一化（非订阅分组——含本次更新转为非订阅——静默清空高峰配置，清洗停用状态下的脏字段），
 	// 再收敛校验：Update 可能只传部分 peak 字段，需对合并后的最终配置统一校验，

@@ -265,6 +265,13 @@ func (_u *GroupUpdate) AddCacheReadMultiplier(v float64) *GroupUpdate {
 	return _u
 }
 
+// SetNightCacheReadMultiplier sets the "night_cache_read_multiplier" field.
+func (_u *GroupUpdate) SetNightCacheReadMultiplier(v float64) *GroupUpdate {
+	_u.mutation.ResetNightCacheReadMultiplier()
+	_u.mutation.SetNightCacheReadMultiplier(v)
+	return _u
+}
+
 // SetIsExclusive sets the "is_exclusive" field.
 func (_u *GroupUpdate) SetIsExclusive(v bool) *GroupUpdate {
 	_u.mutation.SetIsExclusive(v)
@@ -2571,6 +2578,13 @@ func (_u *GroupUpdateOne) SetNillableCacheReadMultiplier(v *float64) *GroupUpdat
 // AddCacheReadMultiplier adds value to the "cache_read_multiplier" field.
 func (_u *GroupUpdateOne) AddCacheReadMultiplier(v float64) *GroupUpdateOne {
 	_u.mutation.AddCacheReadMultiplier(v)
+	return _u
+}
+
+// SetNightCacheReadMultiplier sets the "night_cache_read_multiplier" field.
+func (_u *GroupUpdateOne) SetNightCacheReadMultiplier(v float64) *GroupUpdateOne {
+	_u.mutation.ResetNightCacheReadMultiplier()
+	_u.mutation.SetNightCacheReadMultiplier(v)
 	return _u
 }
 

@@ -124,6 +124,7 @@ func createGroupRecord(ctx context.Context, client *dbent.Client, groupIn *servi
 		SetNightEnd(groupIn.NightEnd).
 		SetNightRateMultiplier(groupIn.NightRateMultiplier).
 		SetCacheReadMultiplier(groupIn.CacheReadMultiplier).
+		SetNightCacheReadMultiplier(groupIn.NightCacheReadMultiplier).
 		SetProfitControlEnabled(groupIn.ProfitControlEnabled).
 		SetProfitMinMargin(groupIn.ProfitMinMargin).
 		SetProfitSafetyBuffer(groupIn.ProfitSafetyBuffer)
@@ -309,6 +310,7 @@ func (r *groupRepository) Update(ctx context.Context, groupIn *service.Group) er
 		SetNightEnd(groupIn.NightEnd).
 		SetNightRateMultiplier(groupIn.NightRateMultiplier).
 		SetCacheReadMultiplier(groupIn.CacheReadMultiplier).
+		SetNightCacheReadMultiplier(groupIn.NightCacheReadMultiplier).
 		SetProfitControlEnabled(groupIn.ProfitControlEnabled).
 		SetProfitMinMargin(groupIn.ProfitMinMargin).
 		SetProfitSafetyBuffer(groupIn.ProfitSafetyBuffer)
