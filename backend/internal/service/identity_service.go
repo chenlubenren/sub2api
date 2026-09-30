@@ -27,7 +27,8 @@ var (
 	// fingerprintUserAgentPattern 校验可写入账号级持久身份的 User-Agent 形态：
 	// <product>/<major>.<minor>.<patch> 之后必须紧跟空白或字符串结束。
 	// 版本号带 -local / -dev / +build 等后缀的本地构建一律不接受。
-	fingerprintUserAgentPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+/\d+\.\d+\.\d+(\s|$)`)
+	fingerprintUserAgentPattern   = regexp.MustCompile(`^[A-Za-z0-9._-]+/\d+\.\d+\.\d+(\s|$)`)
+	claudeCLIUAVersionPrefixRegex = regexp.MustCompile(`(?i)^(claude-cli)/\d+\.\d+\.\d+`)
 )
 
 const (

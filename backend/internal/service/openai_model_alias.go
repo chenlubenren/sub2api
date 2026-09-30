@@ -158,10 +158,6 @@ func isOpenAIGPT6AstraModel(model string) bool {
 	return normalized == "gpt-6" || normalized == "gpt-6-astra" || strings.HasPrefix(normalized, "gpt-6-astra-")
 }
 
-func isOpenAIGPT6Model(model string) bool {
-	return isOpenAIGPT6AstraModel(model) || isOpenAIGPT6SolOrLunaModel(model)
-}
-
 func appendUsageBillingModelCandidate(candidates []string, seen map[string]struct{}, model string) []string {
 	trimmed := strings.TrimSpace(model)
 	if trimmed == "" {

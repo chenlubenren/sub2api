@@ -114,7 +114,7 @@ func mergeCodexModelsManifestBodies(bodies [][]byte) ([]byte, error) {
 //   - every fetch failed → the last upstream error
 //   - partial failure → successful accounts are still merged and a warning
 //     naming the failed account IDs is logged.
-func (s *OpenAIGatewayService) FetchPinnedCodexModelsManifest(ctx context.Context, group *Group, clientVersion string) (*CodexModelsManifest, *Account, error) {
+func (s *OpenAIGatewayService) FetchPinnedCodexModelsManifest(ctx context.Context, group *Group, clientVersion string) (*OpenAIModelsResponse, *Account, error) {
 	if s == nil || s.accountRepo == nil || group == nil {
 		return nil, nil, ErrNoPinnedCodexModelsAccounts
 	}
@@ -207,7 +207,7 @@ func (s *OpenAIGatewayService) FetchPinnedCodexModelsManifest(ctx context.Contex
 		return nil, nil, fmt.Errorf("merge pinned codex models manifests: %w", err)
 	}
 	firstAccount := *successAccounts[0]
-	return &CodexModelsManifest{
+	return &OpenAIModelsResponse{
 		Body: merged,
 		ETag: codexModelsManifestBodyETag(merged),
 	}, &firstAccount, nil
