@@ -185,6 +185,16 @@ const routes: RouteRecordRaw[] = [
       titleKey: 'modelPlaza.title'
     }
   },
+  {
+    path: '/model-pricing',
+    name: 'ModelPricing',
+    component: () => import('@/views/ModelPlazaView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Model Pricing'
+    }
+  },
 
   // ==================== User Routes ====================
   {
@@ -411,6 +421,14 @@ const routes: RouteRecordRaw[] = [
       title: 'Admin Dashboard',
       titleKey: 'admin.dashboard.title',
       descriptionKey: 'admin.dashboard.description'
+    }
+  },
+  {
+    path: '/admin/model-pricing',
+    redirect: '/admin/channels/pricing',
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true
     }
   },
   {

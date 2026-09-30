@@ -28,7 +28,7 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 
 // embedded=1 但未登录(如转发的链接)自动降级为独立形态。
-const isEmbedded = computed(() => route.query.embedded === '1' && authStore.isAuthenticated)
+const isEmbedded = computed(() => (route.query.embedded === '1' || route.path === '/model-pricing') && authStore.isAuthenticated)
 
 const data = ref<ModelPlazaResponse | null>(null)
 const loading = ref(true)
