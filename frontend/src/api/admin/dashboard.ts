@@ -249,6 +249,28 @@ export interface UserSpendingRankingParams
   limit?: number
 }
 
+export interface SubscriptionAnalyticsItem {
+  subscription_id: number
+  subscription_name: string
+  user_id: number
+  email: string
+  average_recharge_amount: number
+  average_monthly_actual_cost: number
+  average_daily_usage: number
+  daily_limit: number
+  daily_limit_utilization: number
+}
+
+export interface SubscriptionAnalyticsResponse {
+  items: SubscriptionAnalyticsItem[]
+  generated_at: string
+}
+
+export async function getSubscriptionAnalytics(): Promise<SubscriptionAnalyticsResponse> {
+  const { data } = await apiClient.get<SubscriptionAnalyticsResponse>('/admin/dashboard/subscription-analytics')
+  return data
+}
+
 /**
  * Get user usage trend data
  * @param params - Query parameters for filtering
@@ -341,6 +363,7 @@ export const dashboardAPI = {
   getApiKeyUsageTrend,
   getUserUsageTrend,
   getUserSpendingRanking,
+  getSubscriptionAnalytics,
   getBatchUsersUsage,
   getBatchApiKeysUsage
 }

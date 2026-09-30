@@ -98,7 +98,7 @@
         <!-- Row 2: Token Stats -->
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <!-- Today Tokens -->
-          <div class="card p-4">
+          <button type="button" class="card p-4 text-left transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" @click="openDailyTokenTrend">
             <div class="flex items-center gap-3">
               <div class="rounded-lg bg-amber-100 p-2 dark:bg-amber-900/30">
                 <Icon name="cube" size="md" class="text-amber-600 dark:text-amber-400" :stroke-width="2" />
@@ -131,10 +131,10 @@
                 </p>
               </div>
             </div>
-          </div>
+          </button>
 
           <!-- Total Tokens -->
-          <div class="card p-4">
+          <button type="button" class="card p-4 text-left transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" @click="openDailyTokenTrend">
             <div class="flex items-center gap-3">
               <div class="rounded-lg bg-indigo-100 p-2 dark:bg-indigo-900/30">
                 <Icon name="database" size="md" class="text-indigo-600 dark:text-indigo-400" :stroke-width="2" />
@@ -167,7 +167,7 @@
                 </p>
               </div>
             </div>
-          </div>
+          </button>
 
           <!-- Performance (RPM/TPM) -->
           <div class="card p-4">
@@ -289,6 +289,9 @@
         </div>
       </template>
     </div>
+    <BaseDialog :show="dailyTrendOpen" :title="'每日 Token 波动（近 30 天）'" width="wide" @close="dailyTrendOpen = false">
+      <TokenUsageTrend :trend-data="dailyTrendData" :loading="dailyTrendLoading" />
+    </BaseDialog>
   </AppLayout>
 </template>
 
@@ -314,6 +317,7 @@ import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import Select from '@/components/common/Select.vue'
 import ModelDistributionChart from '@/components/charts/ModelDistributionChart.vue'
 import TokenUsageTrend from '@/components/charts/TokenUsageTrend.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 
 import {
   Chart as ChartJS,
@@ -355,6 +359,9 @@ const rankingItems = ref<UserSpendingRankingItem[]>([])
 const rankingTotalActualCost = ref(0)
 const rankingTotalRequests = ref(0)
 const rankingTotalTokens = ref(0)
+const dailyTrendOpen = ref(false)
+const dailyTrendLoading = ref(false)
+const dailyTrendData = ref<TrendDataPoint[]>([])
 let chartLoadSeq = 0
 let usersTrendLoadSeq = 0
 let rankingLoadSeq = 0
@@ -371,6 +378,27 @@ const getLast24HoursRangeDates = (): { start: string; end: string } => {
   return {
     start: formatLocalDate(start),
     end: formatLocalDate(end)
+  }
+}
+
+const openDailyTokenTrend = async () => {
+  dailyTrendOpen.value = true
+  dailyTrendLoading.value = true
+  const end = new Date()
+  const start = new Date(end)
+  start.setDate(start.getDate() - 29)
+  try {
+    const response = await adminAPI.dashboard.getUsageTrend({
+      start_date: formatLocalDate(start),
+      end_date: formatLocalDate(end),
+      granularity: 'day'
+    })
+    dailyTrendData.value = response.trend || []
+  } catch (error) {
+    console.error('Error loading daily token trend:', error)
+    dailyTrendData.value = []
+  } finally {
+    dailyTrendLoading.value = false
   }
 }
 
