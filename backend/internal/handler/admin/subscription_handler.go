@@ -101,6 +101,17 @@ func (h *SubscriptionHandler) List(c *gin.Context) {
 	response.PaginatedWithResult(c, out, toResponsePagination(pagination))
 }
 
+// GetAnalytics returns per-subscription usage and utilization analytics.
+// GET /api/v1/admin/dashboard/subscription-analytics
+func (h *SubscriptionHandler) GetAnalytics(c *gin.Context) {
+	analytics, err := h.subscriptionService.GetSubscriptionAnalytics(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, analytics)
+}
+
 // GetByID handles getting a subscription by ID
 // GET /api/v1/admin/subscriptions/:id
 func (h *SubscriptionHandler) GetByID(c *gin.Context) {
