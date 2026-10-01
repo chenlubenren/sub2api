@@ -118,7 +118,15 @@ func (h *ModelPlazaHandler) GetPricing(c *gin.Context) {
 		response.Unauthorized(c, "Authentication required")
 		return
 	}
-	h.get(c, true)
+	groups, err := h.plazaService.ListStandardPricing(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, modelPlazaResponse{
+		Description: "ChatGPT 与 Claude Code 常用模型的标准 1x 价格。",
+		Groups:      toModelPlazaGroupsDTO(groups, nil),
+	})
 }
 
 func (h *ModelPlazaHandler) get(c *gin.Context, authenticatedPricing bool) {
@@ -139,12 +147,6 @@ func (h *ModelPlazaHandler) get(c *gin.Context, authenticatedPricing bool) {
 	if h.settingService != nil {
 		runtime = h.settingService.GetModelPlazaRuntime(c.Request.Context())
 	}
-	if authenticatedPricing {
-		// The description is still useful on the user pricing page, but the
-		// public enable/require-auth switches must not gate this endpoint.
-		runtime.Enabled = true
-	}
-
 	subject, authed := middleware.GetAuthSubjectFromContext(c)
 	if runtime.RequireAuth && !authed {
 		response.Unauthorized(c, "Authentication required")
@@ -178,14 +180,19 @@ func (h *ModelPlazaHandler) get(c *gin.Context, authenticatedPricing bool) {
 
 	visible := filterPlazaVisibleGroups(groups, allowedGroups, restrictPublicGroups)
 
-	out := make([]modelPlazaGroup, 0, len(visible))
-	for i := range visible {
-		out = append(out, toModelPlazaGroupDTO(&visible[i], userRates))
-	}
+	out := toModelPlazaGroupsDTO(visible, userRates)
 	response.Success(c, modelPlazaResponse{
 		Description: runtime.Description,
 		Groups:      out,
 	})
+}
+
+func toModelPlazaGroupsDTO(groups []service.PlazaGroup, userRates map[int64]float64) []modelPlazaGroup {
+	out := make([]modelPlazaGroup, 0, len(groups))
+	for i := range groups {
+		out = append(out, toModelPlazaGroupDTO(&groups[i], userRates))
+	}
+	return out
 }
 
 // filterPlazaVisibleGroups 按登录态裁剪分组可见性。

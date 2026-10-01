@@ -313,11 +313,26 @@ type BillingService struct {
 	cfg            *config.Config
 	pricingService *PricingService
 	fallbackPrices map[string]*ModelPricing // 硬编码回退价格
+	// globalPricingOverrides are administrator-managed standard prices. They are
+	// intentionally applied after catalog/channel lookup so the global model
+	// pricing page is the single price source for the standard catalogue.
+	globalPricingMu        sync.RWMutex
+	globalPricingOverrides map[string]GlobalModelPricingOverride
 
 	// fallbackWarnSeen 记录已打过 fallback 警告日志的(已小写化)模型名,
 	// 让 "[Billing] Using fallback pricing" 每个模型每进程最多打一条,
 	// 避免热路径上每请求刷屏(issue #3394)。零值即可用,无需在构造函数初始化。
 	fallbackWarnSeen sync.Map
+}
+
+// GlobalModelPricingOverride is stored in USD per token and applies to all
+// requests for a standard catalogue model, independent of channel or group.
+type GlobalModelPricingOverride struct {
+	Model           string
+	InputPrice      float64
+	OutputPrice     float64
+	CacheWritePrice float64
+	CacheReadPrice  float64
 }
 
 // hiddenCacheReadCostMultiplier is applied only in backend billing. The
@@ -337,6 +352,84 @@ func NewBillingService(cfg *config.Config, pricingService *PricingService) *Bill
 	s.initFallbackPricing()
 
 	return s
+}
+
+// SetGlobalModelPricingOverrides replaces the process-local view of the
+// persisted administrator price cards. The caller persists first and only then
+// invokes this method, so readers either observe the former complete map or
+// the new complete map.
+func (s *BillingService) SetGlobalModelPricingOverrides(overrides []GlobalModelPricingOverride) {
+	if s == nil {
+		return
+	}
+	next := make(map[string]GlobalModelPricingOverride, len(overrides))
+	for _, override := range overrides {
+		key := normalizedGlobalPricingModel(override.Model)
+		if key == "" {
+			continue
+		}
+		override.Model = key
+		next[key] = override
+	}
+	s.globalPricingMu.Lock()
+	s.globalPricingOverrides = next
+	s.globalPricingMu.Unlock()
+}
+
+// HasGlobalModelPricingOverride reports whether a request model is governed by
+// the administrator's global standard price rather than a channel/group card.
+func (s *BillingService) HasGlobalModelPricingOverride(model string) bool {
+	if s == nil {
+		return false
+	}
+	s.globalPricingMu.RLock()
+	_, ok := s.globalPricingOverrides[normalizedGlobalPricingModel(model)]
+	s.globalPricingMu.RUnlock()
+	return ok
+}
+
+func normalizedGlobalPricingModel(model string) string {
+	model = strings.ToLower(strings.TrimSpace(model))
+	if model == "" {
+		return ""
+	}
+	if normalized := normalizeKnownOpenAICodexModel(model); normalized != "" {
+		return normalized
+	}
+	return model
+}
+
+// applyGlobalModelPricingOverride returns a clone so no cached catalog or
+// fallback price can be mutated by a request. Cache-write applies to both
+// cache windows because the global UI intentionally exposes one write price.
+func (s *BillingService) applyGlobalModelPricingOverride(model string, pricing *ModelPricing) *ModelPricing {
+	if s == nil || pricing == nil {
+		return pricing
+	}
+	s.globalPricingMu.RLock()
+	override, ok := s.globalPricingOverrides[normalizedGlobalPricingModel(model)]
+	s.globalPricingMu.RUnlock()
+	if !ok {
+		return pricing
+	}
+	cloned := *pricing
+	cloned.InputPricePerTokenPriority = channelTierOverridePrice(cloned.InputPricePerToken, cloned.InputPricePerTokenPriority, override.InputPrice)
+	cloned.InputPricePerToken = override.InputPrice
+	cloned.OutputPricePerTokenPriority = channelTierOverridePrice(cloned.OutputPricePerToken, cloned.OutputPricePerTokenPriority, override.OutputPrice)
+	cloned.OutputPricePerToken = override.OutputPrice
+	cloned.CacheCreationPricePerTokenPriority = channelTierOverridePrice(cloned.CacheCreationPricePerToken, cloned.CacheCreationPricePerTokenPriority, override.CacheWritePrice)
+	cloned.CacheCreationPricePerToken = override.CacheWritePrice
+	cloned.CacheCreation5mPrice = override.CacheWritePrice
+	cloned.CacheCreation1hPrice = override.CacheWritePrice
+	cloned.CacheCreationPriceExplicit = true
+	cloned.CacheReadPricePerTokenPriority = channelTierOverridePrice(cloned.CacheReadPricePerToken, cloned.CacheReadPricePerTokenPriority, override.CacheReadPrice)
+	cloned.CacheReadPricePerToken = override.CacheReadPrice
+	// The price cards represent a flat standard price. Do not keep a stale
+	// upstream long-context multiplier after an administrator changes it.
+	cloned.LongContextInputThreshold = 0
+	cloned.LongContextInputMultiplier = 0
+	cloned.LongContextOutputMultiplier = 0
+	return &cloned
 }
 
 // initFallbackPricing 初始化硬编码回退价格（当动态价格不可用时使用）
@@ -1255,7 +1348,7 @@ func (s *BillingService) GetModelPricing(model string) (*ModelPricing, error) {
 			price5m := litellmPricing.CacheCreationInputTokenCost
 			price1h := litellmPricing.CacheCreationInputTokenCostAbove1hr
 			enableBreakdown := price1h > 0 && price1h > price5m
-			return s.applyModelSpecificPricingPolicy(model, &ModelPricing{
+			return s.applyGlobalModelPricingOverride(model, s.applyModelSpecificPricingPolicy(model, &ModelPricing{
 				InputPricePerToken:                 litellmPricing.InputCostPerToken,
 				InputPricePerTokenPriority:         litellmPricing.InputCostPerTokenPriority,
 				OutputPricePerToken:                litellmPricing.OutputCostPerToken,
@@ -1275,7 +1368,7 @@ func (s *BillingService) GetModelPricing(model string) (*ModelPricing, error) {
 				LongContextOutputMultiplier:   litellmPricing.LongContextOutputCostMultiplier,
 				ImageInputPricePerToken:       litellmPricing.InputCostPerImageToken,
 				ImageOutputPricePerToken:      litellmPricing.OutputCostPerImageToken,
-			}), nil
+			})), nil
 		}
 	}
 
@@ -1287,7 +1380,7 @@ func (s *BillingService) GetModelPricing(model string) (*ModelPricing, error) {
 		if _, seen := s.fallbackWarnSeen.LoadOrStore(model, struct{}{}); !seen {
 			log.Printf("[Billing] Using fallback pricing for model: %s", model)
 		}
-		return s.applyModelSpecificPricingPolicy(model, fallback), nil
+		return s.applyGlobalModelPricingOverride(model, s.applyModelSpecificPricingPolicy(model, fallback)), nil
 	}
 
 	return nil, fmt.Errorf("%w for model: %s", ErrModelPricingUnavailable, model)
@@ -1319,7 +1412,7 @@ func (s *BillingService) GetModelPricingWithChannel(model string, channelPricing
 	}
 	pricing.ImageOutputPriceExplicit = true
 	applyChannelImageInputPrice(channelPricing, pricing)
-	return pricing, nil
+	return s.applyGlobalModelPricingOverride(model, pricing), nil
 }
 
 // channelTierOverridePrice applies a Standard-tier override while preserving

@@ -9,7 +9,9 @@ import (
 
 // SubscriptionAnalyticsItem is the per-subscription row used by the admin
 // analytics page. Costs are in USD and usage is averaged over the last seven
-// calendar days (including zero-use days).
+// completed calendar days (including zero-use days). The current, still-open
+// quota day is intentionally excluded so it cannot distort the historical
+// daily average.
 type SubscriptionAnalyticsItem struct {
 	SubscriptionID           int64   `json:"subscription_id"`
 	SubscriptionName         string  `json:"subscription_name"`
@@ -67,7 +69,10 @@ SELECT us.id,
        u.email,
        COALESCE(plan.recharge_amount, 0)::double precision,
        COALESCE(SUM(ul.actual_cost) FILTER (WHERE ul.created_at >= NOW() - INTERVAL '30 days'), 0)::double precision,
-       (COALESCE(SUM(ul.actual_cost) FILTER (WHERE ul.created_at >= NOW() - INTERVAL '7 days'), 0) / 7)::double precision,
+       (COALESCE(SUM(ul.actual_cost) FILTER (
+           WHERE ul.created_at >= CURRENT_DATE - INTERVAL '7 days'
+             AND ul.created_at < CURRENT_DATE
+       ), 0) / 7)::double precision,
        COALESCE(g.daily_limit_usd, 0)::double precision,
        COALESCE(plan.sort_order, g.sort_order, 0)
 FROM user_subscriptions us

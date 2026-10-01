@@ -144,6 +144,46 @@ function createMockApi(): Plugin {
     'claude-opus-5-5': [4, 20, 5, 0.2], 'claude-opus-5': [5, 25, 6.25, 0.5], 'claude-sonnet-5-5': [2, 10, 2.5, 0.2], 'claude-sonnet-5': [2, 10, 2.5, 0.2],
     'claude-opus-4-8': [5, 25, 6.25, 0.5], 'claude-opus-4-7': [5, 25, 6.25, 0.5], 'claude-opus-4-6': [5, 25, 6.25, 0.5], 'claude-sonnet-4-6': [3, 15, 3.75, 0.3], 'claude-haiku-4-5': [1, 5, 1.25, 0.1]
   }
+  const mockPricingCatalog = [
+    { model: 'gpt-5.5', label: 'GPT-5.5', platform: 'openai' },
+    { model: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', platform: 'openai' },
+    { model: 'gpt-5.6-terra', label: 'GPT-5.6 Terra', platform: 'openai' },
+    { model: 'gpt-5.6-luna', label: 'GPT-5.6 Luna', platform: 'openai' },
+    { model: 'gpt-6-astra', label: 'GPT-6 Astra', platform: 'openai' },
+    { model: 'gpt-6-sol', label: 'GPT-6 Sol', platform: 'openai' },
+    { model: 'gpt-6-luna', label: 'GPT-6 Luna', platform: 'openai' },
+    { model: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', platform: 'openai' },
+    { model: 'claude-opus-5-5', label: 'Claude Opus 5.5', platform: 'anthropic' },
+    { model: 'claude-opus-5', label: 'Claude Opus 5', platform: 'anthropic' },
+    { model: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', platform: 'anthropic' },
+    { model: 'claude-sonnet-5', label: 'Claude Sonnet 5', platform: 'anthropic' },
+    { model: 'claude-opus-4-8', label: 'Claude Opus 4.8', platform: 'anthropic' },
+    { model: 'claude-opus-4-7', label: 'Claude Opus 4.7', platform: 'anthropic' },
+    { model: 'claude-opus-4-6', label: 'Claude Opus 4.6', platform: 'anthropic' },
+    { model: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', platform: 'anthropic' },
+    { model: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', platform: 'anthropic' }
+  ] as const
+  type MockGlobalPrice = {
+    input_price: number
+    output_price: number
+    cache_write_price: number
+    cache_read_price: number
+  }
+  let mockGlobalPricing: Record<string, MockGlobalPrice> = Object.fromEntries(
+    mockPricingCatalog.map(({ model }) => {
+      const [input, output, cacheWrite, cacheRead] = mockDefaultPrices[model]
+      return [model, {
+        input_price: input / 1_000_000,
+        output_price: output / 1_000_000,
+        cache_write_price: cacheWrite / 1_000_000,
+        cache_read_price: cacheRead / 1_000_000
+      }]
+    })
+  )
+  const globalPricingCards = () => mockPricingCatalog.map((item) => ({
+    ...item,
+    ...mockGlobalPricing[item.model]
+  }))
   return {
     name: 'local-mock-api',
     apply: 'serve',
@@ -169,19 +209,60 @@ function createMockApi(): Plugin {
         if (path === '/api/v1/settings/public') {
           return mockResponse(res, { site_name: 'Sub2API Local Mock', registration_enabled: true, email_login_enabled: true, model_plaza_enabled: true, model_plaza_require_auth: false, model_plaza_description: '本地模型价格展示，价格与管理员模型定价配置同步。' })
         }
-        if (path === '/api/v1/model-plaza') {
-          const modelNames: Array<[string, string]> = [['gpt-5.5', 'openai'], ['gpt-5.6-sol', 'openai'], ['gpt-5.6-terra', 'openai'], ['gpt-5.6-luna', 'openai'], ['gpt-6-astra', 'openai'], ['gpt-6-sol', 'openai'], ['gpt-6-luna', 'openai'], ['gpt-6.1-sol', 'openai'], ['claude-opus-5-5', 'anthropic'], ['claude-opus-5', 'anthropic'], ['claude-sonnet-5-5', 'anthropic'], ['claude-sonnet-5', 'anthropic'], ['claude-opus-4-8', 'anthropic'], ['claude-opus-4-7', 'anthropic'], ['claude-opus-4-6', 'anthropic'], ['claude-sonnet-4-6', 'anthropic'], ['claude-haiku-4-5', 'anthropic']]
+        if (path === '/api/v1/admin/model-pricing') {
+          if (req.method === 'GET') return mockResponse(res, { models: globalPricingCards() })
+          if (req.method === 'PUT') {
+            const body = await readMockJsonBody(req)
+            const submitted = Array.isArray(body.models) ? body.models : []
+            if (submitted.length !== mockPricingCatalog.length) {
+              return mockResponse(res, { message: 'all standard models must be supplied' }, 400)
+            }
+            const next: Record<string, MockGlobalPrice> = {}
+            for (const item of submitted) {
+              if (typeof item !== 'object' || item === null) return mockResponse(res, { message: 'invalid model pricing payload' }, 400)
+              const pricing = item as Record<string, unknown>
+              const model = typeof pricing.model === 'string' ? pricing.model : ''
+              if (!mockPricingCatalog.some((catalogItem) => catalogItem.model === model)) {
+                return mockResponse(res, { message: 'unknown standard model' }, 400)
+              }
+              const values = ['input_price', 'output_price', 'cache_write_price', 'cache_read_price'] as const
+              if (values.some((key) => typeof pricing[key] !== 'number' || !Number.isFinite(pricing[key]) || Number(pricing[key]) < 0)) {
+                return mockResponse(res, { message: 'invalid model pricing value' }, 400)
+              }
+              next[model] = {
+                input_price: Number(pricing.input_price),
+                output_price: Number(pricing.output_price),
+                cache_write_price: Number(pricing.cache_write_price),
+                cache_read_price: Number(pricing.cache_read_price)
+              }
+            }
+            if (Object.keys(next).length !== mockPricingCatalog.length) {
+              return mockResponse(res, { message: 'duplicate standard model' }, 400)
+            }
+            mockGlobalPricing = next
+            return mockResponse(res, { models: globalPricingCards() })
+          }
+        }
+        if (path === '/api/v1/model-plaza' || path === '/api/v1/model-pricing') {
+          const standardPricing = path === '/api/v1/model-pricing'
+          const modelNames = mockPricingCatalog.map(({ model, platform }) => [model, platform] as const)
           const toPricing = (model: string, platform: string) => {
             const rule = mockChannels[0].model_pricing.find((item) => item.models.includes(model))
             const defaults = mockDefaultPrices[model] || [0, 0, 0, 0]
-            const input = rule?.input_price ?? defaults[0] / 1_000_000
-            const output = rule?.output_price ?? defaults[1] / 1_000_000
-            const cacheWrite = rule?.cache_write_price ?? defaults[2] / 1_000_000
-            const cacheRead = rule?.cache_read_price ?? defaults[3] / 1_000_000
+            const global = mockGlobalPricing[model] || {
+              input_price: defaults[0] / 1_000_000,
+              output_price: defaults[1] / 1_000_000,
+              cache_write_price: defaults[2] / 1_000_000,
+              cache_read_price: defaults[3] / 1_000_000
+            }
+            const input = standardPricing ? global.input_price : rule?.input_price ?? global.input_price
+            const output = standardPricing ? global.output_price : rule?.output_price ?? global.output_price
+            const cacheWrite = standardPricing ? global.cache_write_price : rule?.cache_write_price ?? global.cache_write_price
+            const cacheRead = standardPricing ? global.cache_read_price : rule?.cache_read_price ?? global.cache_read_price
             return { billing_mode: 'token', input_price: input, output_price: output, cache_write_price: cacheWrite, cache_read_price: cacheRead, image_input_price: null, image_output_price: null, per_request_price: null, intervals: [] }
           }
           const makeGroup = (id: number, name: string, platform: string) => ({
-            id, name, description: `${name} · 管理员定价实时同步`, platform, subscription_type: 'standard', rate_multiplier: 1,
+            id, name, description: standardPricing ? '标准 1x 价格，按每百万 token 计价。' : `${name} · 管理员定价实时同步`, platform, subscription_type: 'standard', rate_multiplier: 1,
             peak_rate_enabled: false, peak_start: '', peak_end: '', peak_rate_multiplier: 1, is_exclusive: false,
             image_rate_independent: false, image_rate_multiplier: 1, long_context_pricing_enabled: true,
             models: modelNames.filter(([, itemPlatform]) => itemPlatform === platform).map(([model]) => {
@@ -189,7 +270,13 @@ function createMockApi(): Plugin {
               return { name: model, platform, pricing: toPricing(model, platform), official_pricing: { input_price: p[0] / 1_000_000, output_price: p[1] / 1_000_000, cache_write_price: p[2] / 1_000_000, cache_read_price: p[3] / 1_000_000 } }
             })
           })
-          return mockResponse(res, { description: '本地模型价格展示，价格与管理员模型定价配置同步。', groups: [makeGroup(1, 'OpenAI GPT 模型', 'openai'), makeGroup(2, 'Anthropic Claude 模型', 'anthropic')] })
+          return mockResponse(res, {
+            description: standardPricing ? 'ChatGPT 与 Claude Code 常用模型的标准 1x 价格。' : '本地模型价格展示，价格与管理员模型定价配置同步。',
+            groups: [
+              makeGroup(1, standardPricing ? 'OpenAI GPT 常用模型' : 'OpenAI GPT 模型', 'openai'),
+              makeGroup(2, standardPricing ? 'Anthropic Claude Code 常用模型' : 'Anthropic Claude 模型', 'anthropic')
+            ]
+          })
         }
         if (path === '/api/v1/groups/available') return mockResponse(res, mockGroups)
         if (path === '/api/v1/groups/rates') return mockResponse(res, {})

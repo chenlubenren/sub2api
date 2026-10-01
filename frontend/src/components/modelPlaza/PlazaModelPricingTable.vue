@@ -329,7 +329,10 @@ const PER_MILLION = 1_000_000
  * 3. 同价按名称降序(新版本号在前,如 gpt-5.6 先于 gpt-5.5)。
  */
 const sortedModels = computed(() => {
-  return [...props.models].sort((a, b) => {
+	// The global standard catalogue already has a deliberate, stable order:
+	// all GPT models precede Claude models. Do not re-sort it by price.
+	if (standardOnly.value) return [...props.models]
+	return [...props.models].sort((a, b) => {
     const ta = billingMode(a) === BILLING_MODE_TOKEN
     const tb = billingMode(b) === BILLING_MODE_TOKEN
     if (ta !== tb) return ta ? -1 : 1

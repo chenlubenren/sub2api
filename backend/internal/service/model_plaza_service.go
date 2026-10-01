@@ -227,6 +227,68 @@ func (s *ModelPlazaService) ListGroups(ctx context.Context) ([]PlazaGroup, error
 	return out, nil
 }
 
+// ListStandardPricing returns the small, channel-independent catalogue shown
+// on the authenticated user pricing page. It deliberately does not consult
+// channels, groups, subscriptions, or user-specific rates: the page is a
+// transparent reference for the standard 1x token price.
+//
+// Keeping this catalogue here rather than filtering ListGroups in the frontend
+// means a supported model remains visible even before an operator adds it to a
+// channel or group. Pricing still comes from BillingService, the same standard
+// price source used when a channel has no model-level override.
+func (s *ModelPlazaService) ListStandardPricing(ctx context.Context) ([]PlazaGroup, error) {
+	memo := make(map[string]*PlazaOfficialPricing)
+	catalog := StandardModelPricingCatalog()
+	out := make([]PlazaGroup, 0, len(catalog))
+	for index, group := range catalog {
+		models := make([]PlazaModel, 0, len(group.Models))
+		for _, entry := range group.Models {
+			official := s.lookupOfficialPricing(ctx, entry.Model, memo)
+			models = append(models, PlazaModel{
+				Name:            entry.Model,
+				Platform:        entry.Platform,
+				Pricing:         standardPricingFromOfficial(official),
+				OfficialPricing: official,
+			})
+		}
+		out = append(out, PlazaGroup{
+			ID:                        int64(index + 1),
+			Name:                      group.Name,
+			Description:               "标准 1x 价格，按每百万 token 计价。",
+			Platform:                  group.Platform,
+			SubscriptionType:          "standard",
+			RateMultiplier:            1,
+			PeakRateEnabled:           false,
+			PeakRateMultiplier:        1,
+			ImageRateMultiplier:       1,
+			LongContextPricingEnabled: true,
+			Models:                    models,
+		})
+	}
+	return out, nil
+}
+
+// standardPricingFromOfficial converts the no-override price source into the
+// display pricing structure. It copies the interval slice so callers cannot
+// mutate the memoized official price through the response.
+func standardPricingFromOfficial(official *PlazaOfficialPricing) *ChannelModelPricing {
+	if official == nil {
+		return nil
+	}
+	pricing := &ChannelModelPricing{
+		BillingMode:       BillingModeToken,
+		InputPrice:        official.InputPrice,
+		OutputPrice:       official.OutputPrice,
+		CacheWritePrice:   official.CacheWritePrice,
+		CacheWrite1hPrice: official.CacheWrite1hPrice,
+		CacheReadPrice:    official.CacheReadPrice,
+	}
+	if len(official.Intervals) > 0 {
+		pricing.Intervals = append([]PricingInterval(nil), official.Intervals...)
+	}
+	return pricing
+}
+
 func (s *ModelPlazaService) populateCatalogModels(
 	byGroup map[int64]*PlazaGroup,
 	groupEnt map[int64]*Group,

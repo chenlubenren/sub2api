@@ -15,14 +15,22 @@ import (
 
 // ChannelHandler handles admin channel management
 type ChannelHandler struct {
-	channelService *service.ChannelService
-	billingService *service.BillingService
-	pricingService *service.PricingService
+	channelService            *service.ChannelService
+	billingService            *service.BillingService
+	pricingService            *service.PricingService
+	globalModelPricingService *service.GlobalModelPricingService
 }
 
 // NewChannelHandler creates a new admin channel handler
 func NewChannelHandler(channelService *service.ChannelService, billingService *service.BillingService, pricingService *service.PricingService) *ChannelHandler {
 	return &ChannelHandler{channelService: channelService, billingService: billingService, pricingService: pricingService}
+}
+
+// SetGlobalModelPricingService attaches the global catalogue after Wire has
+// built both the settings-backed pricing service and this legacy channel
+// handler. Keeping it as a setter preserves focused channel-handler tests.
+func (h *ChannelHandler) SetGlobalModelPricingService(svc *service.GlobalModelPricingService) {
+	h.globalModelPricingService = svc
 }
 
 // --- Request / Response types ---
@@ -54,6 +62,10 @@ type updateChannelRequest struct {
 	FeaturesConfig             map[string]any                    `json:"features_config"`
 	ApplyPricingToAccountStats *bool                             `json:"apply_pricing_to_account_stats"`
 	AccountStatsPricingRules   *[]accountStatsPricingRuleRequest `json:"account_stats_pricing_rules"`
+}
+
+type updateGlobalModelPricingRequest struct {
+	Models []service.GlobalModelPricing `json:"models" binding:"required,min=1"`
 }
 
 type channelModelPricingRequest struct {
@@ -630,6 +642,41 @@ func (h *ChannelHandler) GetModelDefaultPricing(c *gin.Context) {
 		"image_input_price":               pricing.ImageInputPricePerToken,
 		"image_output_price":              pricing.ImageOutputPricePerToken,
 	})
+}
+
+// GetGlobalModelPricing returns the single standard model price catalogue.
+// GET /api/v1/admin/model-pricing
+func (h *ChannelHandler) GetGlobalModelPricing(c *gin.Context) {
+	if h.globalModelPricingService == nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("GLOBAL_MODEL_PRICING_UNAVAILABLE", "global model pricing is unavailable"))
+		return
+	}
+	models, err := h.globalModelPricingService.List(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, gin.H{"models": models})
+}
+
+// UpdateGlobalModelPricing replaces the global standard price catalogue.
+// PUT /api/v1/admin/model-pricing
+func (h *ChannelHandler) UpdateGlobalModelPricing(c *gin.Context) {
+	if h.globalModelPricingService == nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("GLOBAL_MODEL_PRICING_UNAVAILABLE", "global model pricing is unavailable"))
+		return
+	}
+	var req updateGlobalModelPricingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorFrom(c, infraerrors.BadRequest("INVALID_GLOBAL_MODEL_PRICING", "invalid global model pricing payload"))
+		return
+	}
+	models, err := h.globalModelPricingService.Update(c.Request.Context(), req.Models)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, gin.H{"models": models})
 }
 
 // platformToLiteLLMProvider maps a channel platform name to the corresponding

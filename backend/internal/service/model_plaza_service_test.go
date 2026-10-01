@@ -365,6 +365,34 @@ func plazaModelsByName(models []PlazaModel) map[string]PlazaModel {
 	return out
 }
 
+func TestListStandardPricing_IncludesGPT56AndClaude5Series(t *testing.T) {
+	svc := newPlazaServiceWithBilling(nil, nil, nil, nil)
+	groups, err := svc.ListStandardPricing(context.Background())
+	require.NoError(t, err)
+	require.Len(t, groups, 2)
+
+	openAI := plazaModelsByName(groups[0].Models)
+	for _, model := range []string{"gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"} {
+		entry, ok := openAI[model]
+		require.Truef(t, ok, "missing %s", model)
+		require.NotNilf(t, entry.Pricing, "missing standard pricing for %s", model)
+		require.NotNilf(t, entry.OfficialPricing, "missing official pricing for %s", model)
+	}
+
+	anthropic := plazaModelsByName(groups[1].Models)
+	for _, model := range []string{"claude-opus-5", "claude-opus-5-5", "claude-sonnet-5", "claude-sonnet-5-5"} {
+		entry, ok := anthropic[model]
+		require.Truef(t, ok, "missing %s", model)
+		require.NotNilf(t, entry.Pricing, "missing standard pricing for %s", model)
+		require.NotNilf(t, entry.OfficialPricing, "missing official pricing for %s", model)
+	}
+
+	for _, group := range groups {
+		require.Equal(t, 1.0, group.RateMultiplier)
+		require.False(t, group.PeakRateEnabled)
+	}
+}
+
 func TestListGroups_TokenLadderFollowsGroupToggle(t *testing.T) {
 	// 同一渠道挂开启/关闭阶梯的两个分组：实付档位随分组开关，官方阶梯不受影响。
 	channels := []Channel{{

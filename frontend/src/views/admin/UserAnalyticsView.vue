@@ -4,7 +4,7 @@
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 class="text-xl font-semibold text-gray-900 dark:text-white">订阅用户分析</h1>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">按订阅用户查看充值费用与每日额度使用情况。</p>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">日均使用量基于最近七个已完成自然日，不包含当天未重置的额度使用。</p>
         </div>
         <button type="button" class="btn btn-secondary" :disabled="loading" @click="load">
           <Icon name="refresh" size="sm" :class="loading ? 'animate-spin' : ''" />
@@ -135,8 +135,8 @@ const packageCards = computed(() => {
       label: item.subscription_name,
       value: money(item.average_daily_usage_7d),
       hint: `${money(subscriptionPrice)} · ${item.active_users} 位订阅用户`,
-      actualMultiplier: subscriptionPrice > 0
-        ? (item.average_daily_usage_7d * 30) / subscriptionPrice
+      actualMultiplier: subscriptionPrice > 0 && item.average_daily_usage_7d > 0
+        ? subscriptionPrice / (item.average_daily_usage_7d * 30)
         : null
     }
   })

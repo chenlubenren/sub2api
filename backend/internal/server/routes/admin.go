@@ -767,6 +767,12 @@ func registerPluginRoutes(admin *gin.RouterGroup, h *handler.Handlers, stepUpAut
 }
 
 func registerChannelRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	// The standard model catalogue is global. It deliberately lives outside the
+	// channel namespace so administrators do not accidentally configure a
+	// different price for each channel or subscription group.
+	admin.GET("/model-pricing", h.Admin.Channel.GetGlobalModelPricing)
+	admin.PUT("/model-pricing", h.Admin.Channel.UpdateGlobalModelPricing)
+
 	channels := admin.Group("/channels")
 	{
 		channels.GET("", h.Admin.Channel.List)

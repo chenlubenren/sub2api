@@ -49,8 +49,25 @@
         @update:search="searchQuery = $event"
       />
 
+      <!-- 标准价目不承载任何分组/订阅语义，仅按模型目录顺序展示。 -->
+      <section
+        v-if="standardOnly && standardModels.length > 0"
+        class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card dark:border-dark-700/50 dark:bg-dark-800/50"
+      >
+        <PlazaModelPricingTable
+          :models="standardModels"
+          platform=""
+          :rate-multiplier="1"
+          :user-rate-multiplier="null"
+          :image-rate-independent="false"
+          :image-rate-multiplier="1"
+          peak-window=""
+          :peak-rate-multiplier="1"
+          standard-only
+        />
+      </section>
       <!-- 分组分节的模型清单(默认按生效倍率升序) -->
-      <div v-if="filteredGroups.length > 0" class="space-y-5">
+      <div v-else-if="filteredGroups.length > 0" class="space-y-5">
         <PlazaGroupSection v-for="g in filteredGroups" :key="g.id" :group="g" :standard-only="standardOnly" />
       </div>
       <div
@@ -71,6 +88,7 @@ import DOMPurify from 'dompurify'
 import Icon from '@/components/icons/Icon.vue'
 import PlazaFilterBar from './PlazaFilterBar.vue'
 import PlazaGroupSection from './PlazaGroupSection.vue'
+import PlazaModelPricingTable from './PlazaModelPricingTable.vue'
 import type { ModelPlazaGroup, ModelPlazaResponse } from '@/api/modelPlaza'
 import { useAuthStore } from '@/stores/auth'
 
@@ -123,6 +141,14 @@ const groupOptions = computed(() =>
 /** 全量生效倍率;当前组合下不可用的项由 FilterBar 置灰而非隐藏。 */
 const rates = computed(() =>
   [...new Set((props.response?.groups ?? []).map(effectiveRate))].sort((a, b) => a - b)
+)
+
+// The standard user price list is deliberately flat: those records are global
+// prices, not availability groups. Provider labels remain on each model row.
+const standardModels = computed(() =>
+  [...(props.response?.groups ?? [])]
+    .sort((a, b) => platformRank(a.platform) - platformRank(b.platform))
+    .flatMap((group) => group.models)
 )
 
 /** 数据刷新后选中的倍率可能不复存在,重置为全部。 */
