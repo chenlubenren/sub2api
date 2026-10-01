@@ -189,6 +189,13 @@ func (s *ModelPlazaService) ListGroups(ctx context.Context) ([]PlazaGroup, error
 			}
 		}
 	}
+	if len(channels) == 0 {
+		// A deployment may intentionally manage pricing at the group/catalog
+		// level before any channel rows exist. Keep the user pricing page useful
+		// in that state by materializing models from the same pricing catalog and
+		// group overrides used by billing.
+		s.populateCatalogModels(byGroup, groupEnt, order)
+	}
 
 	officialMemo := make(map[string]*PlazaOfficialPricing)
 	out := make([]PlazaGroup, 0, len(order))
@@ -218,6 +225,147 @@ func (s *ModelPlazaService) ListGroups(ctx context.Context) ([]PlazaGroup, error
 		return out[i].Name < out[j].Name
 	})
 	return out, nil
+}
+
+func (s *ModelPlazaService) populateCatalogModels(
+	byGroup map[int64]*PlazaGroup,
+	groupEnt map[int64]*Group,
+	order []int64,
+) {
+	for _, gid := range order {
+		pg := byGroup[gid]
+		g := groupEnt[gid]
+		if pg == nil || g == nil {
+			continue
+		}
+		candidates := catalogModelsForGroup(s.pricingService, g)
+		seen := make(map[string]struct{}, len(candidates))
+		for _, candidate := range candidates {
+			name := strings.TrimSpace(candidate.Name)
+			platform := candidate.Platform
+			if name == "" || platform == "" {
+				continue
+			}
+			key := strings.ToLower(platform + "\x00" + name)
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+
+			model := SupportedModel{Name: name, Platform: platform, Pricing: groupModelPricing(g, platform, name)}
+			fillGlobalPricingFallback(s.pricingService, []SupportedModel{model})
+			pg.Models = append(pg.Models, PlazaModel{Name: name, Platform: platform, Pricing: model.Pricing})
+		}
+	}
+}
+
+type catalogPlazaModel struct {
+	Name     string
+	Platform string
+}
+
+func catalogModelsForGroup(pricing *PricingService, g *Group) []catalogPlazaModel {
+	if g == nil {
+		return nil
+	}
+	models := make([]catalogPlazaModel, 0)
+	add := func(name, platform string) {
+		name = strings.TrimSpace(name)
+		platform = strings.TrimSpace(platform)
+		if name == "" || platform == "" {
+			return
+		}
+		for _, existing := range models {
+			if strings.EqualFold(existing.Name, name) && existing.Platform == platform {
+				return
+			}
+		}
+		models = append(models, catalogPlazaModel{Name: name, Platform: platform})
+	}
+
+	if g.CustomModelsListEnabled() {
+		for _, name := range g.ModelsListConfig.Models {
+			add(name, catalogModelPlatform(g.Platform, g.Platform))
+		}
+	} else if pricing != nil {
+		for _, provider := range pricingProvidersForPlatform(g.Platform) {
+			platform := catalogModelPlatform(g.Platform, provider)
+			for _, name := range pricing.ListModelNamesByProvider(provider) {
+				add(name, platform)
+			}
+		}
+	}
+
+	// Group pricing overrides are also a valid model source when an operator
+	// has configured a model absent from the remote catalog.
+	for _, entry := range g.ModelPricing {
+		platform := entry.Platform
+		if platform == "" {
+			platform = g.Platform
+		}
+		for _, name := range entry.Models {
+			add(name, platform)
+		}
+	}
+
+	if g.ModelAllowlistEnabled() {
+		filtered := make([]catalogPlazaModel, 0, len(models))
+		for _, model := range models {
+			if g.ModelAllowlist.Allows(model.Name) {
+				filtered = append(filtered, model)
+			}
+		}
+		models = filtered
+	}
+	return models
+}
+
+func pricingProvidersForPlatform(platform string) []string {
+	switch platform {
+	case PlatformGemini:
+		return []string{"google", "gemini"}
+	case PlatformGrok:
+		return []string{"xai", "grok"}
+	case PlatformAntigravity:
+		return []string{"anthropic", "google"}
+	case PlatformComposite:
+		return []string{"openai", "anthropic", "google", "xai"}
+	default:
+		return []string{platform}
+	}
+}
+
+func catalogModelPlatform(groupPlatform, provider string) string {
+	if groupPlatform != PlatformComposite && groupPlatform != PlatformAntigravity {
+		return groupPlatform
+	}
+	switch provider {
+	case "google", "gemini":
+		return PlatformGemini
+	case "xai", "grok":
+		return PlatformGrok
+	default:
+		return provider
+	}
+}
+
+func groupModelPricing(g *Group, platform, model string) *ChannelModelPricing {
+	if g == nil {
+		return nil
+	}
+	for i := range g.ModelPricing {
+		entry := &g.ModelPricing[i]
+		if entry.Platform != "" && entry.Platform != platform {
+			continue
+		}
+		for _, configured := range entry.Models {
+			if strings.EqualFold(strings.TrimSpace(configured), model) {
+				clone := entry.Clone()
+				return &clone
+			}
+		}
+	}
+	return nil
 }
 
 // fillDisplayPricing 把模型的展示定价换成实收口径：

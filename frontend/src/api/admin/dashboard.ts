@@ -265,6 +265,7 @@ export interface SubscriptionPackageAnalytics {
   subscription_name: string
   active_users: number
   average_daily_usage_7d: number
+  subscription_price: number
   /** Matches the ordering used by the subscription plans shown during recharge. */
   sort_order?: number
 }

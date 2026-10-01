@@ -84,7 +84,7 @@ export interface ModelPlazaResponse {
   groups: ModelPlazaGroup[]
 }
 
-/** 获取模型广场数据。开关未启用时后端返回 404。 */
+/** 获取公开模型广场数据。开关未启用时后端返回 404。 */
 export async function getModelPlaza(options?: { signal?: AbortSignal }): Promise<ModelPlazaResponse> {
   const { data } = await apiClient.get<ModelPlazaResponse>('/model-plaza', {
     signal: options?.signal
@@ -92,6 +92,19 @@ export async function getModelPlaza(options?: { signal?: AbortSignal }): Promise
   return data
 }
 
-export const modelPlazaAPI = { getModelPlaza }
+/**
+ * 获取登录用户的模型定价。
+ *
+ * 这个接口不依赖公开模型广场开关，避免用户侧模型定价被公开展示配置
+ * 意外挡住；返回的分组和定价仍由后端按当前用户权限过滤。
+ */
+export async function getModelPricing(options?: { signal?: AbortSignal }): Promise<ModelPlazaResponse> {
+  const { data } = await apiClient.get<ModelPlazaResponse>('/model-pricing', {
+    signal: options?.signal
+  })
+  return data
+}
+
+export const modelPlazaAPI = { getModelPlaza, getModelPricing }
 
 export default modelPlazaAPI

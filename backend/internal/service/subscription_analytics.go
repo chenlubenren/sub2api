@@ -27,6 +27,7 @@ type SubscriptionPackageAnalytics struct {
 	SubscriptionName  string  `json:"subscription_name"`
 	ActiveUsers       int     `json:"active_users"`
 	AverageDailyUsage float64 `json:"average_daily_usage_7d"`
+	SubscriptionPrice float64 `json:"subscription_price"`
 	SortOrder         int     `json:"sort_order,omitempty"`
 }
 
@@ -113,17 +114,17 @@ ORDER BY COALESCE(plan.sort_order, g.sort_order, 0), us.id`)
 		return nil, fmt.Errorf("iterate subscription analytics: %w", err)
 	}
 
-	type packageAccumulator struct {
+	type groupAccumulator struct {
 		users map[int64]struct{}
 		total float64
 		sort  int
 	}
-	packages := make(map[string]*packageAccumulator)
+	groupAccumulators := make(map[string]*groupAccumulator)
 	for _, item := range result.Items {
-		p := packages[item.SubscriptionName]
+		p := groupAccumulators[item.SubscriptionName]
 		if p == nil {
-			p = &packageAccumulator{users: make(map[int64]struct{}), sort: item.sortOrder}
-			packages[item.SubscriptionName] = p
+			p = &groupAccumulator{users: make(map[int64]struct{}), sort: item.sortOrder}
+			groupAccumulators[item.SubscriptionName] = p
 		}
 		p.users[item.UserID] = struct{}{}
 		p.total += item.AverageDailyUsage
@@ -131,12 +132,63 @@ ORDER BY COALESCE(plan.sort_order, g.sort_order, 0), us.id`)
 			p.sort = item.sortOrder
 		}
 	}
-	for name, p := range packages {
+	// Build cards from the same for-sale subscription plan catalog used by the
+	// recharge page. This keeps daily plans visible even when they currently
+	// have zero active subscribers, and preserves the configured sort order.
+	planRows, err := s.entClient.QueryContext(ctx, `
+SELECT sp.name,
+       g.name,
+       sp.price::double precision,
+       sp.sort_order
+FROM subscription_plans sp
+JOIN groups g ON g.id = sp.group_id AND g.deleted_at IS NULL
+WHERE sp.for_sale = TRUE
+ORDER BY sp.sort_order, sp.id`)
+	if err != nil {
+		return nil, fmt.Errorf("query subscription plan catalog: %w", err)
+	}
+	defer planRows.Close()
+	seenGroups := make(map[string]struct{})
+	for planRows.Next() {
+		var planName, groupName string
+		var price float64
+		var sortOrder int
+		if err := planRows.Scan(&planName, &groupName, &price, &sortOrder); err != nil {
+			return nil, fmt.Errorf("scan subscription plan catalog: %w", err)
+		}
+		p := groupAccumulators[groupName]
+		activeUsers := 0
+		averageDailyUsage := 0.0
+		if p != nil {
+			activeUsers = len(p.users)
+			if activeUsers > 0 {
+				averageDailyUsage = p.total / float64(activeUsers)
+			}
+			seenGroups[groupName] = struct{}{}
+		}
+		result.PackageSummaries = append(result.PackageSummaries, SubscriptionPackageAnalytics{
+			SubscriptionName:  planName,
+			ActiveUsers:       activeUsers,
+			AverageDailyUsage: averageDailyUsage,
+			SubscriptionPrice: price,
+			SortOrder:         sortOrder,
+		})
+	}
+	if err := planRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate subscription plan catalog: %w", err)
+	}
+	for name, p := range groupAccumulators {
+		if _, ok := seenGroups[name]; ok {
+			continue
+		}
 		avg := 0.0
 		if len(p.users) > 0 {
 			avg = p.total / float64(len(p.users))
 		}
-		result.PackageSummaries = append(result.PackageSummaries, SubscriptionPackageAnalytics{SubscriptionName: name, ActiveUsers: len(p.users), AverageDailyUsage: avg, SortOrder: p.sort})
+		result.PackageSummaries = append(result.PackageSummaries, SubscriptionPackageAnalytics{
+			SubscriptionName: name, ActiveUsers: len(p.users), AverageDailyUsage: avg,
+			SubscriptionPrice: 0, SortOrder: p.sort,
+		})
 	}
 	sort.SliceStable(result.PackageSummaries, func(i, j int) bool {
 		if result.PackageSummaries[i].SortOrder == result.PackageSummaries[j].SortOrder {

@@ -27,4 +27,15 @@ func RegisterModelPlazaRoutes(
 	{
 		plaza.GET("", h.ModelPlaza.Get)
 	}
+
+	// 用户侧模型定价是登录后的面板能力，不应受公开模型广场开关影响。
+	// 仍复用 OptionalJWT 以保持统一的认证解析和 BackendMode 防护，handler
+	// 会进一步要求有效登录态。
+	pricing := v1.Group("/model-pricing")
+	pricing.Use(panelRateLimiter.PublicIP())
+	pricing.Use(gin.HandlerFunc(optionalJWT))
+	pricing.Use(middleware.BackendModeUserGuard(settingService))
+	{
+		pricing.GET("", h.ModelPlaza.GetPricing)
+	}
 }

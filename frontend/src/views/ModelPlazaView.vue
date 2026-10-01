@@ -19,7 +19,7 @@ import { useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import PlazaNavBar from '@/components/modelPlaza/PlazaNavBar.vue'
 import ModelPlazaContent from '@/components/modelPlaza/ModelPlazaContent.vue'
-import { getModelPlaza, type ModelPlazaResponse } from '@/api/modelPlaza'
+import { getModelPlaza, getModelPricing, type ModelPlazaResponse } from '@/api/modelPlaza'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 
@@ -38,7 +38,7 @@ onMounted(async () => {
   // 独立形态导航条需要站点名/Logo;有 __APP_CONFIG__ 注入时同步命中缓存。
   void appStore.fetchPublicSettings()
   try {
-    data.value = await getModelPlaza()
+    data.value = await (route.path === '/model-pricing' ? getModelPricing() : getModelPlaza())
   } catch {
     loadFailed.value = true
   } finally {

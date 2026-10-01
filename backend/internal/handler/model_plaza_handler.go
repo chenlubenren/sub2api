@@ -106,18 +106,47 @@ type modelPlazaResponse struct {
 // Get 返回模型广场数据。
 // GET /api/v1/model-plaza
 func (h *ModelPlazaHandler) Get(c *gin.Context) {
-	if h.settingService == nil {
-		response.NotFound(c, "Model plaza is not enabled")
+	h.get(c, false)
+}
+
+// GetPricing returns model pricing for an authenticated panel user. Unlike the
+// public plaza, this view is a core user-facing pricing page and is not gated by
+// the optional public model-plaza switch.
+// GET /api/v1/model-pricing
+func (h *ModelPlazaHandler) GetPricing(c *gin.Context) {
+	if _, ok := middleware.GetAuthSubjectFromContext(c); !ok {
+		response.Unauthorized(c, "Authentication required")
 		return
 	}
-	rt := h.settingService.GetModelPlazaRuntime(c.Request.Context())
-	if !rt.Enabled {
-		response.NotFound(c, "Model plaza is not enabled")
-		return
+	h.get(c, true)
+}
+
+func (h *ModelPlazaHandler) get(c *gin.Context, authenticatedPricing bool) {
+	if h.settingService == nil {
+		if !authenticatedPricing {
+			response.NotFound(c, "Model plaza is not enabled")
+			return
+		}
+	} else if !authenticatedPricing {
+		rt := h.settingService.GetModelPlazaRuntime(c.Request.Context())
+		if !rt.Enabled {
+			response.NotFound(c, "Model plaza is not enabled")
+			return
+		}
+	}
+
+	var runtime service.ModelPlazaRuntime
+	if h.settingService != nil {
+		runtime = h.settingService.GetModelPlazaRuntime(c.Request.Context())
+	}
+	if authenticatedPricing {
+		// The description is still useful on the user pricing page, but the
+		// public enable/require-auth switches must not gate this endpoint.
+		runtime.Enabled = true
 	}
 
 	subject, authed := middleware.GetAuthSubjectFromContext(c)
-	if rt.RequireAuth && !authed {
+	if runtime.RequireAuth && !authed {
 		response.Unauthorized(c, "Authentication required")
 		return
 	}
@@ -154,7 +183,7 @@ func (h *ModelPlazaHandler) Get(c *gin.Context) {
 		out = append(out, toModelPlazaGroupDTO(&visible[i], userRates))
 	}
 	response.Success(c, modelPlazaResponse{
-		Description: rt.Description,
+		Description: runtime.Description,
 		Groups:      out,
 	})
 }

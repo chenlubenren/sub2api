@@ -13,10 +13,18 @@
       </div>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <div v-for="card in packageCards" :key="card.subscriptionName" class="card p-4">
-          <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ card.label }}</p>
-          <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ card.value }}</p>
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ card.hint }}</p>
+        <div v-for="card in packageCards" :key="`${card.subscriptionName}-${card.sortOrder}`" class="card flex items-start justify-between gap-4 p-4">
+          <div class="min-w-0">
+            <p class="truncate text-xs font-medium text-gray-500 dark:text-gray-400">{{ card.label }}</p>
+            <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ card.value }}</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ card.hint }}</p>
+          </div>
+          <div class="shrink-0 text-right">
+            <p class="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">实际倍率</p>
+            <p class="mt-1 text-xl font-semibold tabular-nums" :class="multiplierClass(card.actualMultiplier)">
+              {{ card.actualMultiplier == null ? '—' : `×${card.actualMultiplier.toFixed(2)}` }}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -113,9 +121,13 @@ const packageCards = computed(() => {
   const summaries = packageSummaries.value.length ? packageSummaries.value : summarizePackages(rows.value)
   return sortPackages(summaries).map((item) => ({
     subscriptionName: item.subscription_name,
+    sortOrder: item.sort_order ?? Number.MAX_SAFE_INTEGER,
     label: item.subscription_name,
     value: money(item.average_daily_usage_7d),
-    hint: `近七日日均使用 · ${item.active_users} 位订阅用户`
+    hint: `${money(item.subscription_price)} · ${item.active_users} 位订阅用户`,
+    actualMultiplier: item.subscription_price > 0
+      ? (item.average_daily_usage_7d * 30) / item.subscription_price
+      : null
   }))
 })
 
@@ -198,8 +210,16 @@ function summarizePackages(items: SubscriptionAnalyticsItem[]): SubscriptionPack
     subscription_name,
     active_users: group.users.size,
     average_daily_usage_7d: group.users.size ? group.totalDailyUsage / group.users.size : 0,
+    subscription_price: 0,
     sort_order: index
   }))
+}
+
+function multiplierClass(value: number | null): string {
+  if (value == null) return 'text-gray-400 dark:text-gray-500'
+  if (value < 0.2) return 'text-red-600 dark:text-red-400'
+  if (value < 0.4) return 'text-amber-600 dark:text-amber-400'
+  return 'text-emerald-600 dark:text-emerald-400'
 }
 
 function money(value: number): string {
@@ -218,7 +238,12 @@ async function load() {
   try {
     if (import.meta.env.DEV && route.query.demo === '1') {
       rows.value = demoRows
-      packageSummaries.value = summarizePackages(demoRows)
+      packageSummaries.value = [
+        { subscription_name: '基础订阅', active_users: 1, average_daily_usage_7d: 0.49, subscription_price: 18, sort_order: 10 },
+        { subscription_name: 'Pro 月度订阅', active_users: 1, average_daily_usage_7d: 2.87, subscription_price: 38.5, sort_order: 20 },
+        { subscription_name: '日卡', active_users: 0, average_daily_usage_7d: 0, subscription_price: 3.99, sort_order: 30 },
+        { subscription_name: '团队订阅', active_users: 1, average_daily_usage_7d: 6.8, subscription_price: 96, sort_order: 40 }
+      ]
       utilizationTrends.value = []
     } else {
       const response = await getSubscriptionAnalytics()
