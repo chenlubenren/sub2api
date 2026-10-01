@@ -23,8 +23,31 @@ func TestGetOpsAdvancedSettings_DefaultSnapshotHidesOpenAITokenStats(t *testing.
 	if !cfg.DisplayAlertEvents {
 		t.Fatalf("DisplayAlertEvents = false, want true by default")
 	}
+	if !cfg.DataRetention.CleanupEnabled {
+		t.Fatalf("CleanupEnabled = false, want true by default")
+	}
 	if repo.getValueCalls != 0 || repo.getMultipleCalls != 0 {
 		t.Fatalf("hot-path snapshot read touched repository: get=%d get_multiple=%d", repo.getValueCalls, repo.getMultipleCalls)
+	}
+}
+
+func TestNormalizeOpsAdvancedSettings_DefaultsLegacySystemLogRetention(t *testing.T) {
+	cfg := &OpsAdvancedSettings{}
+	normalizeOpsAdvancedSettings(cfg)
+	if cfg.DataRetention.SystemLogRetentionDays == nil {
+		t.Fatal("system log retention should be backfilled")
+	}
+	if *cfg.DataRetention.SystemLogRetentionDays != 14 {
+		t.Fatalf("system log retention = %d, want 14", *cfg.DataRetention.SystemLogRetentionDays)
+	}
+}
+
+func TestNormalizeOpsAdvancedSettings_PreservesExplicitSystemLogTruncate(t *testing.T) {
+	zero := 0
+	cfg := &OpsAdvancedSettings{DataRetention: OpsDataRetentionSettings{SystemLogRetentionDays: &zero}}
+	normalizeOpsAdvancedSettings(cfg)
+	if cfg.DataRetention.SystemLogRetentionDays == nil || *cfg.DataRetention.SystemLogRetentionDays != 0 {
+		t.Fatalf("explicit system log retention = %v, want 0", cfg.DataRetention.SystemLogRetentionDays)
 	}
 }
 

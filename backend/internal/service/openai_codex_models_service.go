@@ -117,6 +117,10 @@ type OpenAIModelsResponse struct {
 	NotModified                  bool
 }
 
+// CodexModelsManifest is kept as a descriptive alias for handlers and
+// integrations that consume the Codex-shaped response envelope.
+type CodexModelsManifest = OpenAIModelsResponse
+
 // BuildGroupConfiguredCodexModelsManifest builds a Codex catalog from configured
 // public model names, supplemented by defaults for unmapped OpenAI accounts. The
 // boolean result distinguishes "no explicit configuration" from a configured
@@ -205,7 +209,7 @@ func (s *OpenAIGatewayService) MergeGroupConfiguredCodexModels(
 		return fmt.Errorf("merge group configured Codex models: %w", err)
 	}
 	if group.CodexModelsManifestConfig.Enabled && group.ModelAllowlistEnabled() {
-		body, err = orderPinnedCodexModelsBySelection(body, group.ModelAllowlist)
+		body, err = orderPinnedCodexModelsBySelection(body, group.ModelAllowlist.Models)
 		if err != nil {
 			return fmt.Errorf("order pinned Codex models: %w", err)
 		}
@@ -902,9 +906,24 @@ func buildCodexModelsManifestForAccounts(
 	modelIDs []string,
 	accounts []Account,
 	group *Group,
-	compositeRoutes []CompositeModelRoute,
-	compositeRoutesAvailable bool,
+	options ...any,
 ) ([]byte, error) {
+	// Keep the pre-composite call shape (group, compositeRoutesAvailable)
+	// source-compatible while allowing current callers to pass route metadata.
+	var compositeRoutes []CompositeModelRoute
+	compositeRoutesAvailable := true
+	if len(options) == 1 {
+		if available, ok := options[0].(bool); ok {
+			compositeRoutesAvailable = available
+		}
+	} else if len(options) >= 2 {
+		if routes, ok := options[0].([]CompositeModelRoute); ok {
+			compositeRoutes = routes
+		}
+		if available, ok := options[1].(bool); ok {
+			compositeRoutesAvailable = available
+		}
+	}
 	imageInputModels := make(map[string]bool, len(modelIDs))
 	searchToolModels := make(map[string]bool, len(modelIDs))
 	metadataModels := codexCatalogMetadataModels(
@@ -939,7 +958,6 @@ func buildCodexModelsManifestForAccounts(
 			effectivePlatform,
 			modelID,
 			accounts,
-			group,
 			compositeRoutes,
 			compositeRoutesAvailable,
 		); ok {

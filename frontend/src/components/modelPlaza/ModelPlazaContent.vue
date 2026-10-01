@@ -146,11 +146,17 @@ const filteredGroups = computed(() => {
       .map((g) => ({ ...g, models: g.models.filter((m) => m.name.toLowerCase().includes(q)) }))
       .filter((g) => g.models.length > 0)
   }
-  // 专属倍率会改变生效值,不能只依赖后端按默认倍率的排序。
+  // 用户首先按供应商浏览模型，OpenAI 固定在 Anthropic 之前；同平台内再按倍率和名称排序。
   return [...groups].sort(
-    (a, b) => effectiveRate(a) - effectiveRate(b) || a.name.localeCompare(b.name)
+    (a, b) => platformRank(a.platform) - platformRank(b.platform) || effectiveRate(a) - effectiveRate(b) || a.name.localeCompare(b.name)
   )
 })
+
+function platformRank(platform: string): number {
+  if (platform === 'openai') return 0
+  if (platform === 'anthropic') return 1
+  return 2
+}
 </script>
 
 <style scoped>

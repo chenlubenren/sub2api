@@ -18,6 +18,15 @@ const OllamaCloudMaxTokensCapExtraKey = "ollama_max_tokens_cap"
 // （约 65535），max_tokens 超过该值会被上游直接 400 拒绝；该上限与模型无关，不做模型过滤。
 const ollamaCloudDefaultMaxTokensCap = 65535
 
+// clampOllamaCloudUpstreamMaxTokens is the raw Chat Completions compatibility
+// hook used by the gateway request path.
+func clampOllamaCloudUpstreamMaxTokens(account *Account, body []byte) []byte {
+	if account == nil || len(body) == 0 || !isOllamaCloudBaseURL(account.GetOpenAIBaseURL()) {
+		return body
+	}
+	return clampOllamaCloudMaxTokens(account, body)
+}
+
 // 本文件的 clampOllamaCloudMaxTokens 被
 // applyOllamaCloudRawChatCompletionsRequest（openai_gateway_ollama_cloud_cc_reasoning.go）
 // 调用，账号检测（isOllamaCloudRawChatCompletionsAccount）由调用方完成，此处不再重复判断。

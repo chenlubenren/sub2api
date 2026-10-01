@@ -782,6 +782,13 @@ func sanitizeGrokResponsesUnsupportedFields(body []byte) ([]byte, error) {
 	return marshalOpenAIUpstreamJSON(payload)
 }
 
+// sanitizeGrokUnsupportedFields is the shared compatibility name used by raw
+// Chat Completions forwarding. Keep the older Responses-specific helper above
+// as the implementation source for this branch.
+func sanitizeGrokUnsupportedFields(body []byte) ([]byte, error) {
+	return sanitizeGrokResponsesUnsupportedFields(body)
+}
+
 func deleteJSONFields(value any, fields map[string]struct{}) bool {
 	switch typed := value.(type) {
 	case map[string]any:

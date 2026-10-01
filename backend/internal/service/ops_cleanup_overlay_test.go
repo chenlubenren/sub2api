@@ -32,6 +32,8 @@ func writeAdvancedSettings(t *testing.T, repo *runtimeSettingRepoStub, dr OpsDat
 	}
 }
 
+func retentionDaysPtr(value int) *int { return &value }
+
 func TestComputeEffective_FallbackToCfgWhenSettingsAbsent(t *testing.T) {
 	repo := newRuntimeSettingRepoStub()
 	base := config.OpsCleanupConfig{
@@ -56,6 +58,7 @@ func TestComputeEffective_SettingsOverridesAll(t *testing.T) {
 		CleanupEnabled:             true,
 		CleanupSchedule:            "0 * * * *",
 		ErrorLogRetentionDays:      0,
+		SystemLogRetentionDays:     retentionDaysPtr(7),
 		MinuteMetricsRetentionDays: 7,
 		HourlyMetricsRetentionDays: 14,
 	})
@@ -74,11 +77,38 @@ func TestComputeEffective_SettingsOverridesAll(t *testing.T) {
 		Enabled:                    true,
 		Schedule:                   "0 * * * *",
 		ErrorLogRetentionDays:      0,
+		SystemLogRetentionDays:     7,
 		MinuteMetricsRetentionDays: 7,
 		HourlyMetricsRetentionDays: 14,
 	}
 	if svc.effective != want {
 		t.Fatalf("effective mismatch:\nwant %#v\n got %#v", want, svc.effective)
+	}
+}
+
+func TestComputeEffective_LegacySettingsKeepConfigSystemLogRetention(t *testing.T) {
+	repo := newRuntimeSettingRepoStub()
+	writeAdvancedSettings(t, repo, OpsDataRetentionSettings{
+		CleanupEnabled:             true,
+		CleanupSchedule:            "0 * * * *",
+		ErrorLogRetentionDays:      30,
+		MinuteMetricsRetentionDays: 30,
+		HourlyMetricsRetentionDays: 30,
+	})
+	base := config.OpsCleanupConfig{
+		Enabled:                    false,
+		Schedule:                   "0 2 * * *",
+		ErrorLogRetentionDays:      30,
+		SystemLogRetentionDays:     14,
+		MinuteMetricsRetentionDays: 30,
+		HourlyMetricsRetentionDays: 30,
+	}
+	svc := makeOverlayService(repo, base)
+
+	svc.computeEffectiveLocked(context.Background())
+
+	if svc.effective.SystemLogRetentionDays != 14 {
+		t.Fatalf("legacy settings changed system log retention to %d, want 14", svc.effective.SystemLogRetentionDays)
 	}
 }
 

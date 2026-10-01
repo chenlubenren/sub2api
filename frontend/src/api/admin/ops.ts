@@ -804,6 +804,7 @@ export interface OpsDataRetentionSettings {
   cleanup_enabled: boolean
   cleanup_schedule: string
   error_log_retention_days: number
+  system_log_retention_days: number
   minute_metrics_retention_days: number
   hourly_metrics_retention_days: number
 }

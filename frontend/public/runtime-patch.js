@@ -6,6 +6,11 @@
   const dashboardWideSelector = '.mx-auto.w-full'
   const dashboardWideCardClass = 'max-w-[1380px]'
 
+  // Model pricing is denominated in USD. Keep its explicit dollar signs
+  // intact while the legacy patch continues to localize payment pages to RMB.
+  const isDollarPricingPage = () =>
+    ['/model-pricing', '/model-plaza', '/admin/model-pricing', '/admin/channels/pricing'].includes(window.location.pathname)
+
   const isDashboardWideCardElement = (element) => {
     const classList = element?.classList
     return (
@@ -36,6 +41,7 @@
   }
 
   const patchTextNode = (node) => {
+    if (isDollarPricingPage()) return
     const nextValue = normalizeDollarText(node.nodeValue)
     if (nextValue !== node.nodeValue) {
       node.nodeValue = nextValue
@@ -43,6 +49,7 @@
   }
 
   const patchAttributes = (element) => {
+    if (isDollarPricingPage()) return
     for (const name of ['placeholder', 'title', 'aria-label']) {
       if (!element.hasAttribute(name)) continue
       const current = element.getAttribute(name)

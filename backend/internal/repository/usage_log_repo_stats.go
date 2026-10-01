@@ -696,20 +696,25 @@ func (r *usageLogRepository) GetStatsWithFilters(ctx context.Context, filters Us
 	}
 
 	query := fmt.Sprintf(`
-		WITH scoped AS (
+		WITH filtered AS (
+			SELECT
+				usage_logs.*,
+				COALESCE((SELECT g.cache_read_multiplier FROM groups g WHERE g.id = usage_logs.group_id), 1) AS cache_read_multiplier
+			FROM usage_logs
+			%s
+		), scoped AS (
 			SELECT
 				COALESCE(NULLIF(TRIM(inbound_endpoint), ''), 'unknown') AS inbound_endpoint,
 				COALESCE(NULLIF(TRIM(upstream_endpoint), ''), 'unknown') AS upstream_endpoint,
 				input_tokens,
 				output_tokens,
 				cache_creation_tokens,
-				cache_read_tokens,
+				ROUND(cache_read_tokens * cache_read_multiplier)::bigint AS cache_read_tokens,
 				total_cost,
 				actual_cost,
 				COALESCE(account_stats_cost, total_cost) * COALESCE(account_rate_multiplier, 1) AS account_cost,
 				duration_ms
-			FROM usage_logs
-			%s
+			FROM filtered
 		)
 		SELECT
 			GROUPING(inbound_endpoint) AS inbound_grouped,

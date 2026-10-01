@@ -261,8 +261,32 @@ export interface SubscriptionAnalyticsItem {
   daily_limit_utilization: number
 }
 
+export interface SubscriptionPackageAnalytics {
+  subscription_name: string
+  active_users: number
+  average_daily_usage_7d: number
+  /** Matches the ordering used by the subscription plans shown during recharge. */
+  sort_order?: number
+}
+
+export interface SubscriptionUtilizationTrendPoint {
+  date: string
+  utilization: number
+}
+
+export interface SubscriptionUtilizationTrend {
+  subscription_id?: number
+  subscription_name: string
+  period_start: string
+  period_end: string
+  daily_limit: number
+  trend: SubscriptionUtilizationTrendPoint[]
+}
+
 export interface SubscriptionAnalyticsResponse {
   items: SubscriptionAnalyticsItem[]
+  package_summaries?: SubscriptionPackageAnalytics[]
+  utilization_trends?: SubscriptionUtilizationTrend[]
   generated_at: string
 }
 

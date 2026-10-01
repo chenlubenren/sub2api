@@ -14,6 +14,9 @@ const (
 	opsCleanupCronStopTimeout  = 3 * time.Second
 	opsCleanupRunTimeout       = 30 * time.Minute
 	opsCleanupHeartbeatTimeout = 2 * time.Second
+	// Cleanup audit rows are low-volume accountability data. Keep them longer
+	// than the high-volume system log rows so operators can verify past cleanup runs.
+	opsCleanupAuditRetentionDays = 90
 )
 
 type opsCleanupTarget struct {

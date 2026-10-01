@@ -212,3 +212,85 @@ func (s *OpenAIGatewayService) FetchPinnedCodexModelsManifest(ctx context.Contex
 		ETag: codexModelsManifestBodyETag(merged),
 	}, &firstAccount, nil
 }
+
+type pinnedOpenAIModelsResult struct {
+	account  *Account
+	response *OpenAIModelsResponse
+}
+
+// fetchPinnedOpenAIModels shares membership, eligibility, fanout and partial
+// failure policy between ordinary model lists and Codex manifests.
+func (s *OpenAIGatewayService) fetchPinnedOpenAIModels(ctx context.Context, group *Group, fetch func(context.Context, *Account) (*OpenAIModelsResponse, error)) ([]pinnedOpenAIModelsResult, error) {
+	if s == nil || s.accountRepo == nil || group == nil {
+		return nil, ErrNoPinnedCodexModelsAccounts
+	}
+	cfg := group.CodexModelsManifestConfig
+	if group.Platform != PlatformOpenAI || !cfg.Enabled || len(cfg.AccountIDs) == 0 {
+		return nil, ErrNoPinnedCodexModelsAccounts
+	}
+
+	members, err := s.accountRepo.ListByGroup(ctx, group.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load pinned codex models manifest accounts: %w", err)
+	}
+	memberByID := make(map[int64]Account, len(members))
+	for _, member := range members {
+		memberByID[member.ID] = member
+	}
+
+	// 按配置顺序筛选可用账号；已解绑/已删除的 ID 直接跳过。
+	usable := make([]Account, 0, len(cfg.AccountIDs))
+	for _, id := range cfg.AccountIDs {
+		member, ok := memberByID[id]
+		if !ok || member.Platform != PlatformOpenAI {
+			continue
+		}
+		if !isPinnedCodexModelsAccountUsable(&member) {
+			continue
+		}
+		usable = append(usable, member)
+	}
+	if len(usable) == 0 {
+		return nil, ErrNoPinnedCodexModelsAccounts
+	}
+
+	results := make([]pinnedOpenAIModelsResult, len(usable))
+	fetchErrs := make([]error, len(usable))
+	var fetchGroup sync.WaitGroup
+	for i := range usable {
+		fetchGroup.Add(1)
+		go func() {
+			defer fetchGroup.Done()
+			response, err := fetch(ctx, &usable[i])
+			results[i] = pinnedOpenAIModelsResult{account: &usable[i], response: response}
+			fetchErrs[i] = err
+		}()
+	}
+	fetchGroup.Wait()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	successes := make([]pinnedOpenAIModelsResult, 0, len(results))
+	failedIDs := make([]int64, 0)
+	var lastErr error
+	for i, result := range results {
+		if fetchErrs[i] != nil || result.response == nil {
+			failedIDs = append(failedIDs, usable[i].ID)
+			if fetchErrs[i] != nil {
+				lastErr = fetchErrs[i]
+			}
+			continue
+		}
+		successes = append(successes, result)
+	}
+	if len(successes) == 0 {
+		if lastErr == nil {
+			lastErr = infraerrors.New(http.StatusBadGateway, "OPENAI_MODELS_UPSTREAM_FAILED", "pinned model discovery accounts all failed")
+		}
+		return nil, lastErr
+	}
+	if len(failedIDs) > 0 {
+		slog.Warn("openai_models_pinned_partial_failure", "group_id", group.ID, "failed_account_ids", failedIDs)
+	}
+	return successes, nil
+}

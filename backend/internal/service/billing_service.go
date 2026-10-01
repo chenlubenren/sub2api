@@ -425,6 +425,10 @@ func (s *BillingService) initFallbackPricing() {
 		CacheCreation1hPrice:       4e-6,
 		SupportsCacheBreakdown:     true,
 	}
+	// Claude Sonnet 5 is a public alias with the same current standard card as
+	// the 5.5 family. Keep it explicit so an alias never falls through to the
+	// legacy Sonnet 3.5 fallback when the remote catalog omits the alias.
+	s.fallbackPrices["claude-sonnet-5"] = s.fallbackPrices["claude-sonnet-5-5"]
 	// Claude Fable 5.x uses the same input/output and cache-write prices, while
 	// Fable 5.1 reduces cache reads from $1 to $0.25 per MTok.
 	s.fallbackPrices["claude-fable-5"] = &ModelPricing{
@@ -958,6 +962,9 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 		return s.fallbackPrices["claude-3-opus"]
 	}
 	if strings.Contains(modelLower, "sonnet") {
+		if strings.Contains(modelLower, "sonnet-5") || strings.Contains(modelLower, "sonnet5") {
+			return s.fallbackPrices["claude-sonnet-5"]
+		}
 		if strings.Contains(modelLower, "4") && !strings.Contains(modelLower, "3") {
 			return s.fallbackPrices["claude-sonnet-4"]
 		}

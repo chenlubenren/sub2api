@@ -54,6 +54,10 @@ async function loadAllSettings() {
     if (advancedSettings.value && !advancedSettings.value.openai_account_quota_auto_pause) {
       advancedSettings.value.openai_account_quota_auto_pause = { default_threshold_5h: 0, default_threshold_7d: 0 }
     }
+    // 兼容历史 data_retention JSON：系统日志此前复用了错误日志周期。
+    if (advancedSettings.value && advancedSettings.value.data_retention.system_log_retention_days == null) {
+      advancedSettings.value.data_retention.system_log_retention_days = 14
+    }
     // 如果后端返回了阈值，使用后端的值；否则保持默认值
     if (thresholds && Object.keys(thresholds).length > 0) {
         metricThresholds.value = {
@@ -161,8 +165,11 @@ const validation = computed(() => {
 
   // 验证高级设置
   if (advancedSettings.value) {
-    const { error_log_retention_days, minute_metrics_retention_days, hourly_metrics_retention_days } = advancedSettings.value.data_retention
+    const { error_log_retention_days, system_log_retention_days, minute_metrics_retention_days, hourly_metrics_retention_days } = advancedSettings.value.data_retention
     if (error_log_retention_days < 0 || error_log_retention_days > 365) {
+      errors.push(t('admin.ops.settings.validation.retentionDaysRange'))
+    }
+    if (system_log_retention_days < 0 || system_log_retention_days > 365) {
       errors.push(t('admin.ops.settings.validation.retentionDaysRange'))
     }
     if (minute_metrics_retention_days < 0 || minute_metrics_retention_days > 365) {
@@ -456,11 +463,21 @@ async function saveAllSettings() {
               <p class="mt-1 text-xs text-gray-500">{{ t('admin.ops.settings.cleanupScheduleHint') }}</p>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div>
                 <label class="input-label">{{ t('admin.ops.settings.errorLogRetentionDays') }}</label>
                 <input
                   v-model.number="advancedSettings.data_retention.error_log_retention_days"
+                  type="number"
+                  min="0"
+                  max="365"
+                  class="input"
+                />
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.ops.settings.systemLogRetentionDays') }}</label>
+                <input
+                  v-model.number="advancedSettings.data_retention.system_log_retention_days"
                   type="number"
                   min="0"
                   max="365"

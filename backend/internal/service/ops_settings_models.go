@@ -113,11 +113,14 @@ type OpsOpenAIAccountQuotaAutoPauseSettings struct {
 }
 
 type OpsDataRetentionSettings struct {
-	CleanupEnabled             bool   `json:"cleanup_enabled"`
-	CleanupSchedule            string `json:"cleanup_schedule"`
-	ErrorLogRetentionDays      int    `json:"error_log_retention_days"`
-	MinuteMetricsRetentionDays int    `json:"minute_metrics_retention_days"`
-	HourlyMetricsRetentionDays int    `json:"hourly_metrics_retention_days"`
+	CleanupEnabled        bool   `json:"cleanup_enabled"`
+	CleanupSchedule       string `json:"cleanup_schedule"`
+	ErrorLogRetentionDays int    `json:"error_log_retention_days"`
+	// Pointer preserves the distinction between a legacy payload that omitted
+	// this field and an explicit 0-day truncate policy.
+	SystemLogRetentionDays     *int `json:"system_log_retention_days,omitempty"`
+	MinuteMetricsRetentionDays int  `json:"minute_metrics_retention_days"`
+	HourlyMetricsRetentionDays int  `json:"hourly_metrics_retention_days"`
 }
 
 type OpsAggregationSettings struct {

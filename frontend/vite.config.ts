@@ -35,6 +35,91 @@ async function readMockJsonBody(req: import('http').IncomingMessage): Promise<Re
 }
 
 function createMockApi(): Plugin {
+  const mockDashboardStats = {
+    total_users: 128,
+    today_new_users: 4,
+    active_users: 43,
+    hourly_active_users: 17,
+    stats_updated_at: new Date().toISOString(),
+    stats_stale: false,
+    total_api_keys: 286,
+    active_api_keys: 241,
+    total_accounts: 36,
+    normal_accounts: 31,
+    error_accounts: 2,
+    ratelimit_accounts: 2,
+    overload_accounts: 1,
+    total_requests: 186420,
+    total_input_tokens: 102840000,
+    total_output_tokens: 28460000,
+    total_cache_creation_tokens: 4960000,
+    total_cache_read_tokens: 41820000,
+    total_tokens: 178080000,
+    total_cost: 1162.48,
+    total_actual_cost: 1078.63,
+    total_account_cost: 823.14,
+    today_requests: 1842,
+    today_input_tokens: 1084000,
+    today_output_tokens: 326000,
+    today_cache_creation_tokens: 52000,
+    today_cache_read_tokens: 418000,
+    today_tokens: 1880000,
+    today_cost: 12.84,
+    today_actual_cost: 11.92,
+    today_account_cost: 8.71,
+    average_duration_ms: 742,
+    uptime: 2592000,
+    rpm: 24,
+    tpm: 28800
+  }
+  const mockDates = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date()
+    date.setHours(0, 0, 0, 0)
+    date.setDate(date.getDate() - (29 - index))
+    return date.toISOString().slice(0, 10)
+  })
+  const formatMockDate = (date: Date): string =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const mockTrend = mockDates.map((date, index) => {
+    const wave = Math.round(Math.sin(index * 0.72) * 100000)
+    const inputTokens = 740000 + index * 11000 + wave
+    const outputTokens = 218000 + index * 3700 + Math.round(wave * 0.22)
+    const cacheReadTokens = 290000 + index * 5200 + Math.round(wave * 0.3)
+    const cacheCreationTokens = 36000 + index * 650
+    return {
+      date,
+      requests: 1180 + index * 22 + (index % 5) * 41,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      cache_creation_tokens: cacheCreationTokens,
+      cache_read_tokens: cacheReadTokens,
+      total_tokens: inputTokens + outputTokens + cacheReadTokens + cacheCreationTokens,
+      cost: Number((7.8 + index * 0.15 + (index % 4) * 0.24).toFixed(4)),
+      actual_cost: Number((7.2 + index * 0.14 + (index % 4) * 0.21).toFixed(4))
+    }
+  })
+  const mockModels = [
+    { model: 'gpt-5', requests: 64320, input_tokens: 46200000, output_tokens: 13940000, cache_creation_tokens: 2140000, cache_read_tokens: 18480000, total_tokens: 80760000, cost: 584.62, actual_cost: 541.38, account_cost: 418.21 },
+    { model: 'claude-sonnet-4', requests: 42860, input_tokens: 28460000, output_tokens: 8420000, cache_creation_tokens: 1460000, cache_read_tokens: 12620000, total_tokens: 50960000, cost: 348.47, actual_cost: 323.61, account_cost: 247.86 },
+    { model: 'gemini-2.5-pro', requests: 29480, input_tokens: 18180000, output_tokens: 4840000, cache_creation_tokens: 820000, cache_read_tokens: 6720000, total_tokens: 30560000, cost: 186.19, actual_cost: 173.46, account_cost: 132.54 }
+  ]
+  const mockUsers = [
+    { user_id: 1001, email: 'mock@example.com', username: 'mock-user', actual_cost: 92.48, requests: 16320, tokens: 21940000 },
+    { user_id: 1002, email: 'lin@sub2api.local', username: 'Lin', actual_cost: 74.16, requests: 12640, tokens: 17480000 },
+    { user_id: 1003, email: 'chen@sub2api.local', username: 'Chen', actual_cost: 61.73, requests: 10980, tokens: 14860000 },
+    { user_id: 1004, email: 'yu@sub2api.local', username: 'Yu', actual_cost: 48.92, requests: 8760, tokens: 11240000 },
+    { user_id: 1005, email: 'wu@sub2api.local', username: 'Wu', actual_cost: 39.65, requests: 7440, tokens: 9640000 }
+  ]
+  const mockUsersTrend = mockDates.flatMap((date, dayIndex) => mockUsers.map((user, userIndex) => ({
+    date,
+    user_id: user.user_id,
+    email: user.email,
+    username: user.username,
+    requests: Math.round(user.requests / 30) + dayIndex * 2 + userIndex * 7,
+    tokens: Math.round(user.tokens / 30) + dayIndex * 4800 + userIndex * 18600,
+    cost: Number((user.actual_cost / 30).toFixed(4)),
+    actual_cost: Number((user.actual_cost / 30).toFixed(4))
+  })))
   const mockGroups = [
     { id: 1, name: 'OpenAI Pro', description: '本地模拟 OpenAI 分组', platform: 'openai', rate_multiplier: 1.2, cache_read_multiplier: 1.1, night_cache_read_multiplier: 1.2, is_exclusive: false, status: 'active', subscription_type: 'subscription', daily_limit_usd: 25, weekly_limit_usd: 100, monthly_limit_usd: 300, long_context_pricing_enabled: true, peak_rate_enabled: false, peak_start: '', peak_end: '', peak_rate_multiplier: 1, night_rate_enabled: true, night_start: '01:30', night_end: '06:30', night_rate_multiplier: 1.5, rpm_limit: 0, model_pricing: [], sort_order: 1 },
     { id: 2, name: 'Claude Standard', description: '本地模拟 Anthropic 分组', platform: 'anthropic', rate_multiplier: 1, cache_read_multiplier: 1.1, night_cache_read_multiplier: 1.2, is_exclusive: false, status: 'active', subscription_type: 'standard', daily_limit_usd: null, weekly_limit_usd: null, monthly_limit_usd: null, long_context_pricing_enabled: true, peak_rate_enabled: false, peak_start: '', peak_end: '', peak_rate_multiplier: 1, night_rate_enabled: true, night_start: '01:30', night_end: '06:30', night_rate_multiplier: 1.5, rpm_limit: 0, model_pricing: [], sort_order: 2 }
@@ -51,6 +136,14 @@ function createMockApi(): Plugin {
   const mockSubscriptions = [
     { id: 1, user_id: 1001, group_id: 1, status: 'active', starts_at: '2026-09-01T00:00:00Z', expires_at: '2026-10-01T00:00:00Z', daily_usage_usd: 1.2, weekly_usage_usd: 5.4, monthly_usage_usd: 12.8, daily_window_start: '2026-09-25T00:00:00Z', weekly_window_start: '2026-09-22T00:00:00Z', monthly_window_start: '2026-09-01T00:00:00Z', created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-25T00:00:00Z', user: mockUser, group: mockGroups[0] }
   ]
+  const mockChannels = [{ id: 1, name: 'OpenAI Official', description: '本地模型定价演示渠道', status: 'active', billing_model_source: 'requested', restrict_models: false, group_ids: [1], model_pricing: [], model_mapping: {}, apply_pricing_to_account_stats: true, account_stats_pricing_rules: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]
+  const mockDefaultPrices: Record<string, [number, number, number, number]> = {
+    // Values are USD per 1M tokens; API responses below convert them to per-token values.
+    'gpt-5.5': [5, 30, 5, 0.5], 'gpt-5.6-sol': [5, 30, 6.25, 0.5], 'gpt-5.6-terra': [2, 12, 2.5, 0.2], 'gpt-5.6-luna': [0.2, 1.2, 0.25, 0.02],
+    'gpt-6': [10, 50, 12.5, 1], 'gpt-6-astra': [10, 50, 12.5, 1], 'gpt-6-sol': [2, 10, 2.5, 0.2], 'gpt-6-luna': [0.1, 0.5, 0.125, 0.01], 'gpt-6.1-sol': [2, 10, 2.5, 0.1],
+    'claude-opus-5-5': [4, 20, 5, 0.2], 'claude-opus-5': [5, 25, 6.25, 0.5], 'claude-sonnet-5-5': [2, 10, 2.5, 0.2], 'claude-sonnet-5': [2, 10, 2.5, 0.2],
+    'claude-opus-4-8': [5, 25, 6.25, 0.5], 'claude-opus-4-7': [5, 25, 6.25, 0.5], 'claude-opus-4-6': [5, 25, 6.25, 0.5], 'claude-sonnet-4-6': [3, 15, 3.75, 0.3], 'claude-haiku-4-5': [1, 5, 1.25, 0.1]
+  }
   return {
     name: 'local-mock-api',
     apply: 'serve',
@@ -74,15 +167,54 @@ function createMockApi(): Plugin {
         }
         if (path === '/api/v1/auth/logout') return mockResponse(res, {})
         if (path === '/api/v1/settings/public') {
-          return mockResponse(res, { site_name: 'Sub2API Local Mock', registration_enabled: true, email_login_enabled: true })
+          return mockResponse(res, { site_name: 'Sub2API Local Mock', registration_enabled: true, email_login_enabled: true, model_plaza_enabled: true, model_plaza_require_auth: false, model_plaza_description: '本地模型价格展示，价格与管理员模型定价配置同步。' })
+        }
+        if (path === '/api/v1/model-plaza') {
+          const modelNames: Array<[string, string]> = [['gpt-5.5', 'openai'], ['gpt-5.6-sol', 'openai'], ['gpt-5.6-terra', 'openai'], ['gpt-5.6-luna', 'openai'], ['gpt-6-astra', 'openai'], ['gpt-6-sol', 'openai'], ['gpt-6-luna', 'openai'], ['gpt-6.1-sol', 'openai'], ['claude-opus-5-5', 'anthropic'], ['claude-opus-5', 'anthropic'], ['claude-sonnet-5-5', 'anthropic'], ['claude-sonnet-5', 'anthropic'], ['claude-opus-4-8', 'anthropic'], ['claude-opus-4-7', 'anthropic'], ['claude-opus-4-6', 'anthropic'], ['claude-sonnet-4-6', 'anthropic'], ['claude-haiku-4-5', 'anthropic']]
+          const toPricing = (model: string, platform: string) => {
+            const rule = mockChannels[0].model_pricing.find((item) => item.models.includes(model))
+            const defaults = mockDefaultPrices[model] || [0, 0, 0, 0]
+            const input = rule?.input_price ?? defaults[0] / 1_000_000
+            const output = rule?.output_price ?? defaults[1] / 1_000_000
+            const cacheWrite = rule?.cache_write_price ?? defaults[2] / 1_000_000
+            const cacheRead = rule?.cache_read_price ?? defaults[3] / 1_000_000
+            return { billing_mode: 'token', input_price: input, output_price: output, cache_write_price: cacheWrite, cache_read_price: cacheRead, image_input_price: null, image_output_price: null, per_request_price: null, intervals: [] }
+          }
+          const makeGroup = (id: number, name: string, platform: string) => ({
+            id, name, description: `${name} · 管理员定价实时同步`, platform, subscription_type: 'standard', rate_multiplier: 1,
+            peak_rate_enabled: false, peak_start: '', peak_end: '', peak_rate_multiplier: 1, is_exclusive: false,
+            image_rate_independent: false, image_rate_multiplier: 1, long_context_pricing_enabled: true,
+            models: modelNames.filter(([, itemPlatform]) => itemPlatform === platform).map(([model]) => {
+              const p = mockDefaultPrices[model] || [0, 0, 0, 0]
+              return { name: model, platform, pricing: toPricing(model, platform), official_pricing: { input_price: p[0] / 1_000_000, output_price: p[1] / 1_000_000, cache_write_price: p[2] / 1_000_000, cache_read_price: p[3] / 1_000_000 } }
+            })
+          })
+          return mockResponse(res, { description: '本地模型价格展示，价格与管理员模型定价配置同步。', groups: [makeGroup(1, 'OpenAI GPT 模型', 'openai'), makeGroup(2, 'Anthropic Claude 模型', 'anthropic')] })
+        }
+        if (path === '/api/v1/groups/available') return mockResponse(res, mockGroups)
+        if (path === '/api/v1/groups/rates') return mockResponse(res, {})
+        if (path === '/api/v1/usage/stats') {
+          return mockResponse(res, {
+            total_requests: 1284,
+            total_input_tokens: 860000,
+            total_output_tokens: 224000,
+            total_cache_creation_tokens: 18000,
+            total_cache_read_tokens: 105600,
+            total_cache_tokens: 123600,
+            total_tokens: 1207600,
+            total_cost: 3.8079,
+            total_actual_cost: 3.8079,
+            average_duration_ms: 820,
+            endpoints: []
+          })
         }
         if (path === '/api/v1/usage/dashboard/stats') {
           return mockResponse(res, {
             total_api_keys: 2, active_api_keys: 2, total_requests: 1284,
-            total_input_tokens: 860000, total_output_tokens: 224000, total_cache_creation_tokens: 18000, total_cache_read_tokens: 96000,
-            total_tokens: 1198000, total_cost: 3.8079, total_actual_cost: 3.8079, total_account_cost: 0,
-            today_requests: 36, today_input_tokens: 24000, today_output_tokens: 6800, today_cache_creation_tokens: 600, today_cache_read_tokens: 4200,
-            today_tokens: 35600, today_cost: 0.12, today_actual_cost: 0.12, today_account_cost: 0,
+            total_input_tokens: 860000, total_output_tokens: 224000, total_cache_creation_tokens: 18000, total_cache_read_tokens: 105600,
+            total_cache_tokens: 123600, total_tokens: 1207600, total_cost: 3.8079, total_actual_cost: 3.8079, total_account_cost: 0,
+            today_requests: 36, today_input_tokens: 24000, today_output_tokens: 6800, today_cache_creation_tokens: 600, today_cache_read_tokens: 4620,
+            today_cache_tokens: 5220, today_tokens: 36620, today_cost: 0.12, today_actual_cost: 0.12, today_account_cost: 0,
             average_duration_ms: 820, rpm: 1, tpm: 460
           })
         }
@@ -105,11 +237,156 @@ function createMockApi(): Plugin {
             { model: 'claude-sonnet-4', requests: 424, input_tokens: 320000, output_tokens: 60000, total_tokens: 380000, actual_cost: 1.35, cost: 1.35 }
           ], start_date: '2026-09-19', end_date: '2026-09-25' })
         }
+        if (path === '/api/v1/usage/dashboard/snapshot-v2') {
+          const params = new URL(req.url || '/', 'http://localhost').searchParams
+          const requestedGranularity = params.get('granularity')
+          const snapshotGranularity = requestedGranularity === 'hour' ? 'hour' : 'day'
+          const start = params.get('start_date') || mockDates[0]
+          const end = params.get('end_date') || mockDates[mockDates.length - 1]
+          const startTime = new Date(`${start}T00:00:00`)
+          const endTime = new Date(`${end}T00:00:00`)
+          const rangeDays = Math.max(1, Math.ceil((endTime.getTime() - startTime.getTime()) / 86400000))
+          const pointCount = snapshotGranularity === 'hour' ? 24 : Math.min(rangeDays, 30)
+          const trend = Array.from({ length: pointCount }, (_, index) => {
+            const pointDate = new Date(startTime)
+            if (snapshotGranularity === 'hour') {
+              pointDate.setHours(pointDate.getHours() + index)
+            } else {
+              pointDate.setDate(pointDate.getDate() + index)
+            }
+            const date = snapshotGranularity === 'hour'
+              ? `${formatMockDate(pointDate)} ${String(pointDate.getHours()).padStart(2, '0')}:00`
+              : formatMockDate(pointDate)
+            const wave = Math.round(Math.sin(index * 0.72) * 2800)
+            const inputTokens = 36000 + index * 2100 + wave
+            const outputTokens = 12000 + index * 760 + Math.round(wave * 0.2)
+            const cacheCreationTokens = 1800 + index * 90
+            const cacheReadTokens = 14200 + index * 520 + Math.round(wave * 0.35)
+            const weightedCacheReadTokens = Math.round(cacheReadTokens * 1.1)
+            return {
+              date,
+              requests: 80 + index * 7,
+              input_tokens: inputTokens,
+              output_tokens: outputTokens,
+              cache_creation_tokens: cacheCreationTokens,
+              cache_read_tokens: weightedCacheReadTokens,
+              total_tokens: inputTokens + outputTokens + cacheCreationTokens + weightedCacheReadTokens,
+              cost: Number((0.22 + index * 0.012).toFixed(4)),
+              actual_cost: Number((0.22 + index * 0.012).toFixed(4))
+            }
+          })
+          return mockResponse(res, {
+            generated_at: new Date().toISOString(),
+            start_date: start,
+            end_date: end,
+            granularity: snapshotGranularity,
+            trend,
+            groups: [
+              { group_id: 1, group_name: 'OpenAI Pro', requests: 820, total_tokens: 748000, cost: 2.46, actual_cost: 2.46 },
+              { group_id: 2, group_name: 'Claude Standard', requests: 464, total_tokens: 459600, cost: 1.35, actual_cost: 1.35 }
+            ]
+          })
+        }
         if (path === '/api/v1/usage') {
           return mockResponse(res, { items: [], total: 0, page: 1, page_size: 20, pages: 0 })
         }
-        if (path === '/api/v1/admin/dashboard/stats') {
-          return mockResponse(res, { total_users: 12, active_users: 8, total_api_keys: 18, active_api_keys: 14, today_requests: 128, total_requests: 12684, today_actual_cost: 3.2, total_actual_cost: 438.9, total_account_cost: 0, today_tokens: 92000, total_tokens: 9840000 })
+        if (path === '/api/v1/admin/dashboard/stats') return mockResponse(res, mockDashboardStats)
+        if (path === '/api/v1/admin/channels' && req.method === 'GET') return mockResponse(res, { items: mockChannels, total: mockChannels.length })
+        if (path === '/api/v1/admin/channels/model-pricing') {
+          const model = new URL(req.url || '/', 'http://localhost').searchParams.get('model') || ''
+          const prices = mockDefaultPrices[model]
+          return mockResponse(res, prices ? { found: true, input_price: prices[0] / 1_000_000, output_price: prices[1] / 1_000_000, cache_write_price: prices[2] / 1_000_000, cache_read_price: prices[3] / 1_000_000 } : { found: false })
+        }
+        if (/^\/api\/v1\/admin\/channels\/\d+$/.test(path) && req.method === 'PUT') {
+          const id = Number(path.split('/').pop()); const body = await readMockJsonBody(req); const channel = mockChannels.find(item => item.id === id)
+          if (!channel) return mockResponse(res, { message: 'not found' }, 404)
+          Object.assign(channel, body, { updated_at: new Date().toISOString() }); return mockResponse(res, channel)
+        }
+        if (path === '/api/v1/admin/dashboard/snapshot-v2') {
+          return mockResponse(res, {
+            generated_at: new Date().toISOString(),
+            start_date: mockDates[0],
+            end_date: mockDates[mockDates.length - 1],
+            granularity: 'day',
+            stats: mockDashboardStats,
+            trend: mockTrend,
+            models: mockModels,
+            groups: [],
+            users_trend: mockUsersTrend
+          })
+        }
+        if (path === '/api/v1/admin/dashboard/trend') {
+          return mockResponse(res, {
+            trend: mockTrend,
+            start_date: mockDates[0],
+            end_date: mockDates[mockDates.length - 1],
+            granularity: 'day'
+          })
+        }
+        if (path === '/api/v1/admin/dashboard/models') {
+          return mockResponse(res, { models: mockModels, start_date: mockDates[0], end_date: mockDates[mockDates.length - 1] })
+        }
+        if (path === '/api/v1/admin/dashboard/users-trend') {
+          return mockResponse(res, {
+            trend: mockUsersTrend,
+            start_date: mockDates[0],
+            end_date: mockDates[mockDates.length - 1],
+            granularity: 'day'
+          })
+        }
+        if (path === '/api/v1/admin/dashboard/users-ranking') {
+          return mockResponse(res, {
+            ranking: mockUsers,
+            total_actual_cost: mockUsers.reduce((total, user) => total + user.actual_cost, 0),
+            total_requests: mockUsers.reduce((total, user) => total + user.requests, 0),
+            total_tokens: mockUsers.reduce((total, user) => total + user.tokens, 0),
+            start_date: mockDates[0],
+            end_date: mockDates[mockDates.length - 1]
+          })
+        }
+        if (path === '/api/v1/admin/dashboard/subscription-analytics') {
+          const items = mockUsers.map((user, index) => ({
+            subscription_id: index + 1,
+            subscription_name: index % 2 === 0 ? 'OpenAI Pro' : 'Claude Standard',
+            user_id: user.user_id,
+            email: user.email,
+            average_recharge_amount: 58 + index * 14.5,
+            average_monthly_actual_cost: user.actual_cost,
+            average_daily_usage: Number((user.actual_cost / 30).toFixed(2)),
+            daily_limit: index % 2 === 0 ? 4 : 5,
+            daily_limit_utilization: Number(((user.actual_cost / 30 / (index % 2 === 0 ? 4 : 5)) * 100).toFixed(1))
+          })).sort((left, right) => right.daily_limit_utilization - left.daily_limit_utilization)
+          const packages = new Map<string, { users: Set<number>; usage: number }>()
+          items.forEach((item) => {
+            const packageItem = packages.get(item.subscription_name) || { users: new Set<number>(), usage: 0 }
+            packageItem.users.add(item.user_id)
+            packageItem.usage += item.average_daily_usage
+            packages.set(item.subscription_name, packageItem)
+          })
+          return mockResponse(res, {
+            generated_at: new Date().toISOString(),
+            items,
+            package_summaries: Array.from(packages, ([subscription_name, packageItem]) => ({
+              subscription_name,
+              active_users: packageItem.users.size,
+              average_daily_usage_7d: Number((packageItem.usage / packageItem.users.size).toFixed(2)),
+              sort_order: subscription_name === 'OpenAI Pro' ? 1 : 2
+            })),
+            utilization_trends: items.map((item, subscriptionIndex) => {
+              const baseline = item.daily_limit_utilization
+              return {
+                subscription_id: item.subscription_id,
+                subscription_name: item.subscription_name,
+                period_start: mockDates[0],
+                period_end: mockDates[mockDates.length - 1],
+                daily_limit: item.daily_limit,
+                trend: mockDates.map((date, dayIndex) => ({
+                  date,
+                  utilization: Number(Math.max(0, baseline + Math.sin(dayIndex * 0.65 + subscriptionIndex) * 9 + (dayIndex % 4) * 1.5).toFixed(1))
+                }))
+              }
+            })
+          })
         }
         if (path === '/api/v1/admin/groups/billing-settings' && req.method === 'PUT') {
           const settings = await readMockJsonBody(req)
