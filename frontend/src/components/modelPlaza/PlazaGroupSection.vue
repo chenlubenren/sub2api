@@ -63,6 +63,7 @@
         :image-rate-multiplier="group.image_rate_multiplier"
         :peak-window="peakWindow"
         :peak-rate-multiplier="group.peak_rate_multiplier"
+        :standard-only="standardOnly"
       />
       <p v-else class="px-5 py-4 text-center text-sm text-gray-400 dark:text-dark-500">
         {{ t('modelPlaza.detail.noModels') }}
@@ -85,7 +86,10 @@ import { useAppStore } from '@/stores/app'
 
 const props = defineProps<{
   group: ModelPlazaGroup
+  standardOnly?: boolean
 }>()
+
+const standardOnly = computed(() => props.standardOnly === true)
 
 const { t } = useI18n()
 const appStore = useAppStore()

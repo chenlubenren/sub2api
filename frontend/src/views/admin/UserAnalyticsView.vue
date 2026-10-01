@@ -119,16 +119,27 @@ const demoRows: SubscriptionAnalyticsItem[] = [
 
 const packageCards = computed(() => {
   const summaries = packageSummaries.value.length ? packageSummaries.value : summarizePackages(rows.value)
-  return sortPackages(summaries).map((item) => ({
-    subscriptionName: item.subscription_name,
-    sortOrder: item.sort_order ?? Number.MAX_SAFE_INTEGER,
-    label: item.subscription_name,
-    value: money(item.average_daily_usage_7d),
-    hint: `${money(item.subscription_price)} · ${item.active_users} 位订阅用户`,
-    actualMultiplier: item.subscription_price > 0
-      ? (item.average_daily_usage_7d * 30) / item.subscription_price
-      : null
-  }))
+  const rowPrices = new Map<string, number>()
+  for (const row of rows.value) {
+    if (!rowPrices.has(row.subscription_name) && Number(row.average_recharge_amount) > 0) {
+      rowPrices.set(row.subscription_name, Number(row.average_recharge_amount))
+    }
+  }
+  return sortPackages(summaries).map((item) => {
+    const subscriptionPrice = Number(item.subscription_price) > 0
+      ? Number(item.subscription_price)
+      : (rowPrices.get(item.subscription_name) || 0)
+    return {
+      subscriptionName: item.subscription_name,
+      sortOrder: item.sort_order ?? Number.MAX_SAFE_INTEGER,
+      label: item.subscription_name,
+      value: money(item.average_daily_usage_7d),
+      hint: `${money(subscriptionPrice)} · ${item.active_users} 位订阅用户`,
+      actualMultiplier: subscriptionPrice > 0
+        ? (item.average_daily_usage_7d * 30) / subscriptionPrice
+        : null
+    }
+  })
 })
 
 const subscriberRows = computed(() => [...rows.value].sort(
@@ -199,18 +210,19 @@ function createFallbackTrend(row: SubscriptionAnalyticsItem): SubscriptionUtiliz
 }
 
 function summarizePackages(items: SubscriptionAnalyticsItem[]): SubscriptionPackageAnalytics[] {
-  const grouped = new Map<string, { users: Set<number>; totalDailyUsage: number }>()
+  const grouped = new Map<string, { users: Set<number>; totalDailyUsage: number; totalPrice: number }>()
   items.forEach((item) => {
-    const group = grouped.get(item.subscription_name) || { users: new Set<number>(), totalDailyUsage: 0 }
+    const group = grouped.get(item.subscription_name) || { users: new Set<number>(), totalDailyUsage: 0, totalPrice: 0 }
     group.users.add(item.user_id)
     group.totalDailyUsage += item.average_daily_usage
+    group.totalPrice += Number(item.average_recharge_amount) || 0
     grouped.set(item.subscription_name, group)
   })
   return Array.from(grouped, ([subscription_name, group], index) => ({
     subscription_name,
     active_users: group.users.size,
     average_daily_usage_7d: group.users.size ? group.totalDailyUsage / group.users.size : 0,
-    subscription_price: 0,
+    subscription_price: group.users.size ? group.totalPrice / group.users.size : 0,
     sort_order: index
   }))
 }

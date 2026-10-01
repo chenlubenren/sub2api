@@ -35,6 +35,7 @@
     <template v-else>
       <!-- 筛选区:平台 → 分组 → 倍率 -->
       <PlazaFilterBar
+        v-if="!standardOnly"
         :platforms="platforms"
         :groups="groupOptions"
         :rates="rates"
@@ -50,7 +51,7 @@
 
       <!-- 分组分节的模型清单(默认按生效倍率升序) -->
       <div v-if="filteredGroups.length > 0" class="space-y-5">
-        <PlazaGroupSection v-for="g in filteredGroups" :key="g.id" :group="g" />
+        <PlazaGroupSection v-for="g in filteredGroups" :key="g.id" :group="g" :standard-only="standardOnly" />
       </div>
       <div
         v-else
@@ -79,11 +80,14 @@ const props = defineProps<{
   error?: boolean
   /** 后台内嵌形态(AppLayout 内):隐藏页头。 */
   embedded?: boolean
+  /** 用户模型定价页：只展示合并后的标准 1x 价目。 */
+  standardOnly?: boolean
 }>()
 
 const { t } = useI18n()
 const authStore = useAuthStore()
 const isAuthenticated = computed(() => authStore.isAuthenticated)
+const standardOnly = computed(() => props.standardOnly === true)
 
 const selectedPlatform = ref<string>('all')
 const selectedGroupId = ref<number | 'all'>('all')

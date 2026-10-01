@@ -1,14 +1,16 @@
 <template>
   <div class="plaza-pricing-table overflow-x-auto" :style="accentStyle">
-    <table class="w-full min-w-[900px] table-fixed border-collapse text-sm tabular-nums">
+    <table class="w-full table-fixed border-collapse text-sm tabular-nums" :class="standardOnly ? 'min-w-[700px]' : 'min-w-[900px]'">
       <colgroup>
         <col class="w-[25%]" />
         <col class="w-[11%]" />
         <col class="w-[9%]" />
         <col class="w-[14%]" />
-        <col class="w-[11%]" />
-        <col class="w-[14%]" />
-        <col class="w-[8%]" />
+        <template v-if="!standardOnly">
+          <col class="w-[11%]" />
+          <col class="w-[14%]" />
+          <col class="w-[8%]" />
+        </template>
       </colgroup>
       <thead>
         <tr
@@ -22,11 +24,12 @@
           </th>
           <th colspan="3" class="pz-bg pt-2 text-center">
             <div class="pz-title border-b pb-2 font-semibold">
-              {{ t('modelPlaza.table.paidPrice') }}
+              {{ standardOnly ? '标准价格' : t('modelPlaza.table.paidPrice') }}
               <span class="pz-unit ml-1 normal-case font-normal">{{ t('modelPlaza.table.unitPerMillion') }}</span>
             </div>
           </th>
           <th
+            v-if="!standardOnly"
             colspan="3"
             class="border-l border-gray-100 pt-2 text-center dark:border-dark-700/60"
           >
@@ -42,11 +45,11 @@
           <th class="pz-bg px-3 py-2 font-medium">{{ t('modelPlaza.table.input') }}</th>
           <th class="pz-bg px-3 py-2 font-medium">{{ t('modelPlaza.table.output') }}</th>
           <th class="pz-bg px-3 py-2 font-medium">{{ t('modelPlaza.table.cache') }}</th>
-          <th class="border-l border-gray-100 px-3 py-2 font-medium dark:border-dark-700/60">
+          <th v-if="!standardOnly" class="border-l border-gray-100 px-3 py-2 font-medium dark:border-dark-700/60">
             {{ t('modelPlaza.table.input') }}
           </th>
-          <th class="px-3 py-2 font-medium">{{ t('modelPlaza.table.output') }}</th>
-          <th class="px-3 py-2 font-medium">{{ t('modelPlaza.table.cache') }}</th>
+          <th v-if="!standardOnly" class="px-3 py-2 font-medium">{{ t('modelPlaza.table.output') }}</th>
+          <th v-if="!standardOnly" class="px-3 py-2 font-medium">{{ t('modelPlaza.table.cache') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -201,6 +204,7 @@
 
           <!-- 官方价格(参考价,不乘倍率;官方有阶梯时每档一行) -->
           <td
+            v-if="!standardOnly"
             class="border-l border-gray-100 px-3 py-2.5 align-middle font-mono text-xs text-gray-500 dark:border-dark-700/60 dark:text-dark-400"
           >
             <template v-if="officialIntervals(m).length">
@@ -215,7 +219,7 @@
             </template>
             <template v-else>{{ official(m.official_pricing?.input_price) }}</template>
           </td>
-          <td class="px-3 py-2.5 align-middle font-mono text-xs text-gray-500 dark:text-dark-400">
+          <td v-if="!standardOnly" class="px-3 py-2.5 align-middle font-mono text-xs text-gray-500 dark:text-dark-400">
             <template v-if="officialIntervals(m).length">
               <div
                 v-for="(iv, idx) in officialIntervals(m)"
@@ -228,7 +232,7 @@
             </template>
             <template v-else>{{ official(m.official_pricing?.output_price) }}</template>
           </td>
-          <td class="px-3 py-2.5 align-middle">
+          <td v-if="!standardOnly" class="px-3 py-2.5 align-middle">
             <template v-if="hasTierCachePricing(officialIntervals(m))">
               <div
                 v-for="(iv, idx) in officialIntervals(m)"
@@ -306,9 +310,12 @@ const props = defineProps<{
    */
   peakWindow?: string
   peakRateMultiplier?: number | null
+  /** 用户标准模型定价页隐藏官方对照列，只显示 1x 标准价。 */
+  standardOnly?: boolean
 }>()
 
 const { t } = useI18n()
+const standardOnly = computed(() => props.standardOnly === true)
 
 /** 实付分区只从平台拿一个主色,浅底/标题/下划线全部由 scoped CSS 用 color-mix 派生。 */
 const accentStyle = computed(() => ({ '--plaza-accent': platformAccentColor(props.platform ?? '') }))
